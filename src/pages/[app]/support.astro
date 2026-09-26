@@ -1,0 +1,41 @@
+---
+import AppPage from '../../layouts/AppPage.astro';
+import { apps } from '../../data/apps';
+import { company } from '../../data/company';
+import type { AppInfo } from '../../data/types';
+
+export function getStaticPaths() {
+  return apps.map((app) => ({ params: { app: app.slug }, props: { app } }));
+}
+
+const { app } = Astro.props as { app: AppInfo };
+---
+
+<AppPage app={app} current="support" title={`${app.name} Support`} description={`Help with ${app.name}: purchases, subscriptions, account deletion and contact details.`}>
+  <main class="doc">
+    <div class="wrap narrow">
+      <h1>{app.name} Support</h1>
+      <p class="meta">{app.support.intro}</p>
+
+      <div class="topics">
+        {app.support.topics.map((t) => (
+          <div class="card">
+            <h3>{t.q}</h3>
+            <p>{t.a}</p>
+          </div>
+        ))}
+      </div>
+
+      <h2>Still need help?</h2>
+      <p>
+        Email <a href={`mailto:${company.contactEmail}`}>{company.contactEmail}</a>. Please include what you were
+        doing, what happened, and your device and app version if you can.
+      </p>
+      <p>
+        See also the <a href={`/${app.slug}/privacy/`}>Privacy Policy</a>,
+        <a href={`/${app.slug}/terms/`}> Terms &amp; Conditions</a> and
+        <a href={`/${app.slug}/delete-account/`}> Delete your account</a>.
+      </p>
+    </div>
+  </main>
+</AppPage>

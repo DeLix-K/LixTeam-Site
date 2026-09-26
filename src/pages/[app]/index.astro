@@ -1,0 +1,111 @@
+---
+import { Image } from 'astro:assets';
+import AppPage from '../../layouts/AppPage.astro';
+import { apps } from '../../data/apps';
+import type { AppInfo } from '../../data/types';
+
+export function getStaticPaths() {
+  return apps.map((app) => ({ params: { app: app.slug }, props: { app } }));
+}
+
+const { app } = Astro.props as { app: AppInfo };
+const hero = app.screenshots[0];
+---
+
+<AppPage app={app} current="overview" title={`${app.name}: ${app.tagline}`} description={app.blurb}>
+  <main>
+    <div class="hero">
+      <div class="wrap">
+        <div class="grid">
+          <div>
+            <p class="eyebrow">{app.name}</p>
+            <h1>{app.hero.headline}</h1>
+            <p class="lead">{app.hero.sub}</p>
+            <div class="btn-row">
+              {[app.stores.ios, app.stores.android].map((s) =>
+                s.url ? (
+                  <a class="btn primary" href={s.url}>{s.label}</a>
+                ) : (
+                  <span class="btn" aria-disabled="true">
+                    {s.label} <small>Coming soon</small>
+                  </span>
+                )
+              )}
+              {app.webApp && <a class="btn" href={app.webApp.url}>{app.webApp.label} →</a>}
+            </div>
+          </div>
+          <Image class="hero-shot" src={hero.src} alt={hero.alt} width={320} loading="eager" />
+        </div>
+      </div>
+    </div>
+
+    <section id="features">
+      <div class="wrap">
+        <h2>Everything in one place</h2>
+        <p class="section-sub">Stop juggling separate apps for training, food, sleep and mood.</p>
+        <div class="features">
+          {app.features.map((f) => (
+            <div class="card">
+              <span class="icon">{f.icon}</span>
+              <h3>{f.title}</h3>
+              <ul>{f.points.map((p) => <li>{p}</li>)}</ul>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    <section id="screens">
+      <div class="wrap">
+        <h2>A look inside</h2>
+        <div class="shots">
+          {app.screenshots.map((s) => (
+            <figure><Image src={s.src} alt={s.alt} width={240} /></figure>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    {app.pricing && (
+      <section id="pricing">
+        <div class="wrap">
+          <h2>Free to start</h2>
+          <p class="section-sub">Upgrade only if you want more. Cancel any time.</p>
+          <div class="pricing">
+            <div class="card plan">
+              <h3>{app.pricing.free.title}</h3>
+              <div class="price">{app.pricing.free.price}</div>
+              <ul>{app.pricing.free.points.map((p) => <li>{p}</li>)}</ul>
+            </div>
+            <div class="card plan featured">
+              <h3>{app.pricing.premium.title}</h3>
+              <div class="price">{app.pricing.premium.price}</div>
+              <ul>{app.pricing.premium.points.map((p) => <li>{p}</li>)}</ul>
+            </div>
+          </div>
+        </div>
+      </section>
+    )}
+
+    <section>
+      <div class="wrap narrow">
+        <div class="notice">{app.notice}</div>
+      </div>
+    </section>
+
+    <section id="faq">
+      <div class="wrap narrow">
+        <h2>Questions</h2>
+        <div class="faq">
+          {app.faqs.map((f) => (
+            <details>
+              <summary>{f.q}</summary>
+              <p>{f.a}</p>
+            </details>
+          ))}
+        </div>
+        <p style="margin-top:24px"><a href={`/${app.slug}/support/`}>More help and contact →</a></p>
+      </div>
+    </section>
+  </main>
+</AppPage>

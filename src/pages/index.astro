@@ -1,0 +1,50 @@
+---
+import { Image } from 'astro:assets';
+import Base from '../layouts/Base.astro';
+import { company } from '../data/company';
+import { apps } from '../data/apps';
+---
+
+<Base title={company.name} description={`${company.name} builds apps that make everyday life a little easier. Meet FitNFree, our AI health companion.`}>
+  <main>
+    <div class="hero">
+      <div class="wrap">
+        <p class="eyebrow">{company.name}</p>
+        <h1>{company.tagline}</h1>
+        <p class="lead">
+          One small team, a growing set of apps. Each one has its own page here with everything you need:
+          what it does, how to get it, and how it looks after your data.
+        </p>
+      </div>
+    </div>
+
+    <section id="apps">
+      <div class="wrap">
+        <h2>Our apps</h2>
+        <p class="section-sub">More are on the way.</p>
+        <div class="app-grid">
+          {apps.map((app) => (
+            <a class="app-card" href={`/${app.slug}/`}>
+              <Image src={app.icon} alt={`${app.name} icon`} width={72} height={72} />
+              <div>
+                <h3>{app.name}</h3>
+                <p>{app.blurb}</p>
+                <span class="go">Learn more →</span>
+              </div>
+            </a>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    <section id="contact">
+      <div class="wrap narrow">
+        <h2>Get in touch</h2>
+        <p class="section-sub">
+          Questions about an app, a privacy or data request, or just want to say hello? Email
+          <a href={`mailto:${company.contactEmail}`}>{company.contactEmail}</a>.
+        </p>
+      </div>
+    </section>
+  </main>
+</Base>

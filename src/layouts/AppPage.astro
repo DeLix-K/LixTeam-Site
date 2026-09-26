@@ -1,0 +1,37 @@
+---
+import { Image } from 'astro:assets';
+import Base from './Base.astro';
+import type { AppInfo } from '../data/types';
+
+interface Props {
+  app: AppInfo;
+  title: string;
+  description: string;
+  current: 'overview' | 'support' | 'privacy' | 'terms' | 'delete-account';
+}
+
+const { app, title, description, current } = Astro.props;
+
+const links = [
+  { key: 'overview', label: 'Overview', href: `/${app.slug}/` },
+  { key: 'support', label: 'Support', href: `/${app.slug}/support/` },
+  { key: 'privacy', label: 'Privacy', href: `/${app.slug}/privacy/` },
+  { key: 'terms', label: 'Terms', href: `/${app.slug}/terms/` },
+  { key: 'delete-account', label: 'Delete account', href: `/${app.slug}/delete-account/` },
+];
+---
+
+<Base title={title} description={description}>
+  <div class="app-nav">
+    <div class="wrap">
+      <a class="app-name" href={`/${app.slug}/`}>
+        <Image src={app.icon} alt="" width={28} height={28} />
+        {app.name}
+      </a>
+      {links.map((l) => (
+        <a class="link" href={l.href} aria-current={current === l.key ? 'page' : undefined}>{l.label}</a>
+      ))}
+    </div>
+  </div>
+  <slot />
+</Base>

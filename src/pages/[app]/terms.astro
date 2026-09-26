@@ -1,0 +1,21 @@
+---
+import AppPage from '../../layouts/AppPage.astro';
+import { apps } from '../../data/apps';
+import type { AppInfo } from '../../data/types';
+
+export function getStaticPaths() {
+  return apps.map((app) => ({ params: { app: app.slug }, props: { app } }));
+}
+
+const { app } = Astro.props as { app: AppInfo };
+---
+
+<AppPage app={app} current="terms" title={`${app.name} Terms & Conditions`} description={`The terms for using ${app.name}.`}>
+  <main class="doc">
+    <div class="wrap narrow">
+      <h1>{app.name} Terms &amp; Conditions</h1>
+      <p class="meta">Effective date: {app.legalEffective.terms}</p>
+      <div set:html={app.legal.terms} />
+    </div>
+  </main>
+</AppPage>

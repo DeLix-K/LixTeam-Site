@@ -1,0 +1,83 @@
+---
+import '../styles/global.css';
+import { company } from '../data/company';
+import { apps } from '../data/apps';
+
+interface Props {
+  title: string;
+  description: string;
+  // Set to hide a page from search engines (e.g. a draft).
+  noindex?: boolean;
+}
+
+const { title, description, noindex = false } = Astro.props;
+const fullTitle = title === company.name ? title : `${title} · ${company.name}`;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{fullTitle}</title>
+    <meta name="description" content={description} />
+    <meta name="theme-color" content="#0a0a0a" />
+    {noindex && <meta name="robots" content="noindex" />}
+    <meta property="og:title" content={fullTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23a3e635'/%3E%3Ctext x='16' y='22' font-family='Arial' font-weight='900' font-size='15' text-anchor='middle' fill='%230a0a0a'%3ELT%3C/text%3E%3C/svg%3E" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="wrap">
+        <a class="brand" href="/">
+          <span class="brand-mark">LT</span>
+          {company.name}
+        </a>
+        <nav class="top-nav" aria-label="Main">
+          <a href="/#apps">Our apps</a>
+          <a href="/#contact">Contact</a>
+        </nav>
+      </div>
+    </header>
+
+    <slot />
+
+    <footer class="site-footer">
+      <div class="wrap">
+        <div class="cols">
+          <div>
+            <h4>{company.name}</h4>
+            <p style="margin:0;max-width:280px">{company.tagline}</p>
+          </div>
+          <div>
+            <h4>Apps</h4>
+            <ul>
+              {apps.map((a) => <li><a href={`/${a.slug}/`}>{a.name}</a></li>)}
+            </ul>
+          </div>
+          <div>
+            <h4>Legal &amp; help</h4>
+            <ul>
+              {apps.map((a) => (
+                <>
+                  <li><a href={`/${a.slug}/privacy/`}>{a.name} Privacy</a></li>
+                  <li><a href={`/${a.slug}/terms/`}>{a.name} Terms</a></li>
+                  <li><a href={`/${a.slug}/support/`}>{a.name} Support</a></li>
+                </>
+              ))}
+            </ul>
+          </div>
+          <div>
+            <h4>Contact</h4>
+            <ul>
+              <li><a href={`mailto:${company.contactEmail}`}>{company.contactEmail}</a></li>
+            </ul>
+          </div>
+        </div>
+        <p class="copyright">© {company.year} {company.name}. All rights reserved.</p>
+      </div>
+    </footer>
+  </body>
+</html>

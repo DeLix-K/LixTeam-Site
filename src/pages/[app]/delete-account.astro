@@ -1,0 +1,21 @@
+---
+import AppPage from '../../layouts/AppPage.astro';
+import { apps } from '../../data/apps';
+import type { AppInfo } from '../../data/types';
+
+export function getStaticPaths() {
+  return apps.map((app) => ({ params: { app: app.slug }, props: { app } }));
+}
+
+const { app } = Astro.props as { app: AppInfo };
+---
+
+<AppPage app={app} current="delete-account" title={`Delete your ${app.name} account`} description={`How to permanently delete your ${app.name} account and data, with or without the app installed.`}>
+  <main class="doc">
+    <div class="wrap narrow">
+      <h1>Delete your {app.name} account</h1>
+      <p class="meta">Effective date: {app.legalEffective.deleteAccount}</p>
+      <div set:html={app.legal.deleteAccount} />
+    </div>
+  </main>
+</AppPage>

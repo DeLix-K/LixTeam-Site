@@ -1,0 +1,21 @@
+---
+import AppPage from '../../layouts/AppPage.astro';
+import { apps } from '../../data/apps';
+import type { AppInfo } from '../../data/types';
+
+export function getStaticPaths() {
+  return apps.map((app) => ({ params: { app: app.slug }, props: { app } }));
+}
+
+const { app } = Astro.props as { app: AppInfo };
+---
+
+<AppPage app={app} current="privacy" title={`${app.name} Privacy Policy`} description={`How ${app.name} collects, uses and protects your data.`}>
+  <main class="doc">
+    <div class="wrap narrow">
+      <h1>{app.name} Privacy Policy</h1>
+      <p class="meta">Effective date: {app.legalEffective.privacy}</p>
+      <div set:html={app.legal.privacy} />
+    </div>
+  </main>
+</AppPage>
