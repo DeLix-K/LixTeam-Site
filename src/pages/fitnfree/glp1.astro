@@ -179,18 +179,18 @@ const ideas = [
     button.textContent = 'Joining…';
 
     try {
-      // on_conflict + ignore-duplicates: signing up twice is a quiet no-op, and
-      // the response is the same either way, so this can't be used to check
-      // whether an address has already signed up.
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/waitlist_signups?on_conflict=list,email`, {
+      // One narrow database function does the insert (see FitNFree repo:
+      // supabase/waitlist_signups.sql). Signing up twice is a quiet no-op and
+      // the response is identical, so this can't be used to check whether an
+      // address has already signed up.
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/join_waitlist`, {
         method: 'POST',
         headers: {
           apikey: SUPABASE_ANON_KEY,
           Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
           'Content-Type': 'application/json',
-          Prefer: 'resolution=ignore-duplicates,return=minimal',
         },
-        body: JSON.stringify({ list: LIST, email, interest, source: src }),
+        body: JSON.stringify({ p_list: LIST, p_email: email, p_interest: interest, p_source: src }),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       showDone();
