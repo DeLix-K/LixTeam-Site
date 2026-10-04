@@ -1,0 +1,204 @@
+---
+import AppPage from '../../layouts/AppPage.astro';
+import { getApp } from '../../data/apps';
+import { company } from '../../data/company';
+
+const app = getApp('fitnfree')!;
+
+const ideas = [
+  {
+    icon: '🥩',
+    title: 'Protein-first daily targets',
+    text: 'Targets built around protein and your own stats, with the food logging FitNFree already has: search, photo and barcode.',
+  },
+  {
+    icon: '🏋️',
+    title: 'A strength plan you can keep up',
+    text: 'Home or gym plans, with streaks that forgive a bad week instead of resetting you.',
+  },
+  {
+    icon: '📝',
+    title: 'Appetite and side-effect check-ins',
+    text: 'Quick daily notes on appetite, nausea and energy, so you have something concrete to show your clinician.',
+  },
+  {
+    icon: '⏰',
+    title: 'Reminders you set yourself',
+    text: 'A reminder for your own injection day or meals. It never suggests or changes a dose.',
+  },
+];
+---
+
+<AppPage
+  app={app}
+  current="none"
+  noindex
+  title="GLP-1 mode: join the waitlist"
+  description="An idea we are exploring for FitNFree: protein targets, a strength plan and appetite check-ins for people on GLP-1 medication. Join the waitlist to tell us you want it."
+>
+  <main>
+    <div class="hero">
+      <div class="wrap narrow">
+        <p class="eyebrow">{app.name} · An early idea</p>
+        <h1>Protein and strength support for people on GLP-1 medication.</h1>
+        <p class="lead">
+          Eating less is the point of these medications. But many people also want to keep their strength and
+          make sure they are getting enough protein while the weight comes off. Today that usually means a
+          medication tracker, a food tracker and a workout app. We are exploring putting it all in one place
+          inside {app.name}.
+        </p>
+      </div>
+    </div>
+
+    <section id="ideas">
+      <div class="wrap narrow">
+        <h2>What GLP-1 mode could include</h2>
+        <p class="section-sub">None of this is built yet. This is what we would build first.</p>
+        <div class="features one-col">
+          {ideas.map((i) => (
+            <div class="card">
+              <span class="icon">{i.icon}</span>
+              <h3>{i.title}</h3>
+              <p class="card-text">{i.text}</p>
+            </div>
+          ))}
+        </div>
+
+        <h3 class="not-title">What it will not do</h3>
+        <ul class="not-list">
+          <li>It is not medical advice, and it does not replace your doctor, pharmacist or dietitian.</li>
+          <li>It will never recommend, change or track a dose, or tell you to start or stop a medication.</li>
+          <li>It is not affiliated with any maker of these medications.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="join">
+      <div class="wrap narrow">
+        <div class="form-card">
+          <h2>Want this? Join the waitlist.</h2>
+          <p class="section-sub">
+            This page is a demand check. If enough people want it, we will build it and email you once when
+            it is ready. If not, we will not.
+          </p>
+
+          <form id="waitlist-form" novalidate>
+            <div class="field">
+              <label for="email">Email</label>
+              <input id="email" name="email" type="email" inputmode="email" autocomplete="email" maxlength="254" required placeholder="you@example.com" />
+            </div>
+
+            <div class="field">
+              <label for="interest">What would help you most? <span class="optional">(optional)</span></label>
+              <select id="interest" name="interest">
+                <option value="">Choose one</option>
+                <option value="protein-targets">Protein targets</option>
+                <option value="strength-plan">A strength workout plan</option>
+                <option value="appetite-tracking">Appetite and side-effect check-ins</option>
+                <option value="reminders">Reminders</option>
+                <option value="other">Something else</option>
+              </select>
+            </div>
+
+            <!-- Honeypot: real people never see or fill this in. -->
+            <div class="hp" aria-hidden="true">
+              <label for="website">Leave this field empty</label>
+              <input id="website" name="website" type="text" tabindex="-1" autocomplete="off" />
+            </div>
+
+            <button class="btn primary" type="submit">Join the waitlist</button>
+            <p id="waitlist-status" class="form-status" role="status" aria-live="polite"></p>
+          </form>
+
+          <p id="waitlist-done" class="form-done" hidden>
+            ✓ You are on the list. Thank you. We will email you once, if and when GLP-1 mode is ready.
+          </p>
+
+          <p class="fine">
+            We use your email only to tell you about GLP-1 mode, and possibly to ask one question about what you
+            would want from it. We do not sell or share it. To be removed, email
+            <a href={`mailto:${company.contactEmail}`}>{company.contactEmail}</a>. See the
+            <a href={`/${app.slug}/privacy/`}>Privacy Policy</a>.
+          </p>
+        </div>
+
+        <div class="notice" style="margin-top:28px">
+          {app.name} gives general fitness and wellness information. It is not medical advice and does not
+          replace your doctor, pharmacist or dietitian. Speak to your prescriber before changing your diet or
+          exercise routine while taking any medication.
+        </div>
+      </div>
+    </section>
+  </main>
+</AppPage>
+
+<script>
+  import { SUPABASE_URL, SUPABASE_ANON_KEY } from '../../data/waitlist';
+
+  const LIST = 'fitnfree-glp1';
+  const form = document.getElementById('waitlist-form') as HTMLFormElement;
+  const status = document.getElementById('waitlist-status') as HTMLElement;
+  const done = document.getElementById('waitlist-done') as HTMLElement;
+  const button = form.querySelector('button[type="submit"]') as HTMLButtonElement;
+
+  // Which link brought them here (?src=reddit, ?src=friend...), so the demand
+  // test can tell channels apart. Reduced to the shape the database accepts.
+  const src =
+    (new URLSearchParams(location.search).get('src') ?? '')
+      .toLowerCase()
+      .replace(/[^a-z0-9_-]/g, '')
+      .slice(0, 60) || null;
+
+  function showDone() {
+    form.hidden = true;
+    done.hidden = false;
+  }
+
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    status.textContent = '';
+    status.className = 'form-status';
+
+    const data = new FormData(form);
+
+    // Filled-in honeypot means a bot. Look successful and send nothing.
+    if (String(data.get('website') ?? '').length > 0) {
+      showDone();
+      return;
+    }
+
+    const email = String(data.get('email') ?? '').trim().toLowerCase();
+    if (email.length > 254 || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+      status.textContent = 'Please enter a valid email address.';
+      status.className = 'form-status error';
+      return;
+    }
+    const interest = String(data.get('interest') ?? '').slice(0, 200) || null;
+
+    button.disabled = true;
+    button.textContent = 'Joining…';
+
+    try {
+      // One narrow database function does the insert (see FitNFree repo:
+      // supabase/waitlist_signups.sql). Signing up twice is a quiet no-op and
+      // the response is identical, so this can't be used to check whether an
+      // address has already signed up.
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/join_waitlist`, {
+        method: 'POST',
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ p_list: LIST, p_email: email, p_interest: interest, p_source: src }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      showDone();
+    } catch {
+      status.textContent = `Sorry, that did not work. Please try again, or email teamlix6@gmail.com.`;
+      status.className = 'form-status error';
+      button.disabled = false;
+      button.textContent = 'Join the waitlist';
+    }
+  });
+</script>

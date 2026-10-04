@@ -144,3 +144,29 @@ h2 { font-size: clamp(26px, 4vw, 36px); margin: 0 0 12px; letter-spacing: -0.5px
 @media (max-width: 640px) {
   .doc table { display: block; overflow-x: auto; }
 }
+
+/* ── Waitlist page ───────────────────────── */
+.features.one-col { grid-template-columns: 1fr; }
+.card-text { margin: 0; color: var(--muted); font-size: 15px; }
+.not-title { margin: 32px 0 8px; font-size: 18px; }
+.not-list { margin: 0; padding-left: 20px; color: var(--muted); font-size: 15px; }
+.not-list li { margin-bottom: 6px; }
+
+.form-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; }
+.form-card h2 { font-size: clamp(22px, 3.4vw, 28px); }
+.field { margin-bottom: 18px; }
+.field label { display: block; font-weight: 700; font-size: 14px; margin-bottom: 6px; }
+.field .optional { color: var(--muted); font-weight: 400; }
+.field input, .field select { width: 100%; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 16px; font-family: inherit; }
+.field input:focus, .field select:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+.hp { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
+.form-card button.btn { width: 100%; justify-content: center; cursor: pointer; font-family: inherit; }
+.form-card button.btn:disabled { opacity: 0.6; cursor: default; }
+.form-status { min-height: 1.4em; margin: 12px 0 0; font-size: 14px; color: var(--muted); }
+.form-status.error { color: #fca5a5; }
+.form-done { margin: 8px 0 0; padding: 16px 18px; border-radius: 12px; border: 1px solid var(--accent); color: var(--text); font-weight: 600; }
+.fine { margin: 20px 0 0; font-size: 13px; color: var(--muted); }
+
+/* Keep app-nav items at their natural width so a narrow phone scrolls the row
+   sideways instead of squeezing the logo text into the next link. */
+.app-nav .app-name, .app-nav a.link { flex-shrink: 0; }

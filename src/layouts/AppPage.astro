@@ -7,10 +7,12 @@ interface Props {
   app: AppInfo;
   title: string;
   description: string;
-  current: 'overview' | 'support' | 'privacy' | 'terms' | 'delete-account';
+  // 'none' for pages that live under an app but aren't one of the tabs below.
+  current: 'overview' | 'support' | 'privacy' | 'terms' | 'delete-account' | 'none';
+  noindex?: boolean;
 }
 
-const { app, title, description, current } = Astro.props;
+const { app, title, description, current, noindex = false } = Astro.props;
 
 const links = [
   { key: 'overview', label: 'Overview', href: `/${app.slug}/` },
@@ -21,7 +23,7 @@ const links = [
 ];
 ---
 
-<Base title={title} description={description}>
+<Base title={title} description={description} noindex={noindex}>
   <div class="app-nav">
     <div class="wrap">
       <a class="app-name" href={`/${app.slug}/`}>
