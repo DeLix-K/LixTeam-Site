@@ -7,50 +7,97 @@ const PRODUCT = 'Opportunity Radar';
 
 const reports = [
   {
+    icon: '🧲',
+    title: 'Everything in one place',
+    text: 'Search trends, app-store and review-site feedback, public forums and communities, and video comments, pulled together and read as one picture. Today that means a dozen tabs and several different AI tools.',
+  },
+  {
+    icon: '🔎',
+    title: 'What people are searching for',
+    text: 'Rising searches and questions, shown next to the complaints and reviews, so you can see demand and frustration together.',
+  },
+  {
+    icon: '🧩',
+    title: 'What is missing from products',
+    text: 'The gaps in competitors\' products and in your own. Bring your own customer feedback (support tickets, survey exports, reviews) and see how it compares with what the rest of the market says.',
+  },
+  {
     icon: '🎯',
     title: 'Ranked opportunities, with the reason',
-    text: 'The gaps in a market, ranked, each with a plain explanation of why it exists and how strong the signal is.',
+    text: 'Each opportunity comes with a plain explanation of why it exists and how strong the signal is, so you can see where the growth might be.',
   },
   {
     icon: '🔗',
     title: 'A source behind every claim',
-    text: 'Each finding links to the real review, post or comment it came from, so you can check it before it goes in front of a client.',
+    text: 'Each finding links to the real review, post or comment it came from, so you can check it before you act on it or show it to anyone.',
   },
   {
     icon: '🧭',
-    title: 'What to do next',
-    text: 'Not just "customers dislike X": a short list of moves worth testing, such as a feature, a message or an offer.',
+    title: 'What to do next, and what changed',
+    text: 'A short list of moves worth testing, such as a feature, a message or an offer. A monthly re-scan then shows what changed: new complaints, rising topics, competitors getting better or worse.',
+  },
+];
+
+const outputs = [
+  {
+    icon: '💡',
+    title: 'Business, app and software ideas',
+    prompt: '"What are people in pet care complaining about that nobody sells a good answer to?"',
   },
   {
-    icon: '🔁',
-    title: 'A monthly re-scan',
-    text: 'The same report re-run every month, showing what changed: new complaints, rising topics, and competitors getting better or worse.',
+    icon: '🧩',
+    title: 'Product gaps',
+    prompt: '"What do customers of my competitors wish their app did? How does that compare with my own reviews?"',
+  },
+  {
+    icon: '📱',
+    title: 'Social media niches',
+    prompt: '"Which home-fitness topics are growing in searches but have few creators covering them?"',
+  },
+];
+
+const audiences = [
+  {
+    icon: '🧑‍💻',
+    title: 'Individuals and founders',
+    text: 'Looking for a business, app, software or content niche worth going after, without ploughing through search engines, platforms and AI tools one by one.',
+  },
+  {
+    icon: '🏪',
+    title: 'Startups and small to mid-size businesses',
+    text: 'Wanting to see what their customers search for and complain about, what is missing from their own product, and where to grow next.',
+  },
+  {
+    icon: '🏢',
+    title: 'Larger businesses, agencies and consultants',
+    text: 'Tracking many products, markets or clients at once, with the evidence behind every finding.',
   },
 ];
 ---
 
 <Base
   title={`${PRODUCT}: join the waitlist`}
-  description="An early idea from LixTeam: evidence-backed competitor gap reports for agencies and consultants. Tell us if you would use it."
+  description="An early idea from LixTeam: one place to find business, app and software ideas, product gaps and niches, from what people search for and say, with the evidence attached. Tell us if you would use it."
   noindex
 >
   <main>
     <div class="hero">
       <div class="wrap narrow">
         <p class="eyebrow">{company.name} · An early idea</p>
-        <h1>Find out what your clients' customers are missing, with the evidence attached.</h1>
+        <h1>One place to see what people want, what is missing, and where the opportunities are.</h1>
         <p class="lead">
-          Today that means hours of reading reviews, forums and search trends, then guessing which complaints
-          matter. We are exploring a tool that pulls those sources together, ranks the gaps it finds, links
-          every claim to where it came from, and suggests what to do next. We are starting with agencies and
-          consultants who do this research for clients.
+          Finding a business idea, a product gap or a niche today means jumping between search engines, review
+          sites, forums, trend tools and different AI tools, then guessing which signals matter. We are exploring
+          one platform that pulls those sources together, ranks the opportunities it finds, links every claim to
+          where it came from, and suggests what to do next. You could type what you want to know and choose how
+          you want it back.
         </p>
       </div>
     </div>
 
     <section id="ideas">
       <div class="wrap narrow">
-        <h2>What a {PRODUCT} report could contain</h2>
+        <h2>What {PRODUCT} could do</h2>
         <p class="section-sub">None of this is built yet. This is what we would build first.</p>
         <div class="features one-col">
           {reports.map((r) => (
@@ -61,6 +108,34 @@ const reports = [
             </div>
           ))}
         </div>
+
+        <h3 class="not-title">Ask for what you need</h3>
+        <p class="section-sub">
+          Type a question and choose how you want the answer. For example:
+        </p>
+        <div class="features one-col">
+          {outputs.map((o) => (
+            <div class="card">
+              <span class="icon">{o.icon}</span>
+              <h3>{o.title}</h3>
+              <p class="card-text">{o.prompt}</p>
+            </div>
+          ))}
+        </div>
+
+        <h3 class="not-title">Who it could be for</h3>
+        <div class="features one-col">
+          {audiences.map((a) => (
+            <div class="card">
+              <span class="icon">{a.icon}</span>
+              <h3>{a.title}</h3>
+              <p class="card-text">{a.text}</p>
+            </div>
+          ))}
+        </div>
+        <p class="section-sub" style="margin-top:16px">
+          We are testing who needs this most first. Tell us which one describes you below.
+        </p>
 
         <h3 class="not-title">What it will not do</h3>
         <ul class="not-list">
@@ -90,10 +165,12 @@ const reports = [
               <label for="role">What best describes you? <span class="optional">(optional)</span></label>
               <select id="role" name="role">
                 <option value="">Choose one</option>
+                <option value="founder">Individual, founder or indie builder</option>
+                <option value="startup-smb">Startup or small to mid-size business</option>
+                <option value="enterprise">Larger business</option>
+                <option value="product-team">In-house product or marketing team</option>
                 <option value="agency">Marketing or growth agency</option>
                 <option value="consultant">Independent consultant</option>
-                <option value="product-team">In-house product or marketing team</option>
-                <option value="founder">Founder or indie builder</option>
                 <option value="other">Something else</option>
               </select>
             </div>
