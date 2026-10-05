@@ -170,3 +170,6 @@ h2 { font-size: clamp(26px, 4vw, 36px); margin: 0 0 12px; letter-spacing: -0.5px
 /* Keep app-nav items at their natural width so a narrow phone scrolls the row
    sideways instead of squeezing the logo text into the next link. */
 .app-nav .app-name, .app-nav a.link { flex-shrink: 0; }
+
+.field.check label { display: flex; gap: 10px; align-items: flex-start; font-weight: 400; font-size: 15px; color: var(--muted); cursor: pointer; }
+.field.check input { width: 18px; height: 18px; margin-top: 2px; flex-shrink: 0; accent-color: var(--accent); }

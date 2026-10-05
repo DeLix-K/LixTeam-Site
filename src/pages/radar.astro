@@ -1,0 +1,239 @@
+---
+import Base from '../layouts/Base.astro';
+import { company } from '../data/company';
+
+// Working name. Change it here and the page follows.
+const PRODUCT = 'Opportunity Radar';
+
+const reports = [
+  {
+    icon: '🎯',
+    title: 'Ranked opportunities, with the reason',
+    text: 'The gaps in a market, ranked, each with a plain explanation of why it exists and how strong the signal is.',
+  },
+  {
+    icon: '🔗',
+    title: 'A source behind every claim',
+    text: 'Each finding links to the real review, post or comment it came from, so you can check it before it goes in front of a client.',
+  },
+  {
+    icon: '🧭',
+    title: 'What to do next',
+    text: 'Not just "customers dislike X": a short list of moves worth testing, such as a feature, a message or an offer.',
+  },
+  {
+    icon: '🔁',
+    title: 'A monthly re-scan',
+    text: 'The same report re-run every month, showing what changed: new complaints, rising topics, and competitors getting better or worse.',
+  },
+];
+---
+
+<Base
+  title={`${PRODUCT}: join the waitlist`}
+  description="An early idea from LixTeam: evidence-backed competitor gap reports for agencies and consultants. Tell us if you would use it."
+  noindex
+>
+  <main>
+    <div class="hero">
+      <div class="wrap narrow">
+        <p class="eyebrow">{company.name} · An early idea</p>
+        <h1>Find out what your clients' customers are missing, with the evidence attached.</h1>
+        <p class="lead">
+          Today that means hours of reading reviews, forums and search trends, then guessing which complaints
+          matter. We are exploring a tool that pulls those sources together, ranks the gaps it finds, links
+          every claim to where it came from, and suggests what to do next. We are starting with agencies and
+          consultants who do this research for clients.
+        </p>
+      </div>
+    </div>
+
+    <section id="ideas">
+      <div class="wrap narrow">
+        <h2>What a {PRODUCT} report could contain</h2>
+        <p class="section-sub">None of this is built yet. This is what we would build first.</p>
+        <div class="features one-col">
+          {reports.map((r) => (
+            <div class="card">
+              <span class="icon">{r.icon}</span>
+              <h3>{r.title}</h3>
+              <p class="card-text">{r.text}</p>
+            </div>
+          ))}
+        </div>
+
+        <h3 class="not-title">What it will not do</h3>
+        <ul class="not-list">
+          <li>It will not prove an idea will sell. Complaints are a signal, not a promise. You still need to talk to real customers.</li>
+          <li>It will not invent findings. If the evidence is thin, the report will say so.</li>
+          <li>It will not use private groups or accounts. It works from public sources and data you give us.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="join">
+      <div class="wrap narrow">
+        <div class="form-card">
+          <h2>Would you use this? Tell us.</h2>
+          <p class="section-sub">
+            This page is a demand check. Nothing is charged and nothing is for sale yet. If enough people want
+            it, we will build it and email you once when it is ready. If not, we will not.
+          </p>
+
+          <form id="waitlist-form" novalidate>
+            <div class="field">
+              <label for="email">Email</label>
+              <input id="email" name="email" type="email" inputmode="email" autocomplete="email" maxlength="254" required placeholder="you@example.com" />
+            </div>
+
+            <div class="field">
+              <label for="role">What best describes you? <span class="optional">(optional)</span></label>
+              <select id="role" name="role">
+                <option value="">Choose one</option>
+                <option value="agency">Marketing or growth agency</option>
+                <option value="consultant">Independent consultant</option>
+                <option value="product-team">In-house product or marketing team</option>
+                <option value="founder">Founder or indie builder</option>
+                <option value="other">Something else</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="niche">Which industry or market would you research first? <span class="optional">(optional)</span></label>
+              <input id="niche" name="niche" type="text" maxlength="80" placeholder="e.g. restaurants, SaaS, pet products" />
+            </div>
+
+            <div class="field">
+              <label for="price">If it worked as described, what monthly price would feel fair? <span class="optional">(optional)</span></label>
+              <select id="price" name="price">
+                <option value="">Choose one</option>
+                <option value="under-30">Under $30</option>
+                <option value="30-60">$30 to $60</option>
+                <option value="60-120">$60 to $120</option>
+                <option value="120-250">$120 to $250</option>
+                <option value="250-plus">More than $250</option>
+                <option value="would-not-pay">I would not pay for this</option>
+              </select>
+            </div>
+
+            <div class="field check">
+              <label for="sample">
+                <input id="sample" name="sample" type="checkbox" />
+                <span>I would like to be considered for a free sample report on one competitor.</span>
+              </label>
+            </div>
+
+            <!-- Honeypot: real people never see or fill this in. -->
+            <div class="hp" aria-hidden="true">
+              <label for="website">Leave this field empty</label>
+              <input id="website" name="website" type="text" tabindex="-1" autocomplete="off" />
+            </div>
+
+            <button class="btn primary" type="submit">Join the waitlist</button>
+            <p id="waitlist-status" class="form-status" role="status" aria-live="polite"></p>
+          </form>
+
+          <p id="waitlist-done" class="form-done" hidden>
+            ✓ Thank you. You are on the list. We will email you once, if and when {PRODUCT} is ready.
+          </p>
+
+          <p class="fine">
+            We store your email, your answers above, which link you arrived from, and the date. We use them only
+            to tell you about {PRODUCT} and possibly to ask you a question or two about it. If you ticked the
+            sample-report box, we may email you to arrange it. We do not sell or share your details or add you to
+            any other list. To be removed, email
+            <a href={`mailto:${company.contactEmail}`}>{company.contactEmail}</a> and we will delete them.
+          </p>
+        </div>
+      </div>
+    </section>
+  </main>
+</Base>
+
+<script>
+  import { SUPABASE_URL, SUPABASE_ANON_KEY } from '../data/waitlist';
+
+  const LIST = 'opportunity-radar';
+  const form = document.getElementById('waitlist-form') as HTMLFormElement;
+  const status = document.getElementById('waitlist-status') as HTMLElement;
+  const done = document.getElementById('waitlist-done') as HTMLElement;
+  const button = form.querySelector('button[type="submit"]') as HTMLButtonElement;
+
+  // Which link brought them here (?src=linkedin, ?src=friend...), so the demand
+  // test can tell channels apart. Reduced to the shape the database accepts.
+  const src =
+    (new URLSearchParams(location.search).get('src') ?? '')
+      .toLowerCase()
+      .replace(/[^a-z0-9_-]/g, '')
+      .slice(0, 60) || null;
+
+  function showDone() {
+    form.hidden = true;
+    done.hidden = false;
+  }
+
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    status.textContent = '';
+    status.className = 'form-status';
+
+    const data = new FormData(form);
+
+    // Filled-in honeypot means a bot. Look successful and send nothing.
+    if (String(data.get('website') ?? '').length > 0) {
+      showDone();
+      return;
+    }
+
+    const email = String(data.get('email') ?? '').trim().toLowerCase();
+    if (email.length > 254 || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+      status.textContent = 'Please enter a valid email address.';
+      status.className = 'form-status error';
+      return;
+    }
+
+    // The database has one free-text column for answers, so pack them as
+    // "role=agency; price=30-60; sample=yes; niche=restaurants". The select
+    // values are fixed slugs; the free-text niche is cleaned and length-capped
+    // so the whole string stays well under the 200-character limit.
+    const pick = (name: string) => String(data.get(name) ?? '').replace(/[^a-z0-9-]/g, '').slice(0, 20);
+    const niche = String(data.get('niche') ?? '')
+      .replace(/[;=\u0000-\u001f]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 80);
+    const parts = [
+      pick('role') && `role=${pick('role')}`,
+      pick('price') && `price=${pick('price')}`,
+      data.get('sample') && 'sample=yes',
+      niche && `niche=${niche}`,
+    ].filter(Boolean);
+    const interest = parts.join('; ').slice(0, 200) || null;
+
+    button.disabled = true;
+    button.textContent = 'Joining…';
+
+    try {
+      // One narrow database function does the insert (see FitNFree repo:
+      // supabase/waitlist_signups.sql). Signing up twice is a quiet no-op and
+      // the response is identical, so this can't be used to check whether an
+      // address has already signed up.
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/join_waitlist`, {
+        method: 'POST',
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ p_list: LIST, p_email: email, p_interest: interest, p_source: src }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      showDone();
+    } catch {
+      status.textContent = `Sorry, that did not work. Please try again, or email teamlix6@gmail.com.`;
+      status.className = 'form-status error';
+      button.disabled = false;
+      button.textContent = 'Join the waitlist';
+    }
+  });
+</script>
