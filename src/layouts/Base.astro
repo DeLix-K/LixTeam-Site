@@ -2,15 +2,20 @@
 import '../styles/global.css';
 import { company } from '../data/company';
 import { apps } from '../data/apps';
+import Analytics from '@vercel/analytics/astro';
 
 interface Props {
   title: string;
   description: string;
   // Set to hide a page from search engines (e.g. a draft).
   noindex?: boolean;
+  // Cookieless visit counts (Vercel Web Analytics). Off by default: only the
+  // waitlist demand-test pages turn it on, so the rest of the site, including
+  // the legal pages, is not tracked.
+  analytics?: boolean;
 }
 
-const { title, description, noindex = false } = Astro.props;
+const { title, description, noindex = false, analytics = false } = Astro.props;
 const fullTitle = title === company.name ? title : `${title} · ${company.name}`;
 ---
 
@@ -23,6 +28,7 @@ const fullTitle = title === company.name ? title : `${title} · ${company.name}`
     <meta name="description" content={description} />
     <meta name="theme-color" content="#0a0a0a" />
     {noindex && <meta name="robots" content="noindex" />}
+    {analytics && <Analytics />}
     <meta property="og:title" content={fullTitle} />
     <meta property="og:description" content={description} />
     <meta property="og:type" content="website" />

@@ -12,7 +12,7 @@ interface Props {
   noindex?: boolean;
 }
 
-const { app, title, description, current, noindex = false } = Astro.props;
+const { app, title, description, current, noindex = false, analytics = false } = Astro.props;
 
 const links = [
   { key: 'overview', label: 'Overview', href: `/${app.slug}/` },
@@ -23,7 +23,7 @@ const links = [
 ];
 ---
 
-<Base title={title} description={description} noindex={noindex}>
+<Base title={title} description={description} noindex={noindex} analytics={analytics}>
   <div class="app-nav">
     <div class="wrap">
       <a class="app-name" href={`/${app.slug}/`}>
