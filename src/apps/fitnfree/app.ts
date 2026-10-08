@@ -175,8 +175,8 @@ export const fitnfree: AppInfo = {
   },
   legal: { privacy, terms, deleteAccount },
   legalEffective: {
-    privacy: 'October 4, 2026',
-    terms: 'September 26, 2026',
+    privacy: 'October 8, 2026',
+    terms: 'October 8, 2026',
     deleteAccount: 'September 26, 2026',
   },
 };
