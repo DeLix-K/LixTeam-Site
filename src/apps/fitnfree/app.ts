@@ -105,12 +105,13 @@ export const fitnfree: AppInfo = {
     },
     premium: {
       title: 'Premium',
-      price: '$8.99 / month',
+      price: '£8.99 / month',
       points: [
         'Unlimited AI Coach and scans',
         'The full library of programmes and courses, with new content added regularly',
         'Deeper insights',
         'Extra streak protection',
+        'UK price shown. Prices vary by country; the exact price appears in the app before you subscribe.',
       ],
     },
   },
