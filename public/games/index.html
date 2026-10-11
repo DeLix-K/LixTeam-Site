@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Cyber Range · LixTeam</title>
+  <meta name="description" content="Free cyber security training games: spot phishing, investigate incidents and build real skills. No sign-up, no tracking." />
+  <meta name="theme-color" content="#0a0a0a" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23a3e635'/%3E%3Ctext x='16' y='22' font-family='Arial' font-weight='900' font-size='15' text-anchor='middle' fill='%230a0a0a'%3ELT%3C/text%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="shared.css" />
+  <link rel="stylesheet" href="hub.css" />
+</head>
+<body>
+  <header class="top">
+    <a class="back" href="/">← LixTeam</a>
+    <span class="title">Cyber Range</span>
+    <span class="spacer" aria-hidden="true"></span>
+  </header>
+
+  <main id="hub">
+    <section class="screen" aria-labelledby="hub-h">
+      <p class="eyebrow">Free security training games</p>
+      <h1 id="hub-h">Train like an <span class="accent-text">analyst.</span></h1>
+      <p class="lead">Short, hands-on scenarios that build real instincts for spotting scams and handling incidents. No sign-up. Your progress stays on this device.</p>
+
+      <div class="profile" aria-label="Your progress">
+        <div class="lvl"><span class="lvl-num" id="p-level">1</span><small>level</small></div>
+        <div class="xpbar">
+          <div class="xp-top"><span id="p-xp">0 XP</span><span id="p-next"></span></div>
+          <div class="progress"><div id="p-bar"></div></div>
+        </div>
+        <div class="streak"><span id="p-streak">0</span><small>day streak</small></div>
+      </div>
+
+      <div class="daily" id="daily">
+        <div>
+          <h2>Daily mission</h2>
+          <p id="daily-text">Five quick emails. About two minutes.</p>
+        </div>
+        <a class="btn primary big" id="daily-btn" href="phish-or-legit/?mode=daily">Start</a>
+      </div>
+
+      <h2 class="sec">Game modes</h2>
+      <div class="modes" id="modes"></div>
+
+      <h2 class="sec">Your skills</h2>
+      <p class="section-sub" id="skills-sub">Play a few rounds and your strengths will show here.</p>
+      <div class="skills" id="skills"></div>
+
+      <p class="fine">
+        Everything here is fictional and for learning. Progress is saved only in this browser.
+        <button class="linklike" id="reset-btn" type="button">Reset my progress</button>
+      </p>
+    </section>
+  </main>
+
+  <script type="module" src="hub.js"></script>
+</body>
+</html>

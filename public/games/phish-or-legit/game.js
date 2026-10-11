@@ -1,8 +1,10 @@
 import { SCENARIOS } from './scenarios.js';
+import * as profile from '../core/profile.js';
 
-const ROUNDS = 10;
 const LIVES = 3;
 const BEST_KEY = 'lixteam.phishOrLegit.best';
+const DAILY = new URLSearchParams(location.search).get('mode') === 'daily';
+const ROUNDS = DAILY ? 5 : 10;
 
 const $ = (id) => document.getElementById(id);
 const screens = { start: $('screen-start'), play: $('screen-play'), end: $('screen-end') };
@@ -44,12 +46,21 @@ function shuffle(list) {
   return a;
 }
 
-// A mix of four to six scams per round, so the answer is never a pattern.
+// A normal round mixes four to six scams so the answer is never a pattern.
 function buildRound() {
   const phishCount = 4 + Math.floor(Math.random() * 3);
   const phish = shuffle(SCENARIOS.filter((s) => s.kind === 'phish')).slice(0, phishCount);
   const legit = shuffle(SCENARIOS.filter((s) => s.kind === 'legit')).slice(0, ROUNDS - phishCount);
   return shuffle([...phish, ...legit]);
+}
+
+// The daily mission starts with ideas the player missed before and are due
+// again, then fills the rest with fresh emails.
+function buildDaily() {
+  const due = profile.dueItems().map((id) => SCENARIOS.find((s) => s.id === id)).filter(Boolean);
+  const picked = due.slice(0, ROUNDS);
+  const rest = shuffle(SCENARIOS.filter((s) => !picked.includes(s)));
+  return shuffle([...picked, ...rest.slice(0, ROUNDS - picked.length)]);
 }
 
 let game = null;
@@ -62,15 +73,21 @@ function show(name) {
 function renderLives() {
   const wrap = $('hud-lives');
   wrap.replaceChildren();
+  if (DAILY) return; // the daily mission is for learning: no lives
   for (let i = 0; i < LIVES; i++) wrap.append(h('span', { class: i < game.lives ? 'pip' : 'pip lost' }));
   wrap.setAttribute('aria-label', `${game.lives} ${game.lives === 1 ? 'life' : 'lives'} left`);
 }
 
 function renderHud() {
-  $('hud-round').textContent = `Email ${Math.min(game.index + 1, ROUNDS)} of ${ROUNDS}`;
+  $('hud-round').textContent = `${DAILY ? 'Mission' : 'Email'} ${Math.min(game.index + 1, ROUNDS)} of ${ROUNDS}`;
   $('hud-score').textContent = String(game.score);
   $('progress-bar').style.width = `${(game.index / ROUNDS) * 100}%`;
   renderLives();
+}
+
+function selectedConfidence() {
+  const r = document.querySelector('input[name="conf"]:checked');
+  return r ? r.value : 'fairly';
 }
 
 function renderEmail(s) {
@@ -105,14 +122,12 @@ function renderEmail(s) {
   const attach = $('mail-attach');
   attach.replaceChildren();
   if (s.attachment) {
-    attach.append(
-      h('span', { class: 'attach' }, h('small', { text: 'Attachment' }), h('span', { text: s.attachment }))
-    );
+    attach.append(h('span', { class: 'attach' }, h('small', { text: 'Attachment' }), h('span', { text: s.attachment })));
   }
 
   $('link-preview').hidden = true;
   $('feedback').hidden = true;
-  $('answers').hidden = false;
+  $('answer-area').hidden = false;
   $('ans-legit').disabled = false;
   $('ans-phish').disabled = false;
   game.shownAt = performance.now();
@@ -120,7 +135,12 @@ function renderEmail(s) {
 }
 
 function startGame() {
-  game = { queue: buildRound(), index: 0, score: 0, lives: LIVES, streak: 0, bestStreak: 0, correct: 0, missed: [], answered: false };
+  profile.load();
+  game = {
+    queue: DAILY ? buildDaily() : buildRound(),
+    index: 0, score: 0, lives: LIVES, streak: 0, bestStreak: 0, correct: 0, missed: [],
+    xp: 0, certainWrong: 0, certainRight: 0, answered: false,
+  };
   show('play');
   renderHud();
   renderEmail(game.queue[0]);
@@ -133,19 +153,31 @@ function answer(choice) {
   const s = game.queue[game.index];
   const right = choice === s.kind;
   const seconds = (performance.now() - game.shownAt) / 1000;
+  const confId = selectedConfidence();
+  const conf = profile.CONFIDENCE.find((c) => c.id === confId);
 
+  let xpGain;
   if (right) {
     const streakBonus = Math.min(game.streak, 5) * 10;
     const speedBonus = Math.max(0, 50 - Math.floor(seconds * 3));
-    game.score += 100 + streakBonus + speedBonus;
+    game.score += 100 + streakBonus + speedBonus + conf.bonus;
     game.streak += 1;
     game.bestStreak = Math.max(game.bestStreak, game.streak);
     game.correct += 1;
+    if (confId === 'certain') game.certainRight += 1;
+    xpGain = 10 + conf.xp;
   } else {
     game.streak = 0;
-    game.lives -= 1;
+    if (!DAILY) game.lives -= 1;
     game.missed.push(s);
+    if (confId === 'certain') {
+      game.certainWrong += 1;
+      game.score = Math.max(0, game.score - 25); // being sure and wrong costs extra
+    }
+    xpGain = 2; // you still learn something from a miss
   }
+  game.xp += xpGain;
+  profile.recordAnswer({ id: s.id, skill: s.skill || 'email', correct: right, confidence: confId });
 
   $('mail').classList.add(right ? 'flash-good' : 'flash-bad');
   $('ans-legit').disabled = true;
@@ -153,7 +185,7 @@ function answer(choice) {
 
   const fb = $('feedback');
   fb.className = `feedback ${right ? 'good' : 'bad'}`;
-  $('fb-title').textContent = right ? 'Correct' : 'Not quite';
+  $('fb-title').textContent = right ? 'Correct' : confId === 'certain' ? 'Not quite, and you were certain' : 'Not quite';
   $('fb-lead').textContent =
     s.kind === 'phish'
       ? right
@@ -167,19 +199,20 @@ function answer(choice) {
   if (s.kind === 'phish' && s.link && !game.inspected) {
     list.append(h('li', { text: 'Tip: you did not check where the link went. Inspecting a link is often the quickest giveaway.' }));
   }
-  const lastEmail = game.index + 1 >= ROUNDS || game.lives <= 0;
+  const revisit = !right || confId === 'guess';
+  $('fb-xp').textContent = `+${xpGain} XP${revisit ? ' · we will ask you about this one again in a day' : ''}`;
+  const lastEmail = game.index + 1 >= ROUNDS || (!DAILY && game.lives <= 0);
   $('next-btn').textContent = lastEmail ? 'See my results' : 'Next email';
   fb.hidden = false;
-  $('answers').hidden = true;
+  $('answer-area').hidden = true;
   renderHud();
-  $('hud-score').textContent = String(game.score);
   $('next-btn').focus({ preventScroll: false });
 }
 
 function next() {
   game.index += 1;
   game.answered = false;
-  if (game.index >= ROUNDS || game.lives <= 0) return finish();
+  if (game.index >= ROUNDS || (!DAILY && game.lives <= 0)) return finish();
   renderHud();
   renderEmail(game.queue[game.index]);
   $('ans-legit').focus({ preventScroll: true });
@@ -196,19 +229,56 @@ const RANKS = [
 function finish() {
   const answered = game.correct + game.missed.length;
   const accuracy = answered ? Math.round((game.correct / answered) * 100) : 0;
+  const finishedAll = game.index >= ROUNDS;
+
+  // Rewards for finishing, then bank the XP.
+  let bonusXp = finishedAll ? 20 : 0;
+  let dailyMsg = '';
+  if (DAILY && finishedAll) {
+    const d = profile.completeDaily();
+    if (d.first) {
+      bonusXp += 50;
+      dailyMsg = `Daily mission complete. ${d.streak} ${d.streak === 1 ? 'day' : 'days'} in a row.`;
+    } else {
+      dailyMsg = "You have already finished today's mission. Come back tomorrow for the next one.";
+    }
+  }
+  game.xp += bonusXp;
+  const lv = profile.addXp(game.xp);
+  profile.noteRoundPlayed();
+
   const prevBest = readBest();
-  const newBest = game.score > prevBest;
+  const newBest = !DAILY && game.score > prevBest;
   if (newBest) writeBest(game.score);
 
-  const rank = [...RANKS].reverse().find(([min]) => game.score >= min)[1];
+  const rank = DAILY ? 'Daily mission' : [...RANKS].reverse().find(([min]) => game.score >= min)[1];
   $('end-rank').textContent = rank;
   $('end-score').textContent = String(game.score);
   $('end-acc').textContent = `${accuracy}%`;
   $('end-streak').textContent = String(game.bestStreak);
-  $('end-best').textContent = String(Math.max(prevBest, game.score));
+  $('end-xp').textContent = `+${game.xp}`;
   $('end-summary').textContent =
-    (game.lives <= 0 ? 'Out of lives. ' : 'Round complete. ') +
+    (!DAILY && game.lives <= 0 ? 'Out of lives. ' : 'Round complete. ') +
     `You got ${game.correct} of ${answered} right${newBest && prevBest > 0 ? ', and set a new personal best' : ''}.`;
+
+  const info = profile.levelInfo(lv.xp);
+  const levelLine = $('end-level');
+  levelLine.hidden = false;
+  levelLine.textContent =
+    `${lv.leveledUp ? `Level up! You are now level ${info.level}. ` : `Level ${info.level}. `}` +
+    `${info.to - lv.xp} XP to level ${info.level + 1}.` +
+    (dailyMsg ? ` ${dailyMsg}` : '');
+
+  const calib = $('end-calibration');
+  if (game.certainWrong > 0) {
+    calib.hidden = false;
+    calib.textContent = `You were certain about ${game.certainWrong} ${game.certainWrong === 1 ? 'answer' : 'answers'} that turned out wrong. Those are the risky mistakes: when you feel certain, that is the moment to double-check the sender and the link.`;
+  } else if (game.certainRight > 0) {
+    calib.hidden = false;
+    calib.textContent = 'Your confidence matched your results: every time you said you were certain, you were right.';
+  } else {
+    calib.hidden = true;
+  }
 
   const lessons = $('lessons-list');
   lessons.replaceChildren();
@@ -234,7 +304,15 @@ async function copyScore() {
 
 function setup() {
   const best = readBest();
-  if (best > 0) {
+  if (DAILY) {
+    const due = profile.dueItems().length;
+    $('start-eyebrow').textContent = 'Daily mission';
+    $('start-lead').textContent =
+      `Five emails, about two minutes. ${due > 0 ? `${Math.min(due, 5)} of them are ideas you missed before, to help them stick.` : 'Fresh ones today.'}`;
+    $('start-btn').textContent = "Start today's mission";
+    $('again-btn').hidden = true;
+    $('copy-btn').hidden = true;
+  } else if (best > 0) {
     $('best-line').hidden = false;
     $('best-line').textContent = `Your best: ${best}`;
   }
@@ -246,8 +324,8 @@ function setup() {
   $('next-btn').addEventListener('click', next);
   document.addEventListener('keydown', (e) => {
     if (screens.play.hidden || e.altKey || e.ctrlKey || e.metaKey) return;
-    if (e.key === 'ArrowLeft') answer('legit');
-    if (e.key === 'ArrowRight') answer('phish');
+    if (e.key === 'ArrowLeft' && e.target.name !== 'conf') answer('legit');
+    if (e.key === 'ArrowRight' && e.target.name !== 'conf') answer('phish');
   });
 }
 

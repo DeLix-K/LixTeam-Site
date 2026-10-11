@@ -1,4 +1,5 @@
 // Every email in the game. All companies and addresses are fictional.
+// skill: one of the ids in ../core/profile.js (SKILLS)
 // kind: 'phish' | 'legit'
 // context: an optional one-line situation, so legit emails are fair ("you just asked for this").
 // link: { text } is what the email shows; { href } is where it really goes (shown when the player inspects it).
@@ -7,6 +8,7 @@ export const SCENARIOS = [
   // ───────────── PHISH ─────────────
   {
     id: 'p-lookalike-pw',
+    skill: 'email',
     kind: 'phish',
     from: { name: 'Contoso IT Helpdesk', addr: 'helpdesk@contos0.com' },
     subject: 'Your password expires in 24 hours',
@@ -23,6 +25,7 @@ export const SCENARIOS = [
   },
   {
     id: 'p-ceo-giftcards',
+    skill: 'email',
     kind: 'phish',
     from: { name: 'Dana Whitfield (CEO)', addr: 'dana.whitfield.ceo@gmail-mail.com' },
     subject: 'Quick favour, are you at your desk?',
@@ -38,6 +41,7 @@ export const SCENARIOS = [
   },
   {
     id: 'p-invoice-html',
+    skill: 'email',
     kind: 'phish',
     from: { name: 'Accounts Receivable', addr: 'billing@northwind-supplies.biz' },
     subject: 'Overdue invoice #4471 - final notice',
@@ -53,6 +57,7 @@ export const SCENARIOS = [
   },
   {
     id: 'p-parcel-fee',
+    skill: 'email',
     kind: 'phish',
     from: { name: 'ParcelGo Delivery', addr: 'no-reply@parcelgo-redeliver.top' },
     subject: 'We could not deliver your parcel',
@@ -68,6 +73,7 @@ export const SCENARIOS = [
   },
   {
     id: 'p-bank-card',
+    skill: 'email',
     kind: 'phish',
     from: { name: 'Northwind Bank Security', addr: 'security@northwindbank-alerts.com' },
     subject: 'Unusual sign-in detected - verify your card',
@@ -82,6 +88,7 @@ export const SCENARIOS = [
   },
   {
     id: 'p-mfa-approve',
+    skill: 'identity',
     kind: 'phish',
     from: { name: 'Account Security Team', addr: 'verify@account-security-team.co' },
     subject: 'Action required: approve your sign-in',
@@ -97,6 +104,7 @@ export const SCENARIOS = [
   },
   {
     id: 'p-docsign-salary',
+    skill: 'email',
     kind: 'phish',
     from: { name: 'Fabrikam Sign', addr: 'documents@fabrikam-sign.net' },
     subject: 'Document waiting: Q3 salary review',
@@ -112,6 +120,7 @@ export const SCENARIOS = [
   },
   {
     id: 'p-qr-mfa',
+    skill: 'identity',
     kind: 'phish',
     from: { name: 'IT Security', addr: 'it-security@contoso-helpdesk.org' },
     subject: 'Re-enrol your MFA before Friday',
@@ -127,6 +136,7 @@ export const SCENARIOS = [
   },
   {
     id: 'p-payroll-divert',
+    skill: 'data',
     kind: 'phish',
     from: { name: 'Priya Nair', addr: 'priya.nair.work@outlook.com' },
     subject: 'Please update my bank details before payroll',
@@ -142,6 +152,7 @@ export const SCENARIOS = [
   },
   {
     id: 'p-refund-call',
+    skill: 'email',
     kind: 'phish',
     from: { name: 'Billing Department', addr: 'invoice@subscription-renewals.info' },
     subject: 'Your subscription has been renewed: £349.99',
@@ -156,6 +167,7 @@ export const SCENARIOS = [
   },
   {
     id: 'p-double-ext',
+    skill: 'email',
     kind: 'phish',
     from: { name: 'Jordan Blake, Talent Partner', addr: 'jordan.blake@careers-hiring.co' },
     subject: 'Role description for the Senior Analyst position',
@@ -171,6 +183,7 @@ export const SCENARIOS = [
   },
   {
     id: 'p-oauth',
+    skill: 'identity',
     kind: 'phish',
     from: { name: 'Shared with you', addr: 'share@docviewer-pro.app' },
     subject: 'Q3 forecast.xlsx has been shared with you',
@@ -188,6 +201,7 @@ export const SCENARIOS = [
   // ───────────── LEGIT ─────────────
   {
     id: 'l-pw-reset',
+    skill: 'identity',
     kind: 'legit',
     context: 'You just clicked "Forgot password" on the Contoso website.',
     from: { name: 'Contoso', addr: 'no-reply@contoso.com' },
@@ -201,6 +215,7 @@ export const SCENARIOS = [
   },
   {
     id: 'l-calendar',
+    skill: 'email',
     kind: 'legit',
     from: { name: 'Alex Morgan', addr: 'alex.morgan@contoso.com' },
     subject: 'Invitation: Sprint planning, Thursday 10:00',
@@ -213,6 +228,7 @@ export const SCENARIOS = [
   },
   {
     id: 'l-newsletter',
+    skill: 'email',
     kind: 'legit',
     context: 'You subscribed to this newsletter last month.',
     from: { name: 'Northwind Fitness Weekly', addr: 'news@northwind-fitness.com' },
@@ -226,6 +242,7 @@ export const SCENARIOS = [
   },
   {
     id: 'l-it-maint',
+    skill: 'email',
     kind: 'legit',
     from: { name: 'Contoso IT Service Desk', addr: 'servicedesk@contoso.com' },
     subject: 'Planned maintenance Saturday 02:00-04:00',
@@ -237,6 +254,7 @@ export const SCENARIOS = [
   },
   {
     id: 'l-order',
+    skill: 'email',
     kind: 'legit',
     context: 'You bought a pair of trainers from Fabrikam Store an hour ago.',
     from: { name: 'Fabrikam Store', addr: 'orders@fabrikam-store.com' },
@@ -250,6 +268,7 @@ export const SCENARIOS = [
   },
   {
     id: 'l-manager-expense',
+    skill: 'email',
     kind: 'legit',
     context: 'You and Taylor agreed yesterday that you would send your conference expenses.',
     from: { name: 'Taylor Reed', addr: 'taylor.reed@contoso.com' },
@@ -261,6 +280,7 @@ export const SCENARIOS = [
   },
   {
     id: 'l-bank-statement',
+    skill: 'email',
     kind: 'legit',
     from: { name: 'Northwind Bank', addr: 'statements@northwindbank.com' },
     subject: 'Your October statement is ready',
@@ -272,6 +292,7 @@ export const SCENARIOS = [
   },
   {
     id: 'l-security-alert',
+    skill: 'identity',
     kind: 'legit',
     context: 'You signed in from your laptop a few minutes ago.',
     from: { name: 'Contoso Accounts', addr: 'security-noreply@accounts.contoso.com' },
@@ -285,6 +306,7 @@ export const SCENARIOS = [
   },
   {
     id: 'l-hr-benefits',
+    skill: 'email',
     kind: 'legit',
     context: 'HR announced at the all-hands that benefits enrolment opens next week.',
     from: { name: 'Contoso People Team', addr: 'people@contoso.com' },
@@ -297,6 +319,7 @@ export const SCENARIOS = [
   },
   {
     id: 'l-parcel-out',
+    skill: 'email',
     kind: 'legit',
     context: 'You ordered a desk lamp last week and have the tracking number.',
     from: { name: 'ParcelGo', addr: 'tracking@parcelgo.com' },
@@ -309,6 +332,7 @@ export const SCENARIOS = [
   },
   {
     id: 'l-meeting-notes',
+    skill: 'email',
     kind: 'legit',
     context: 'You were in this planning meeting an hour ago.',
     from: { name: 'Jamie Cole', addr: 'jamie.cole@contoso.com' },
@@ -321,6 +345,7 @@ export const SCENARIOS = [
   },
   {
     id: 'l-receipt',
+    skill: 'email',
     kind: 'legit',
     context: 'You subscribed to Fabrikam Music two days ago.',
     from: { name: 'Fabrikam Music Billing', addr: 'billing@fabrikam-music.com' },

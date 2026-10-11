@@ -7,11 +7,12 @@
   <meta name="description" content="Can you spot the phishing email? Ten quick rounds, real red flags, no sign-up and no tracking." />
   <meta name="theme-color" content="#0a0a0a" />
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23a3e635'/%3E%3Ctext x='16' y='22' font-family='Arial' font-weight='900' font-size='15' text-anchor='middle' fill='%230a0a0a'%3ELT%3C/text%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="../shared.css" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <header class="top">
-    <a class="back" href="/">← LixTeam</a>
+    <a class="back" href="/games/">← All games</a>
     <span class="title">Phish or Legit</span>
     <span class="spacer" aria-hidden="true"></span>
   </header>
@@ -19,17 +20,17 @@
   <main id="app">
     <!-- Start -->
     <section id="screen-start" class="screen" aria-labelledby="start-h">
-      <p class="eyebrow">A quick security game</p>
+      <p class="eyebrow" id="start-eyebrow">A quick security game</p>
       <h1 id="start-h">Phish or <span class="accent-text">Legit?</span></h1>
-      <p class="lead">Ten emails. Some are real, some are scams. Decide fast, then learn exactly what gave each one away.</p>
+      <p class="lead" id="start-lead">Ten emails. Some are real, some are scams. Decide, say how sure you are, then learn exactly what gave each one away.</p>
       <ul class="howto">
         <li><strong>Read the email.</strong> Tap the link to see where it really goes.</li>
-        <li><strong>Choose Legit or Phish.</strong> Or use the left and right arrow keys.</li>
-        <li><strong>Three wrong answers</strong> and the round ends. Faster and streaks score more.</li>
+        <li><strong>Say how sure you are,</strong> then choose Legit or Phish. Honest confidence earns bonus points.</li>
+        <li><strong>Three wrong answers</strong> and the round ends. Faster answers and streaks score more.</li>
       </ul>
       <button class="btn primary big" id="start-btn" type="button">Start playing</button>
       <p class="best" id="best-line" hidden></p>
-      <p class="fine">All companies and people in this game are made up. Nothing you do here is stored on a server or tracked.</p>
+      <p class="fine">All companies and people in this game are made up. Your progress stays on this device and is never sent anywhere.</p>
     </section>
 
     <!-- Play -->
@@ -58,15 +59,24 @@
 
       <p class="preview" id="link-preview" role="status" aria-live="polite" hidden></p>
 
-      <div class="answers" id="answers">
-        <button class="btn ans legit" id="ans-legit" type="button">Legit <kbd aria-hidden="true">←</kbd></button>
-        <button class="btn ans phish" id="ans-phish" type="button">Phish <kbd aria-hidden="true">→</kbd></button>
+      <div id="answer-area">
+        <fieldset class="confidence" id="confidence">
+          <legend>How sure are you?</legend>
+          <label><input type="radio" name="conf" value="guess" /><span>Guess</span></label>
+          <label><input type="radio" name="conf" value="fairly" checked /><span>Fairly sure</span></label>
+          <label><input type="radio" name="conf" value="certain" /><span>Certain</span></label>
+        </fieldset>
+        <div class="answers" id="answers">
+          <button class="btn ans legit" id="ans-legit" type="button">Legit <kbd aria-hidden="true">←</kbd></button>
+          <button class="btn ans phish" id="ans-phish" type="button">Phish <kbd aria-hidden="true">→</kbd></button>
+        </div>
       </div>
 
       <div class="feedback" id="feedback" hidden role="status" aria-live="polite">
         <h3 id="fb-title"></h3>
         <p id="fb-lead"></p>
         <ul id="fb-list"></ul>
+        <p class="xp-line" id="fb-xp"></p>
         <button class="btn primary big" id="next-btn" type="button">Next email</button>
       </div>
     </section>
@@ -79,14 +89,17 @@
       <div class="stats">
         <div><span id="end-acc">0%</span><small>accuracy</small></div>
         <div><span id="end-streak">0</span><small>best streak</small></div>
-        <div><span id="end-best">0</span><small>personal best</small></div>
+        <div><span id="end-xp">0</span><small>XP earned</small></div>
       </div>
+      <p class="callout" id="end-level" hidden></p>
+      <p class="callout calib" id="end-calibration" hidden></p>
       <div id="end-lessons" hidden>
         <h2>Worth remembering</h2>
         <ul class="lessons" id="lessons-list"></ul>
       </div>
       <div class="btn-row">
         <button class="btn primary big" id="again-btn" type="button">Play again</button>
+        <a class="btn big" href="/games/">All games</a>
         <button class="btn big" id="copy-btn" type="button">Copy my score</button>
       </div>
       <p class="fine" id="copy-status" role="status" aria-live="polite"></p>
