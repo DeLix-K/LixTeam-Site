@@ -13,10 +13,10 @@ function h(tag, props = {}, ...kids) {
   return el;
 }
 
-// Order matters: this is the roadmap. Only `href` ones are playable today.
+// Order matters: this is the roadmap. Only entries with an `href` are playable today.
 const MODES = [
   { n: 1, name: 'Phish or Legit', blurb: 'Judge a stream of emails, say how sure you are, learn the red flags.', href: 'phish-or-legit/' },
-  { n: 2, name: 'Incident Commander', blurb: 'An incident unfolds and your choices change what happens next.' },
+  { n: 2, name: 'Incident Commander', blurb: 'An incident unfolds and your choices change what happens next.', href: 'incident-commander/' },
   { n: 3, name: 'Cyber Detective', blurb: 'Collect clues from headers, URLs and logs, then name the attack.' },
   { n: 4, name: 'Social Engineering Simulator', blurb: 'Talk to people who are not who they say they are.' },
   { n: 5, name: 'Cyber Escape Room', blurb: 'Solve connected security puzzles to protect the vault.' },

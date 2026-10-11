@@ -84,7 +84,9 @@ export function addXp(n) {
 }
 
 // Record one judged answer. Returns whether the idea was queued for revision.
-export function recordAnswer({ id, skill, correct, confidence, now = Date.now() }) {
+// `revise: false` records the answer (skill stats, confidence) without adding it to
+// the spaced-revision queue, for modes whose questions the daily mission cannot replay.
+export function recordAnswer({ id, skill, correct, confidence, now = Date.now(), revise = true }) {
   const p = load();
   const sk = (p.skills[skill] ||= { seen: 0, correct: 0 });
   sk.seen += 1;
@@ -97,6 +99,10 @@ export function recordAnswer({ id, skill, correct, confidence, now = Date.now() 
 
   const item = p.items[id];
   let queued = false;
+  if (!revise) {
+    save();
+    return false;
+  }
   if (!correct || confidence === 'guess') {
     // Wrong, or right by luck: ask again tomorrow.
     p.items[id] = { box: 0, due: now + INTERVALS_DAYS[0] * DAY, skill };
