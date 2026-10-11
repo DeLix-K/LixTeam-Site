@@ -22,10 +22,10 @@
     <section id="screen-start" class="screen" aria-labelledby="start-h">
       <p class="eyebrow" id="start-eyebrow">A quick security game</p>
       <h1 id="start-h">Phish or <span class="accent-text">Legit?</span></h1>
-      <p class="lead" id="start-lead">Ten emails. Some are real, some are scams. Decide, say how sure you are, then learn exactly what gave each one away.</p>
+      <p class="lead" id="start-lead">Ten cases: emails, calls and everyday choices. Some are genuine, some are scams or risky. Decide, say how sure you are, then learn exactly what gave each one away.</p>
       <ul class="howto">
-        <li><strong>Read the email.</strong> Tap the link to see where it really goes.</li>
-        <li><strong>Say how sure you are,</strong> then choose Legit or Phish. Honest confidence earns bonus points.</li>
+        <li><strong>Read the case.</strong> If there is a link, tap it to see where it really goes.</li>
+        <li><strong>Say how sure you are,</strong> then choose. Honest confidence earns bonus points.</li>
         <li><strong>Three wrong answers</strong> and the round ends. Faster answers and streaks score more.</li>
       </ul>
       <button class="btn primary big" id="start-btn" type="button">Start playing</button>
@@ -36,7 +36,7 @@
     <!-- Play -->
     <section id="screen-play" class="screen" hidden aria-label="Game">
       <div class="hud">
-        <span id="hud-round">Email 1 of 10</span>
+        <span id="hud-round">Case 1 of 10</span>
         <span class="lives" id="hud-lives" role="img" aria-label="3 lives left"></span>
         <span id="hud-score" class="score">0</span>
       </div>
@@ -44,17 +44,19 @@
 
       <p id="context" class="context" hidden></p>
 
-      <article class="mail" id="mail" aria-label="Email to judge">
-        <div class="mail-head">
+      <article class="mail" id="mail" aria-label="Item to judge">
+        <div class="mail-head" id="mail-head">
           <div class="avatar" id="mail-avatar" aria-hidden="true"></div>
           <div>
             <div class="from-name" id="mail-from-name"></div>
             <div class="from-addr" id="mail-from-addr"></div>
           </div>
         </div>
+        <p class="kind" id="mail-kind"></p>
         <h2 class="subject" id="mail-subject"></h2>
         <div class="mail-body" id="mail-body"></div>
         <div id="mail-attach"></div>
+        <dl class="details" id="mail-details" hidden></dl>
       </article>
 
       <p class="preview" id="link-preview" role="status" aria-live="polite" hidden></p>
@@ -77,7 +79,7 @@
         <p id="fb-lead"></p>
         <ul id="fb-list"></ul>
         <p class="xp-line" id="fb-xp"></p>
-        <button class="btn primary big" id="next-btn" type="button">Next email</button>
+        <button class="btn primary big" id="next-btn" type="button">Next case</button>
       </div>
     </section>
 

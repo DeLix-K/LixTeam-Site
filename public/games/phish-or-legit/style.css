@@ -76,3 +76,11 @@
 .callout.calib { border-left-color: var(--warn); }
 .answers { margin-top: 12px; }
 a.btn { text-decoration: none; }
+
+/* Non-email cases */
+.kind { margin: 0 0 4px; font-size: 12px; font-weight: 800; letter-spacing: 0.8px; text-transform: uppercase; color: var(--accent); }
+.details { margin: 12px 0 0; padding: 0; display: grid; gap: 6px; }
+.details div { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 12px; padding: 8px 12px; border-radius: 10px; background: var(--surface-2); border: 1px solid var(--border); font-size: 14px; }
+.details dt { color: var(--muted); font-weight: 600; }
+.details dd { margin: 0; color: #f0f0f0; word-break: break-word; }
+@media (max-width: 480px) { .details div { grid-template-columns: 1fr; gap: 2px; } }

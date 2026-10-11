@@ -4,7 +4,9 @@
 // context: an optional one-line situation, so legit emails are fair ("you just asked for this").
 // link: { text } is what the email shows; { href } is where it really goes (shown when the player inspects it).
 // flags (phish): what gave it away. why (legit): what makes it safe.
-export const SCENARIOS = [
+import { EXTRA } from './scenarios-extra.js';
+
+const CORE = [
   // ───────────── PHISH ─────────────
   {
     id: 'p-lookalike-pw',
@@ -358,3 +360,6 @@ export const SCENARIOS = [
     why: 'It confirms something you signed up for, at the amount you expect, with your name and last four digits. It offers a cancel option in your account on the same domain, and does not ask you to call anyone.',
   },
 ];
+
+// Everything the game draws from.
+export const SCENARIOS = [...CORE, ...EXTRA];

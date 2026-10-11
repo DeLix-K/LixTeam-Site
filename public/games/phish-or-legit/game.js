@@ -3,6 +3,7 @@ import * as profile from '../core/profile.js';
 
 const LIVES = 3;
 const BEST_KEY = 'lixteam.phishOrLegit.best';
+const KIND_LABEL = { email: 'Email', text: 'Text message', call: 'Phone call', situation: 'Situation' };
 const DAILY = new URLSearchParams(location.search).get('mode') === 'daily';
 const ROUNDS = DAILY ? 5 : 10;
 
@@ -79,7 +80,7 @@ function renderLives() {
 }
 
 function renderHud() {
-  $('hud-round').textContent = `${DAILY ? 'Mission' : 'Email'} ${Math.min(game.index + 1, ROUNDS)} of ${ROUNDS}`;
+  $('hud-round').textContent = `${DAILY ? 'Mission' : 'Case'} ${Math.min(game.index + 1, ROUNDS)} of ${ROUNDS}`;
   $('hud-score').textContent = String(game.score);
   $('progress-bar').style.width = `${(game.index / ROUNDS) * 100}%`;
   renderLives();
@@ -97,10 +98,25 @@ function renderEmail(s) {
   $('context').hidden = !s.context;
   $('context').textContent = s.context ? `Situation: ${s.context}` : '';
 
-  $('mail-avatar').textContent = (s.from.name.trim()[0] || '?').toUpperCase();
-  $('mail-from-name').textContent = s.from.name;
-  $('mail-from-addr').textContent = `<${s.from.addr}>`;
+  const channel = s.channel || 'email';
+  $('mail-head').hidden = !s.from;
+  if (s.from) {
+    $('mail-avatar').textContent = (s.from.name.trim()[0] || '?').toUpperCase();
+    $('mail-from-name').textContent = s.from.name;
+    $('mail-from-addr').textContent = channel === 'email' ? `<${s.from.addr}>` : s.from.addr;
+  }
+  $('mail-kind').textContent = KIND_LABEL[channel] || 'Email';
   $('mail-subject').textContent = s.subject;
+
+  const details = $('mail-details');
+  details.replaceChildren();
+  details.hidden = !(s.details && s.details.length);
+  for (const [k, v] of s.details || []) details.append(h('div', {}, h('dt', { text: k }), h('dd', { text: v })));
+
+  // Button wording fits the case: Legit/Phish, Real/Scam or Safe/Risky.
+  const verdict = s.verdict || { legit: 'Legit', phish: 'Phish' };
+  $('ans-legit').replaceChildren(verdict.legit + ' ', h('kbd', { 'aria-hidden': 'true', text: '←' }));
+  $('ans-phish').replaceChildren(verdict.phish + ' ', h('kbd', { 'aria-hidden': 'true', text: '→' }));
 
   const body = $('mail-body');
   body.replaceChildren();
@@ -147,6 +163,15 @@ function startGame() {
   $('ans-legit').focus({ preventScroll: true });
 }
 
+function feedbackLead(s, right) {
+  const channel = s.channel || 'email';
+  if (s.kind === 'phish') {
+    const what = { email: 'a phishing email', text: 'a scam text', call: 'a scam call', situation: 'the risky choice' }[channel] || 'a scam';
+    return right ? `This was ${what}. Here is what gave it away:` : `This was ${what}. Here is what you could have spotted:`;
+  }
+  return channel === 'situation' ? 'This was the safe choice. Here is why:' : 'This one was genuine. Here is why it was safe:';
+}
+
 function answer(choice) {
   if (!game || game.answered) return;
   game.answered = true;
@@ -186,12 +211,7 @@ function answer(choice) {
   const fb = $('feedback');
   fb.className = `feedback ${right ? 'good' : 'bad'}`;
   $('fb-title').textContent = right ? 'Correct' : confId === 'certain' ? 'Not quite, and you were certain' : 'Not quite';
-  $('fb-lead').textContent =
-    s.kind === 'phish'
-      ? right
-        ? 'This was a phishing email. Here is what gave it away:'
-        : 'This was a phishing email. Here is what you could have spotted:'
-      : 'This one was genuine. Here is why it was safe:';
+  $('fb-lead').textContent = feedbackLead(s, right);
   const list = $('fb-list');
   list.replaceChildren();
   const points = s.kind === 'phish' ? s.flags : [s.why];
@@ -202,7 +222,7 @@ function answer(choice) {
   const revisit = !right || confId === 'guess';
   $('fb-xp').textContent = `+${xpGain} XP${revisit ? ' · we will ask you about this one again in a day' : ''}`;
   const lastEmail = game.index + 1 >= ROUNDS || (!DAILY && game.lives <= 0);
-  $('next-btn').textContent = lastEmail ? 'See my results' : 'Next email';
+  $('next-btn').textContent = lastEmail ? 'See my results' : 'Next case';
   fb.hidden = false;
   $('answer-area').hidden = true;
   renderHud();
@@ -284,7 +304,7 @@ function finish() {
   lessons.replaceChildren();
   for (const s of game.missed) {
     const tip = s.kind === 'phish' ? s.flags[0] : s.why;
-    lessons.append(h('li', {}, h('small', { text: `${s.kind === 'phish' ? 'Missed scam' : 'Wrongly flagged'}: "${s.subject}"` }), h('span', { text: tip })));
+    lessons.append(h('li', {}, h('small', { text: `${s.kind === 'phish' ? ((s.channel || 'email') === 'situation' ? 'Missed risk' : 'Missed scam') : 'Wrongly flagged'}: "${s.subject}"` }), h('span', { text: tip })));
   }
   $('end-lessons').hidden = game.missed.length === 0;
   $('copy-status').textContent = '';
@@ -308,7 +328,7 @@ function setup() {
     const due = profile.dueItems().length;
     $('start-eyebrow').textContent = 'Daily mission';
     $('start-lead').textContent =
-      `Five emails, about two minutes. ${due > 0 ? `${Math.min(due, 5)} of them are ideas you missed before, to help them stick.` : 'Fresh ones today.'}`;
+      `Five cases, about two minutes. ${due > 0 ? `${Math.min(due, 5)} of them are ideas you missed before, to help them stick.` : 'Fresh ones today.'}`;
     $('start-btn').textContent = "Start today's mission";
     $('again-btn').hidden = true;
     $('copy-btn').hidden = true;
