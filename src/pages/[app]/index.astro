@@ -12,6 +12,9 @@ export function getStaticPaths() {
 const { app } = Astro.props as { app: AppInfo };
 const hero = app.screenshots[0];
 const stores = [app.stores.ios, app.stores.android];
+// The last word of the headline gets the brand accent.
+const headWords = app.hero.headline.split(' ');
+const headAccent = headWords.pop();
 ---
 
 <AppPage app={app} current="overview" title={`${app.name}: ${app.tagline}`} description={app.blurb}>
@@ -21,7 +24,7 @@ const stores = [app.stores.ios, app.stores.android];
         <div class="grid">
           <div class="hero-copy">
             <p class="eyebrow">{app.name}</p>
-            <h1>{app.hero.headline}</h1>
+            <h1>{headWords.join(' ')} <span class="accent-text">{headAccent}</span></h1>
             <p class="lead">{app.hero.sub}</p>
 
             <div class="btn-row">
@@ -54,7 +57,7 @@ const stores = [app.stores.ios, app.stores.android];
         <p class="section-sub">Stop juggling separate apps for training, food, sleep and mood.</p>
         <div class="features">
           {app.features.map((f) => (
-            <div class="card feature">
+            <div class="card feature reveal">
               <span class="icon-tile"><FeatureIcon name={f.icon} /></span>
               <h3>{f.title}</h3>
               <p class="feature-sum">{f.summary}</p>
@@ -71,7 +74,7 @@ const stores = [app.stores.ios, app.stores.android];
         <p class="section-sub">Swipe or scroll to see more.</p>
         <div class="shots" tabindex="0" role="region" aria-label={`${app.name} screenshots`}>
           {app.screenshots.map((s) => (
-            <figure>
+            <figure class="reveal">
               <Image src={s.src} alt={s.alt} width={280} />
               <figcaption>{s.caption}</figcaption>
             </figure>
@@ -86,15 +89,16 @@ const stores = [app.stores.ios, app.stores.android];
           <h2>Free to start</h2>
           <p class="section-sub">Upgrade only if you want more. Cancel any time.</p>
           <div class="pricing">
-            <div class="card plan">
+            <div class="card plan reveal">
               <h3>{app.pricing.free.title}</h3>
               <div class="price">{app.pricing.free.price}</div>
               <ul>{app.pricing.free.points.map((p) => <li>{p}</li>)}</ul>
             </div>
-            <div class="card plan featured">
+            <div class="card plan featured reveal">
               <h3>{app.pricing.premium.title}</h3>
               <div class="price">{app.pricing.premium.price}</div>
               <ul>{app.pricing.premium.points.map((p) => <li>{p}</li>)}</ul>
+              {app.pricing.premium.note && <p class="price-note">{app.pricing.premium.note}</p>}
             </div>
           </div>
         </div>

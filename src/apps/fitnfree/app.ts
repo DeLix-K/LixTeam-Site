@@ -114,8 +114,8 @@ export const fitnfree: AppInfo = {
         'The full library of programmes and courses, with new content added regularly',
         'Deeper insights',
         'Extra streak protection',
-        'US price shown. Prices vary by country (for example £8.99 in the UK); the exact price appears in the app before you subscribe.',
       ],
+      note: 'US price shown. Prices vary by country (for example £8.99 in the UK); the exact price appears in the app before you subscribe.',
     },
   },
   notice:

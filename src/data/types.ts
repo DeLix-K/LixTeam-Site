@@ -26,7 +26,7 @@ export type AppInfo = {
   screenshots: Screenshot[];
   pricing: {
     free: { title: string; price: string; points: string[] };
-    premium: { title: string; price: string; points: string[] };
+    premium: { title: string; price: string; points: string[]; note?: string };
   } | null;
   notice: string;
   faqs: Faq[];

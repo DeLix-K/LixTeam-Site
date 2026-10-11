@@ -209,3 +209,79 @@ h2 { font-size: clamp(26px, 4vw, 36px); margin: 0 0 12px; letter-spacing: -0.5px
   .hero-copy, .hero-visual { animation: none; }
   html { scroll-behavior: auto; }
 }
+
+/* ── Look and feel + motion ──────────────────
+   Everything here is CSS only. Motion is decoration: it is switched off for
+   anyone who asks their device to reduce motion, and the page reads the same
+   without it. */
+:root {
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --glow: rgba(163, 230, 53, 0.16);
+}
+
+body { background: radial-gradient(1200px 520px at 78% -4%, rgba(163, 230, 53, 0.09), transparent 62%), var(--bg); background-attachment: scroll; }
+
+.site-header { background: rgba(10, 10, 10, 0.82); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+
+h1 { letter-spacing: -1.5px; }
+.accent-text { background: linear-gradient(100deg, #bef264 0%, var(--accent) 45%, #65a30d 100%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+h2 { letter-spacing: -0.8px; }
+
+/* Buttons: lift on hover, press on click (transform only, so nothing around them moves). */
+.btn { transition: transform 0.2s var(--ease), box-shadow 0.25s var(--ease), border-color 0.2s, background-color 0.2s; }
+.btn:not([aria-disabled='true']):hover { transform: translateY(-2px); }
+.btn:not([aria-disabled='true']):active { transform: translateY(0) scale(0.98); }
+.btn.primary { box-shadow: 0 8px 24px -8px rgba(163, 230, 53, 0.45); }
+.btn.primary:hover { box-shadow: 0 14px 34px -8px rgba(163, 230, 53, 0.6); }
+
+/* Hero: soft glow behind the phone, and the phone gently floats. */
+.hero { position: relative; overflow: clip; }
+.hero-visual { position: relative; }
+.hero-visual::before { content: ''; position: absolute; inset: -12% -18%; background: radial-gradient(closest-side, var(--glow), transparent 72%); z-index: -1; filter: blur(8px); }
+.hero-shot { animation: float 7s ease-in-out infinite; will-change: transform; }
+@keyframes float { 0%, 100% { transform: translateY(0) rotate(-0.4deg); } 50% { transform: translateY(-10px) rotate(0.4deg); } }
+
+/* Cards: quiet lift, a lime edge and a glowing icon on hover. */
+.card { transition: transform 0.3s var(--ease), border-color 0.3s, background-color 0.3s, box-shadow 0.3s; }
+.card.feature:hover, .card.plan:hover { transform: translateY(-4px); border-color: rgba(163, 230, 53, 0.45); box-shadow: 0 18px 40px -22px rgba(163, 230, 53, 0.35); }
+.card.feature:hover .icon-tile { background: rgba(163, 230, 53, 0.2); box-shadow: 0 0 0 6px rgba(163, 230, 53, 0.07); }
+.icon-tile { transition: background-color 0.3s, box-shadow 0.3s; }
+.plan.featured { background: linear-gradient(180deg, rgba(163, 230, 53, 0.07), var(--surface) 55%); box-shadow: 0 0 0 1px rgba(163, 230, 53, 0.25), 0 24px 60px -34px rgba(163, 230, 53, 0.5); }
+.plan .price { letter-spacing: -0.5px; }
+.card ul { list-style: none; padding-left: 0; }
+.card li { position: relative; padding-left: 22px; }
+.card li::before { content: ''; position: absolute; left: 2px; top: 0.62em; width: 8px; height: 5px; border-left: 2px solid var(--accent); border-bottom: 2px solid var(--accent); transform: rotate(-48deg) translateY(-50%); opacity: 0.9; }
+
+/* Screenshots: lift a little when you point at one. */
+.shots img { transition: transform 0.35s var(--ease), border-color 0.3s, box-shadow 0.35s; box-shadow: 0 18px 40px -26px rgba(0, 0, 0, 0.8); }
+.shots figure:hover img { transform: translateY(-6px); border-color: rgba(163, 230, 53, 0.4); box-shadow: 0 26px 50px -24px rgba(163, 230, 53, 0.3); }
+
+/* FAQ: a chevron that turns, and a gentle fade as an answer opens. */
+.faq summary { list-style: none; display: flex; justify-content: space-between; align-items: center; gap: 16px; transition: color 0.2s; }
+.faq summary::-webkit-details-marker { display: none; }
+.faq summary::after { content: ''; flex: 0 0 auto; width: 9px; height: 9px; border-right: 2px solid var(--accent); border-bottom: 2px solid var(--accent); transform: rotate(45deg); transition: transform 0.3s var(--ease); margin-right: 4px; }
+.faq details[open] summary::after { transform: rotate(-135deg); }
+.faq summary:hover { color: var(--accent); }
+.faq details[open] p { animation: fade-in 0.35s var(--ease); }
+@keyframes fade-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+
+.notice { transition: border-color 0.3s; }
+
+/* Closing call to action gets its own glow. */
+.cta-band .wrap { position: relative; padding-top: 8px; }
+.cta-band .wrap::before { content: ''; position: absolute; inset: -40px 0 -20px; background: radial-gradient(closest-side, var(--glow), transparent 70%); z-index: -1; }
+
+/* Reveal on scroll, where the browser supports scroll-linked animation
+   (Chrome, Edge, Safari 26+). Elsewhere everything is simply visible. */
+@supports (animation-timeline: view()) {
+  .reveal { animation: reveal linear both; animation-timeline: view(); animation-range: entry 0% entry 40%; }
+  @keyframes reveal { from { opacity: 0; transform: translateY(26px); } to { opacity: 1; transform: none; } }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-shot, .reveal, .faq details[open] p { animation: none !important; }
+  .btn, .card, .shots img, .icon-tile { transition: none; }
+  .btn:not([aria-disabled='true']):hover, .card.feature:hover, .card.plan:hover, .shots figure:hover img { transform: none; }
+}
+
+.price-note { margin: 16px 0 0; padding-top: 14px; border-top: 1px solid var(--border); font-size: 13px; color: var(--muted); }
