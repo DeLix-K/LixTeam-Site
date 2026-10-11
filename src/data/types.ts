@@ -1,8 +1,9 @@
 import type { ImageMetadata } from 'astro';
 
-export type Feature = { icon: string; title: string; points: string[] };
+// `icon` is a key understood by components/FeatureIcon.astro.
+export type Feature = { icon: string; title: string; summary: string; points: string[] };
 export type Faq = { q: string; a: string };
-export type Screenshot = { src: ImageMetadata; alt: string };
+export type Screenshot = { src: ImageMetadata; alt: string; caption: string };
 
 // Where a person can get the app. A null url means "not available yet" and the
 // page shows a "Coming soon" button instead of a link.
@@ -18,7 +19,7 @@ export type AppInfo = {
   tagline: string;
   blurb: string;
   icon: ImageMetadata;
-  hero: { headline: string; sub: string };
+  hero: { headline: string; sub: string; facts: string[] };
   webApp: { label: string; url: string } | null;
   stores: { ios: StoreLink; android: StoreLink };
   features: Feature[];

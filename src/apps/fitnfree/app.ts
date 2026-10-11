@@ -19,6 +19,7 @@ export const fitnfree: AppInfo = {
   hero: {
     headline: 'Your AI health companion.',
     sub: 'Workouts, nutrition, sleep and recovery, all in one app that adapts to how you are actually doing, instead of four apps you have to juggle.',
+    facts: ['Free to start', 'USDA nutrition data', 'Syncs with Oura', 'For ages 16+'],
   },
   webApp: { label: 'Try it on the web', url: 'https://fitnfree-lilac.vercel.app' },
   stores: {
@@ -27,57 +28,59 @@ export const fitnfree: AppInfo = {
   },
   features: [
     {
-      icon: '🏋️',
+      icon: 'dumbbell',
       title: 'Train',
+      summary: 'Plans built around the equipment you actually have.',
       points: [
-        'Home, gym and outdoor plans built around the equipment you have',
+        'Home, gym and outdoor plans',
         'Point your camera at gym equipment for an instant workout',
-        'Real streaks, badges and weekly targets you set yourself',
-        'Squad challenges and leaderboards to stay accountable',
+        'Streaks, badges and squad challenges to keep you going',
       ],
     },
     {
-      icon: '🥗',
+      icon: 'bowl',
       title: 'Eat',
+      summary: 'Log a meal in seconds, with real nutrition data behind it.',
       points: [
-        'Food search backed by real USDA nutrition data',
-        'Snap a meal for an instant calorie and macro estimate',
-        'Scan a barcode to log packaged food',
-        'Daily calorie and protein targets based on your own stats',
+        'Food search backed by USDA data',
+        'Snap a meal or scan a barcode',
+        'Daily calorie and protein targets from your own stats',
       ],
     },
     {
-      icon: '🤖',
+      icon: 'sparkles',
       title: 'AI Coach',
+      summary: 'A coach that reads your sleep, mood and streak before it speaks.',
       points: [
-        'A daily briefing that reads your sleep, mood and streak',
-        'Post-workout insights from your actual logged activity',
-        'Talk to your Coach by voice and hear replies read back',
-        'Choose a style: Encouraging, Strict or Data-Focused',
+        'A daily briefing and post-workout insights',
+        'Talk to it by voice and hear replies read back',
+        'Pick a style: Encouraging, Strict or Data-Focused',
       ],
     },
     {
-      icon: '😴',
+      icon: 'moon',
       title: 'Sleep & recovery',
+      summary: 'Know how rested you are, and wind down properly.',
       points: [
-        'Log sleep manually or sync automatically from Oura',
-        'Daily readiness score and sleep-debt tracking',
-        'Breathwork, ambient sound and binaural beats to wind down',
-        'Calming AI bedtime stories',
+        'Log sleep manually or sync from Oura',
+        'Readiness score and sleep-debt tracking',
+        'Breathwork, ambient sound and calming bedtime stories',
       ],
     },
     {
-      icon: '🧘',
+      icon: 'heart',
       title: 'Wellness & habits',
+      summary: 'Build habits without punishing a missed day.',
       points: [
         'Daily mood check-ins with an optional AI reflection',
-        'A forgiving habit tracker with streak freezes, not harsh resets',
+        'A habit tracker with streak freezes, not harsh resets',
         'A free grounding tool for in-the-moment stress',
       ],
     },
     {
-      icon: '🤝',
+      icon: 'users',
       title: 'Learn & connect',
+      summary: 'Guides, real trainers and merch in the same app.',
       points: [
         'A library of guides and courses across five categories',
         'Chat with real trainers and book live sessions',
@@ -86,11 +89,11 @@ export const fitnfree: AppInfo = {
     },
   ],
   screenshots: [
-    { src: home, alt: 'FitNFree home screen with your streak and daily overview' },
-    { src: coach, alt: 'FitNFree AI Coach conversation' },
-    { src: nutrition, alt: 'FitNFree nutrition tracking screen' },
-    { src: exercises, alt: 'FitNFree exercise library' },
-    { src: merch, alt: 'FitNFree merch store' },
+    { src: home, alt: 'FitNFree home screen with your streak and daily overview', caption: 'Home' },
+    { src: coach, alt: 'FitNFree AI Coach conversation', caption: 'AI Coach' },
+    { src: nutrition, alt: 'FitNFree nutrition tracking screen', caption: 'Nutrition' },
+    { src: exercises, alt: 'FitNFree exercise library', caption: 'Exercises' },
+    { src: merch, alt: 'FitNFree merch store', caption: 'Shop' },
   ],
   pricing: {
     free: {

@@ -1,6 +1,7 @@
 ---
 import { Image } from 'astro:assets';
 import AppPage from '../../layouts/AppPage.astro';
+import FeatureIcon from '../../components/FeatureIcon.astro';
 import { apps } from '../../data/apps';
 import type { AppInfo } from '../../data/types';
 
@@ -10,6 +11,7 @@ export function getStaticPaths() {
 
 const { app } = Astro.props as { app: AppInfo };
 const hero = app.screenshots[0];
+const stores = [app.stores.ios, app.stores.android];
 ---
 
 <AppPage app={app} current="overview" title={`${app.name}: ${app.tagline}`} description={app.blurb}>
@@ -17,24 +19,31 @@ const hero = app.screenshots[0];
     <div class="hero">
       <div class="wrap">
         <div class="grid">
-          <div>
+          <div class="hero-copy">
             <p class="eyebrow">{app.name}</p>
             <h1>{app.hero.headline}</h1>
             <p class="lead">{app.hero.sub}</p>
+
             <div class="btn-row">
-              {[app.stores.ios, app.stores.android].map((s) =>
+              {app.webApp && <a class="btn primary big" href={app.webApp.url}>{app.webApp.label} →</a>}
+              {stores.map((s) =>
                 s.url ? (
-                  <a class="btn primary" href={s.url}>{s.label}</a>
+                  <a class="btn store" href={s.url}>{s.label}</a>
                 ) : (
-                  <span class="btn" aria-disabled="true">
+                  <span class="btn store soon" aria-disabled="true">
                     {s.label} <small>Coming soon</small>
                   </span>
                 )
               )}
-              {app.webApp && <a class="btn" href={app.webApp.url}>{app.webApp.label} →</a>}
             </div>
+
+            <ul class="facts" aria-label="At a glance">
+              {app.hero.facts.map((f) => <li>{f}</li>)}
+            </ul>
           </div>
-          <Image class="hero-shot" src={hero.src} alt={hero.alt} width={320} loading="eager" />
+          <div class="hero-visual">
+            <Image class="hero-shot" src={hero.src} alt={hero.alt} width={320} loading="eager" />
+          </div>
         </div>
       </div>
     </div>
@@ -45,9 +54,10 @@ const hero = app.screenshots[0];
         <p class="section-sub">Stop juggling separate apps for training, food, sleep and mood.</p>
         <div class="features">
           {app.features.map((f) => (
-            <div class="card">
-              <span class="icon">{f.icon}</span>
+            <div class="card feature">
+              <span class="icon-tile"><FeatureIcon name={f.icon} /></span>
               <h3>{f.title}</h3>
+              <p class="feature-sum">{f.summary}</p>
               <ul>{f.points.map((p) => <li>{p}</li>)}</ul>
             </div>
           ))}
@@ -58,9 +68,13 @@ const hero = app.screenshots[0];
     <section id="screens">
       <div class="wrap">
         <h2>A look inside</h2>
-        <div class="shots">
+        <p class="section-sub">Swipe or scroll to see more.</p>
+        <div class="shots" tabindex="0" role="region" aria-label={`${app.name} screenshots`}>
           {app.screenshots.map((s) => (
-            <figure><Image src={s.src} alt={s.alt} width={240} /></figure>
+            <figure>
+              <Image src={s.src} alt={s.alt} width={280} />
+              <figcaption>{s.caption}</figcaption>
+            </figure>
           ))}
         </div>
       </div>
@@ -107,5 +121,15 @@ const hero = app.screenshots[0];
         <p style="margin-top:24px"><a href={`/${app.slug}/support/`}>More help and contact →</a></p>
       </div>
     </section>
+
+    {app.webApp && (
+      <section class="cta-band">
+        <div class="wrap narrow">
+          <h2>Ready to try it?</h2>
+          <p class="section-sub">It is free to start, and it takes a minute to set up.</p>
+          <a class="btn primary big" href={app.webApp.url}>{app.webApp.label} →</a>
+        </div>
+      </section>
+    )}
   </main>
 </AppPage>
