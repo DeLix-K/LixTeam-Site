@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Cyber Escape Room · LixTeam</title>
+  <meta name="description" content="Solve connected security puzzles to escape a compromised system. Passwords, MFA, exposed files, permissions and recovery. Free, no sign-up, no tracking." />
+  <meta name="theme-color" content="#0a0a0a" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23a3e635'/%3E%3Ctext x='16' y='22' font-family='Arial' font-weight='900' font-size='15' text-anchor='middle' fill='%230a0a0a'%3ELT%3C/text%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="../shared.css" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="top">
+    <a class="back" href="/games/">← All games</a>
+    <span class="title">Cyber Escape Room</span>
+    <span class="spacer" aria-hidden="true"></span>
+  </header>
+
+  <main id="app">
+    <!-- Choose an escape -->
+    <section id="screen-pick" class="screen" aria-labelledby="pick-h">
+      <p class="eyebrow">Escape room</p>
+      <h1 id="pick-h">Cyber <span class="accent-text">Escape Room</span></h1>
+      <p class="lead">You are locked in a compromised system. Look around for clues, solve each security puzzle, and unlock the next room before the vault seals.</p>
+      <ul class="howto">
+        <li><strong>Look around first.</strong> Some objects hold clues. Others are red herrings.</li>
+        <li><strong>Accuracy beats speed.</strong> A wrong answer and a hint both cost you, so a careful solve outscores a rushed one.</li>
+        <li><strong>Each room gives a letter</strong> of the escape code. Collect them all.</li>
+      </ul>
+      <label class="practice"><input type="checkbox" id="practice" /><span><strong>Practice mode</strong>: no timer, no time pressure.</span></label>
+      <div class="escapes" id="escape-list"></div>
+      <p class="fine">Everything here is fictional. Your progress stays on this device and is never sent anywhere.</p>
+    </section>
+
+    <!-- Play -->
+    <section id="screen-play" class="screen" hidden aria-label="Escape room">
+      <div class="hud">
+        <ol class="rooms-bar" id="rooms-bar" aria-label="Rooms"></ol>
+        <div class="timer" id="timer-box">
+          <span class="time" id="timer" aria-hidden="true">10:00</span>
+          <small id="timer-label">time left</small>
+        </div>
+      </div>
+      <div class="code" aria-label="Escape code so far" id="code"></div>
+      <p class="sr" id="timer-live" role="status" aria-live="polite"></p>
+
+      <article class="room" id="room">
+        <h2 id="room-title"></h2>
+        <p class="scene" id="room-scene"></p>
+
+        <h3>Look around</h3>
+        <div class="objects" id="objects"></div>
+        <ul class="noticed" id="noticed" aria-live="polite"></ul>
+
+        <h3>The puzzle</h3>
+        <p class="prompt" id="prompt"></p>
+        <div id="puzzle"></div>
+        <div class="puzzle-actions">
+          <button class="btn primary big" id="check-btn" type="button">Check my answer</button>
+          <button class="btn big" id="hint-btn" type="button">Hint</button>
+        </div>
+        <p class="hint-cost" id="hint-cost"></p>
+        <p class="hintbox" id="hintbox" hidden role="status"></p>
+        <p class="feedback-msg" id="feedback-msg" role="status" aria-live="polite"></p>
+      </article>
+
+      <div class="solved" id="solved" hidden role="status">
+        <h3 id="solved-title"></h3>
+        <p id="solved-explain"></p>
+        <button class="btn primary big" id="next-room" type="button">Next room</button>
+      </div>
+    </section>
+
+    <!-- Results -->
+    <section id="screen-end" class="screen" hidden aria-labelledby="end-h">
+      <p class="eyebrow" id="res-eyebrow"></p>
+      <h1 id="end-h"><span id="res-rating" class="accent-text"></span></h1>
+      <div class="code big" id="res-code" aria-label="Escape code"></div>
+      <p class="lead" id="res-blurb"></p>
+      <div class="stats">
+        <div><span id="res-points">0</span><small>score</small></div>
+        <div><span id="res-rooms">0/0</span><small>rooms solved</small></div>
+        <div><span id="res-xp">0</span><small>XP earned</small></div>
+      </div>
+      <p class="callout" id="res-level"></p>
+      <h2>What each room taught</h2>
+      <ul class="lessons" id="res-lessons"></ul>
+      <h2>How your score added up</h2>
+      <ul class="breakdown" id="res-breakdown"></ul>
+      <div class="btn-row">
+        <button class="btn primary big" id="res-again" type="button">Try again</button>
+        <button class="btn big" id="res-other" type="button">Another escape</button>
+        <a class="btn big" href="/games/">All games</a>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="game.js"></script>
+</body>
+</html>
