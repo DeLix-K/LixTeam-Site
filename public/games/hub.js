@@ -17,7 +17,7 @@ function h(tag, props = {}, ...kids) {
 const MODES = [
   { n: 1, name: 'Phish or Legit', blurb: 'Judge emails, calls and everyday choices, say how sure you are, learn the red flags.', href: 'phish-or-legit/' },
   { n: 2, name: 'Incident Commander', blurb: 'An incident unfolds and your choices change what happens next.', href: 'incident-commander/' },
-  { n: 3, name: 'Cyber Detective', blurb: 'Collect clues from headers, URLs and logs, then name the attack.' },
+  { n: 3, name: 'Cyber Detective', blurb: 'Collect clues from headers, URLs and logs, then name the attack.', href: 'cyber-detective/' },
   { n: 4, name: 'Social Engineering Simulator', blurb: 'Talk to people who are not who they say they are.' },
   { n: 5, name: 'Cyber Escape Room', blurb: 'Solve connected security puzzles to protect the vault.' },
   { n: 6, name: 'The Breach Room', blurb: 'Reconstruct how an organisation was compromised.' },
