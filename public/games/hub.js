@@ -20,7 +20,7 @@ const MODES = [
   { n: 3, name: 'Cyber Detective', blurb: 'Collect clues from headers, URLs and logs, then name the attack.', href: 'cyber-detective/' },
   { n: 4, name: 'Social Engineering Simulator', blurb: 'Talk to people who are not who they say they are.', href: 'social-engineering/' },
   { n: 5, name: 'Cyber Escape Room', blurb: 'Solve connected security puzzles to protect the vault.', href: 'escape-room/' },
-  { n: 6, name: 'The Breach Room', blurb: 'Reconstruct how an organisation was compromised.' },
+  { n: 6, name: 'The Breach Room', blurb: 'Reconstruct how an organisation was compromised.', href: 'breach-room/' },
 ];
 
 function render() {

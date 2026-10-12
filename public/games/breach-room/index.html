@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>The Breach Room · LixTeam</title>
+  <meta name="description" content="Reconstruct how an organisation was breached. Connect email, identity, endpoint, file and network evidence into an attack chain. Free, no sign-up, no tracking." />
+  <meta name="theme-color" content="#0a0a0a" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23a3e635'/%3E%3Ctext x='16' y='22' font-family='Arial' font-weight='900' font-size='15' text-anchor='middle' fill='%230a0a0a'%3ELT%3C/text%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="../shared.css" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="top">
+    <a class="back" href="/games/">← All games</a>
+    <span class="title">The Breach Room</span>
+    <span class="spacer" aria-hidden="true"></span>
+  </header>
+
+  <main id="app">
+    <!-- Choose a case -->
+    <section id="screen-pick" class="screen" aria-labelledby="pick-h">
+      <p class="eyebrow">Reconstruction</p>
+      <h1 id="pick-h">The <span class="accent-text">Breach Room</span></h1>
+      <p class="lead">The damage is done. Work backwards through the evidence, connect it across tools, and rebuild how the attacker got in, stayed in and got out.</p>
+      <ul class="howto">
+        <li><strong>Sort each piece of evidence</strong> into the stage of the attack it belongs to, or mark it as unrelated noise.</li>
+        <li><strong>Pivot.</strong> Tap an account, address or host to see every card it appears in. That is how analysts connect evidence across tools.</li>
+        <li><strong>Complete the chain</strong> to unlock the full explanation, then answer questions on root cause and prevention.</li>
+      </ul>
+      <div class="cases" id="case-list"></div>
+      <p class="fine">Everything here is fictional. Your progress stays on this device and is never sent anywhere.</p>
+    </section>
+
+    <!-- The board -->
+    <section id="screen-play" class="screen" hidden aria-label="Evidence board">
+      <div class="case-head">
+        <div>
+          <h2 id="case-title"></h2>
+          <p class="case-sub" id="case-sub"></p>
+        </div>
+        <div class="counters">
+          <div><span id="n-placed">0</span><small id="n-total">of 0</small></div>
+          <div><span id="n-wrong">0</span><small>wrong</small></div>
+          <div><span id="n-pivots">0</span><small>pivots</small></div>
+        </div>
+      </div>
+
+      <details class="brief" id="brief" open>
+        <summary>The case</summary>
+        <div id="brief-body"></div>
+      </details>
+
+      <div class="panel">
+        <h3>The attack path</h3>
+        <ol class="path" id="path"></ol>
+        <div class="uncovered" id="uncovered" aria-live="polite"></div>
+      </div>
+
+      <div class="panel">
+        <h3>Pivot on an indicator</h3>
+        <div class="chips" id="indicators"></div>
+        <p class="pivot-note" id="pivot-note" role="status" aria-live="polite"></p>
+      </div>
+
+      <div class="panel">
+        <h3>Evidence</h3>
+        <ul class="cards" id="cards"></ul>
+      </div>
+
+      <div class="panel final" id="final" hidden>
+        <h3>The full explanation</h3>
+        <p id="final-summary"></p>
+        <button class="btn primary big" id="to-questions" type="button">Answer the questions</button>
+      </div>
+    </section>
+
+    <!-- Questions -->
+    <section id="screen-q" class="screen" hidden aria-labelledby="q-h">
+      <p class="eyebrow" id="q-step"></p>
+      <h1 id="q-h" class="q"></h1>
+      <fieldset class="options" id="q-options"><legend class="sr">Choose an answer</legend></fieldset>
+      <fieldset class="confidence" id="q-conf">
+        <legend>How sure are you?</legend>
+        <label><input type="radio" name="qconf" value="guess" /><span>Guess</span></label>
+        <label><input type="radio" name="qconf" value="fairly" checked /><span>Fairly sure</span></label>
+        <label><input type="radio" name="qconf" value="certain" /><span>Certain</span></label>
+      </fieldset>
+      <button class="btn primary big" id="q-submit" type="button" disabled>Check my answer</button>
+      <div class="feedback" id="q-feedback" hidden role="status" aria-live="polite">
+        <h3 id="qf-title"></h3>
+        <p id="qf-explain"></p>
+        <button class="btn primary big" id="q-next" type="button">Next</button>
+      </div>
+    </section>
+
+    <!-- Results -->
+    <section id="screen-end" class="screen" hidden aria-labelledby="end-h">
+      <p class="eyebrow" id="res-eyebrow"></p>
+      <h1 id="end-h"><span id="res-rating" class="accent-text"></span></h1>
+      <p class="lead" id="res-blurb"></p>
+      <div class="stats">
+        <div><span id="res-points">0</span><small>score</small></div>
+        <div><span id="res-placed">0</span><small>placed first time</small></div>
+        <div><span id="res-xp">0</span><small>XP earned</small></div>
+      </div>
+      <p class="callout" id="res-level"></p>
+      <h2>The attack, start to finish</h2>
+      <ol class="story" id="res-story"></ol>
+      <h2>How your score added up</h2>
+      <ul class="breakdown" id="res-breakdown"></ul>
+      <div class="btn-row">
+        <button class="btn primary big" id="res-again" type="button">Try again</button>
+        <button class="btn big" id="res-other" type="button">Another case</button>
+        <a class="btn big" href="/games/">All games</a>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="game.js"></script>
+</body>
+</html>
