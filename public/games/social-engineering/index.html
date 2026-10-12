@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Social Engineering Simulator · LixTeam</title>
+  <meta name="description" content="Talk to people who are not who they say they are. Practise verifying requests, resisting pressure and escalating safely. Free, no sign-up, no tracking." />
+  <meta name="theme-color" content="#0a0a0a" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23a3e635'/%3E%3Ctext x='16' y='22' font-family='Arial' font-weight='900' font-size='15' text-anchor='middle' fill='%230a0a0a'%3ELT%3C/text%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="../shared.css" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="top">
+    <a class="back" href="/games/">← All games</a>
+    <span class="title">Social Engineering</span>
+    <span class="spacer" aria-hidden="true"></span>
+  </header>
+
+  <main id="app">
+    <!-- Choose a scenario -->
+    <section id="screen-pick" class="screen" aria-labelledby="pick-h">
+      <p class="eyebrow">Conversation practice</p>
+      <h1 id="pick-h">Social Engineering <span class="accent-text">Simulator</span></h1>
+      <p class="lead">Colleagues, IT, executives and visitors all ask for things. Some are real. Some are not. Respond, and watch how they react.</p>
+      <ul class="howto">
+        <li><strong>Choose your replies.</strong> People push back, get annoyed and change tack, and the story branches with what you say.</li>
+        <li><strong>Two things matter.</strong> Company risk (keep it low) and your relationship with the person (do not be needlessly rude, because not every request is an attack).</li>
+        <li><strong>Verify, then help.</strong> The skill is checking calmly through a channel you control, not refusing everything.</li>
+      </ul>
+      <div class="scenarios" id="scenario-list"></div>
+      <p class="fine">Everything here is fictional. Your progress stays on this device and is never sent anywhere.</p>
+    </section>
+
+    <!-- The conversation -->
+    <section id="screen-play" class="screen" hidden aria-label="Conversation">
+      <div class="scene-head">
+        <div>
+          <h2 id="sc-title"></h2>
+          <p class="sc-sub" id="sc-channel"></p>
+        </div>
+      </div>
+      <div class="meters">
+        <div class="meter risk">
+          <div class="meter-top"><span>Company risk</span><span id="m-risk">0%</span></div>
+          <div class="bar" role="progressbar" aria-label="Company risk" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="bar-risk"><div id="fill-risk"></div></div>
+        </div>
+        <div class="meter rel">
+          <div class="meter-top"><span>Relationship</span><span id="m-rel">70%</span></div>
+          <div class="bar" role="progressbar" aria-label="Relationship" aria-valuemin="0" aria-valuemax="100" aria-valuenow="70" id="bar-rel"><div id="fill-rel"></div></div>
+        </div>
+      </div>
+
+      <div class="chat" id="chat" role="log" aria-live="polite" aria-label="Conversation"></div>
+
+      <div class="replies" id="replies"></div>
+    </section>
+
+    <!-- Debrief -->
+    <section id="screen-debrief" class="screen" hidden aria-labelledby="debrief-h">
+      <p class="eyebrow">Debrief</p>
+      <h1 id="debrief-h" class="q"></h1>
+      <fieldset class="options" id="debrief-options"><legend class="sr">Choose an answer</legend></fieldset>
+      <fieldset class="confidence" id="debrief-conf">
+        <legend>How sure are you?</legend>
+        <label><input type="radio" name="dconf" value="guess" /><span>Guess</span></label>
+        <label><input type="radio" name="dconf" value="fairly" checked /><span>Fairly sure</span></label>
+        <label><input type="radio" name="dconf" value="certain" /><span>Certain</span></label>
+      </fieldset>
+      <button class="btn primary big" id="debrief-submit" type="button" disabled>Check my answer</button>
+      <div class="feedback" id="debrief-feedback" hidden role="status" aria-live="polite">
+        <h3 id="df-title"></h3>
+        <p id="df-explain"></p>
+        <button class="btn primary big" id="debrief-next" type="button">See my results</button>
+      </div>
+    </section>
+
+    <!-- Results -->
+    <section id="screen-end" class="screen" hidden aria-labelledby="end-h">
+      <p class="eyebrow" id="res-eyebrow"></p>
+      <h1 id="end-h"><span id="res-title"></span></h1>
+      <p class="lead" id="res-text"></p>
+      <div class="stats">
+        <div><span id="res-rating">-</span><small>rating</small></div>
+        <div><span id="res-points">0</span><small>score</small></div>
+        <div><span id="res-xp">0</span><small>XP earned</small></div>
+      </div>
+      <p class="callout" id="res-level"></p>
+      <h2>Your decisions</h2>
+      <ol class="decisions" id="res-decisions"></ol>
+      <h2>The safest route</h2>
+      <p class="callout" id="res-ideal"></p>
+      <h2>Tactics used on you</h2>
+      <ul class="tactics" id="res-tactics"></ul>
+      <h2>How your score added up</h2>
+      <ul class="breakdown" id="res-breakdown"></ul>
+      <div class="btn-row">
+        <button class="btn primary big" id="res-again" type="button">Try again</button>
+        <button class="btn big" id="res-other" type="button">Another scenario</button>
+        <a class="btn big" href="/games/">All games</a>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="game.js"></script>
+</body>
+</html>
