@@ -6,7 +6,9 @@
 // Action tags: key = a strong move worth knowing, useful, weak = tempting but
 // does little, overreact = disproportionate, bad = harmful.
 
-export const INCIDENTS = [
+import { EXTRA } from './incidents-extra.js';
+
+const CORE = [
   // ─────────────────────────────────────────────────────────────
   {
     id: 'mfa-fatigue',
@@ -399,3 +401,6 @@ export const INCIDENTS = [
     ],
   },
 ];
+
+// Everything the game draws from.
+export const INCIDENTS = [...CORE, ...EXTRA];

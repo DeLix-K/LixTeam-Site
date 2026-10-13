@@ -14,7 +14,9 @@ const RATINGS = [
   { min: 255, name: 'Master investigator', blurb: 'Precise placements, evidence connected by pivoting, and the right conclusions on cause and prevention.' },
 ];
 
-export const CASES = [
+import { EXTRA } from './cases-extra.js';
+
+const CORE = [
   // ─────────────────────────────────────────────────────────────
   {
     id: 'friday',
@@ -145,3 +147,6 @@ export const CASES = [
     summary: 'The attack took under three hours from one enabled macro to a ransom note. Each stage left a clear alert, and the shadow-copy deletion was the last warning before encryption began.',
   },
 ];
+
+// Everything the game draws from.
+export const CASES = [...CORE, ...EXTRA];

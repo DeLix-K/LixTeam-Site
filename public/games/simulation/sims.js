@@ -14,7 +14,9 @@ const RATINGS = [
   { name: 'Textbook response', blurb: 'Accurate triage, the right evidence, proportionate decisions and an honest, well-supported report.' },
 ];
 
-export const SIMS = [
+import { SENIOR } from './sims-senior.js';
+
+const CORE = [
   // ─────────────────────────────────────────────────────────────
   {
     id: 'harbour',
@@ -252,3 +254,6 @@ export const SIMS = [
     ],
   },
 ];
+
+// Everything the simulation draws from.
+export const SIMS = [...CORE, ...SENIOR];

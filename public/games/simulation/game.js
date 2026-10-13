@@ -106,7 +106,7 @@ function renderStage() {
   $('stage-next').hidden = true;
   $('stage-body').replaceChildren();
   if (st.stage > 0) $('brief').open = false;
-  ({ triage: buildTriage, evidence: buildEvidence, decision: buildDecision, report: buildReport })[stage.type](stage);
+  ({ triage: buildTriage, evidence: buildEvidence, decision: buildDecision, report: buildReport, prioritise: buildPrioritise, review: buildReview })[stage.type](stage);
   $('stage-title').scrollIntoView({ block: 'start' });
 }
 
@@ -148,8 +148,9 @@ function buildTriage(stage) {
       const label = engine.TRIAGE_ACTIONS.find((x) => x.id === d.answer).label;
       card.append(h('div', { class: `verdict ${d.right ? 'ok' : 'no'}` }, h('b', { text: d.right ? 'Right call' : `Better call: ${label}` }), d.explain));
     }
-    details.triage = { right: res.detail.filter((d) => d.right).length, total: res.detail.length };
-    finishStage(res, `Triage: ${details.triage.right} of ${details.triage.total} handled correctly (+${res.score}).`);
+    const right = res.detail.filter((d) => d.right).length;
+    details[stage.id] = { line: `Triage: ${right} of ${res.detail.length} alerts handled correctly` };
+    finishStage(res, `Triage: ${right} of ${res.detail.length} handled correctly (+${res.score}).`);
   };
 }
 
@@ -191,8 +192,9 @@ function buildEvidence(stage) {
       it.li.classList.add('is-clue');
       it.li.append(h('div', { class: 'note no' }, h('b', { text: 'You missed this clue' }), l.note));
     }
-    details.evidence = { found: res.found.length, total: res.found.length + res.missed.length, wrong: res.wrong };
-    finishStage(res, `Evidence: ${res.found.length} of ${details.evidence.total} clues found, ${res.wrong} wrong flag${res.wrong === 1 ? '' : 's'} (+${res.score}).`);
+    const total = res.found.length + res.missed.length;
+    details[stage.id] = { line: `Evidence: found ${res.found.length} of ${total} clues with ${res.wrong} wrong flag${res.wrong === 1 ? '' : 's'}` };
+    finishStage(res, `Evidence: ${res.found.length} of ${total} clues found, ${res.wrong} wrong flag${res.wrong === 1 ? '' : 's'} (+${res.score}).`);
   };
 }
 
@@ -221,7 +223,7 @@ function buildDecision(stage) {
       else if (o.id === id) labels[o.id].classList.add('wrong');
     }
     body.append(h('div', { class: 'consequence' }, h('b', { text: res.option.quality === 3 ? 'The strongest choice' : 'What happens' }), res.option.consequence));
-    details[stage.id] = { option: res.option.text, quality: res.option.quality };
+    details[stage.id] = { line: `${stage.title.replace(/^Decide: /, '')}: ${res.option.text}` };
     finishStage(res, `${res.score} of ${res.max} points.`);
   };
 }
@@ -263,12 +265,124 @@ function buildReport(stage) {
     };
     res.statements.forEach((s) => mark(s, sLabels));
     res.actions.forEach((a) => mark(a, aLabels));
-    details.report = {
+    details[stage.id] = {
       text: engine.reportText(sim, stage, res),
+      line: `Report: ${res.statements.filter((x) => x.picked && x.correct).length + res.actions.filter((x) => x.picked && x.correct).length} supported points, ${res.statements.filter((x) => x.picked && !x.correct).length + res.actions.filter((x) => x.picked && !x.correct).length} unsupported claims`,
       accurate: res.statements.filter((s) => s.picked && s.correct).length + res.actions.filter((a) => a.picked && a.correct).length,
       unsupported: res.statements.filter((s) => s.picked && !s.correct).length + res.actions.filter((a) => a.picked && !a.correct).length,
     };
     finishStage(res, `Report: ${res.score} of ${res.max} points.`);
+  };
+}
+
+// ── Prioritise ──────────────────────────────────────────────────
+function buildPrioritise(stage) {
+  const body = $('stage-body');
+  const items = engine.visible(stage.items, st.flags);
+  const picked = [];
+  const wrap = h('div', { class: 'order-lists' });
+  const avail = h('div', { class: 'order-col' }, h('h4', { text: 'Incidents (tap to rank)' }), h('ul'));
+  const chosen = h('div', { class: 'order-col picked' }, h('h4', { text: 'Your ranking, most urgent first' }), h('ol'));
+  const reset = h('button', { class: 'linkbtn', type: 'button', text: 'Clear my ranking' });
+  const shuffled = shuffle(items);
+  let locked = false;
+  const draw = () => {
+    avail.querySelector('ul').replaceChildren(
+      ...shuffled
+        .filter((it) => !picked.includes(it.id))
+        .map((it) => {
+          const b = h('button', { class: 'step', type: 'button' }, h('span', { class: 'src', text: it.source }), it.text);
+          b.addEventListener('click', () => {
+            if (locked) return;
+            picked.push(it.id);
+            draw();
+          });
+          return h('li', {}, b);
+        })
+    );
+    chosen.querySelector('ol').replaceChildren(
+      ...picked.map((id, i) => {
+        const it = items.find((x) => x.id === id);
+        const b = h('button', { class: 'step', type: 'button', 'aria-label': `Rank ${i + 1}: ${it.text}. Tap to remove.` }, h('span', { class: 'n', text: String(i + 1) }), it.text);
+        b.addEventListener('click', () => {
+          if (locked) return;
+          picked.splice(i, 1);
+          draw();
+        });
+        return h('li', {}, b);
+      })
+    );
+    $('stage-submit').disabled = picked.length !== items.length;
+  };
+  reset.addEventListener('click', () => {
+    if (locked) return;
+    picked.length = 0;
+    draw();
+  });
+  wrap.append(avail, chosen);
+  body.append(wrap, reset);
+  draw();
+  $('stage-submit').textContent = 'Lock in my ranking';
+  $('stage-submit').onclick = () => {
+    locked = true;
+    const res = engine.scorePrioritise(stage, st.flags, picked);
+    reset.hidden = true;
+    avail.hidden = true;
+    chosen.querySelector('ol').replaceChildren(
+      ...res.detail
+        .sort((a, b) => a.priority - b.priority)
+        .map((d) => {
+          const it = items.find((x) => x.id === d.id);
+          const good = d.points === engine.PRIORITY.exact;
+          return h(
+            'li',
+            {},
+            h('div', { class: 'card' + (good ? ' right' : d.points ? '' : ' wrong') }, h('p', { class: 'card-text', text: `Priority ${d.priority}: ${it.text}` }), h('div', { class: `verdict ${good ? 'ok' : 'no'}` }, h('b', { text: good ? 'You ranked this correctly' : `You ranked this ${d.chosen} (+${d.points})` }), d.why))
+          );
+        })
+    );
+    chosen.querySelector('h4').textContent = 'The right order';
+    const exact = res.detail.filter((d) => d.points === engine.PRIORITY.exact).length;
+    details[stage.id] = { line: `Prioritisation: ${exact} of ${res.detail.length} incidents ranked in exactly the right place` };
+    finishStage(res, `${exact} of ${res.detail.length} ranked exactly right (+${res.score}).`);
+  };
+}
+
+// ── Review a junior's draft ─────────────────────────────────────
+function buildReview(stage) {
+  const body = $('stage-body');
+  const items = engine.visible(stage.statements, st.flags);
+  body.append(h('p', { class: 'stage-intro', text: stage.draftIntro || 'A junior analyst has drafted these findings. Flag every claim that is wrong, unsupported or overstated.' }));
+  const fs = h('fieldset', { class: 'options' }, h('legend', { text: 'Flag the flawed claims' }));
+  const labels = {};
+  for (const it of items) {
+    const input = h('input', { type: 'checkbox', name: 'rv', value: it.id });
+    input.addEventListener('change', () => ($('stage-submit').disabled = false));
+    const lab = h('label', {}, input, h('span', { class: 'box', text: it.text }));
+    labels[it.id] = lab;
+    fs.append(lab);
+  }
+  body.append(fs);
+  $('stage-submit').disabled = false; // finding nothing wrong is a valid (if costly) answer
+  $('stage-submit').textContent = 'Send my review';
+  $('stage-submit').onclick = () => {
+    const flagged = [...body.querySelectorAll('input[name="rv"]:checked')].map((i) => i.value);
+    const res = engine.scoreReview(stage, st.flags, flagged);
+    for (const i of body.querySelectorAll('input')) i.disabled = true;
+    for (const d of res.detail) {
+      const lab = labels[d.id];
+      let tag;
+      if (d.flawed && d.flagged) { lab.classList.add('right'); tag = 'Flaw found.'; }
+      else if (d.flawed) { lab.classList.add('right'); tag = 'You missed this flaw.'; }
+      else if (d.flagged) { lab.classList.add('wrong'); tag = 'This claim was sound: flagging it cost you points.'; }
+      else tag = 'Correctly left alone.';
+      lab.append(h('span', { class: 'why' }, `${tag} ${d.why}`));
+    }
+    const found = res.detail.filter((d) => d.flawed && d.flagged).length;
+    const flaws = res.detail.filter((d) => d.flawed).length;
+    const wrongFlags = res.detail.filter((d) => !d.flawed && d.flagged).length;
+    details[stage.id] = { line: `Mentoring review: found ${found} of ${flaws} flaws in a junior's draft, with ${wrongFlags} sound claim${wrongFlags === 1 ? '' : 's'} wrongly challenged` };
+    finishStage(res, `Review: ${found} of ${flaws} flaws found (+${res.score}).`);
   };
 }
 
@@ -312,25 +426,19 @@ function showResults() {
       return h('li', {}, h('span', { text: stage.title }), h('span', { class: 'pts', text: `${r.score} / ${r.max}` }));
     })
   );
-  $('res-report').textContent = details.report ? details.report.text : '';
+  const reportStage = sim.stages.find((x) => x.type === 'report');
+  $('res-report').textContent = reportStage && details[reportStage.id] ? details[reportStage.id].text : '';
 
   // Campaign: record the result when this was launched as a mission.
   $('mission-result').hidden = true;
   if (MISSION && MISSION.ref === sim.id) {
-    const d = details;
     missionLink.render(
       $('mission-result'),
       missionLink.report(MISSION, {
         points: t.points,
         tier: t.tier,
         perf: t.perf,
-        summary: [
-          `Triage: ${d.triage.right} of ${d.triage.total} alerts handled correctly`,
-          `Evidence: found ${d.evidence.found} of ${d.evidence.total} clues with ${d.evidence.wrong} wrong flag${d.evidence.wrong === 1 ? '' : 's'}`,
-          `Containment: ${d.contain.option}`,
-          `Report: ${d.report.accurate} supported point${d.report.accurate === 1 ? '' : 's'}, ${d.report.unsupported} unsupported claim${d.report.unsupported === 1 ? '' : 's'}`,
-          `Result: ${rating.name} (${Math.round(t.perf * 100)}% of full marks)`,
-        ],
+        summary: [...sim.stages.map((x) => details[x.id] && details[x.id].line).filter(Boolean), `Result: ${rating.name} (${Math.round(t.perf * 100)}% of full marks)`],
       })
     );
   }
@@ -340,7 +448,8 @@ function showResults() {
 }
 
 async function copyReport() {
-  const text = details.report ? details.report.text : '';
+  const reportStage = sim.stages.find((x) => x.type === 'report');
+  const text = reportStage && details[reportStage.id] ? details[reportStage.id].text : '';
   try {
     await navigator.clipboard.writeText(text);
     $('copy-status').textContent = 'Report copied.';

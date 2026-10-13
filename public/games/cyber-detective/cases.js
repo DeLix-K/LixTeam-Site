@@ -16,7 +16,9 @@ const RATINGS = [
   { min: 245, name: 'Chief Inspector', blurb: 'Excellent. Precise evidence, the right attack and the right first move.' },
 ];
 
-export const CASES = [
+import { EXTRA } from './cases-extra.js';
+
+const CORE = [
   // ─────────────────────────────────────────────────────────────
   {
     id: 'invoice',
@@ -302,3 +304,6 @@ export const CASES = [
     ],
   },
 ];
+
+// Everything the game draws from.
+export const CASES = [...CORE, ...EXTRA];

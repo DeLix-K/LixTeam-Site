@@ -120,12 +120,16 @@ export function tierTotal(tierId) {
 }
 
 // 0..100. Unattempted missions count as zero, so breadth matters.
-export function mastery(s, compId) {
+// `scope` (a list of tier ids) limits the sum to those tiers' missions and leaves
+// out promotion exams. Gates use it, so a promotion never asks for mastery built
+// from missions the player cannot have reached yet.
+export function mastery(s, compId, scope) {
   let have = 0;
   let total = 0;
   let attempted = 0;
   let count = 0;
   for (const m of MISSIONS) {
+    if (scope && (m.exam || !scope.includes(m.tier))) continue;
     const w = m.competencies[compId];
     if (!w) continue;
     total += w;
@@ -150,8 +154,14 @@ function checklist(req, s) {
   }
   for (const [compId, min] of Object.entries(req.mastery || {})) {
     const comp = COMPETENCIES.find((c) => c.id === compId);
-    const sc = mastery(s, compId).score;
-    items.push({ key: `mastery-${compId}`, label: `${comp ? comp.name : compId} mastery ${min}+`, detail: `${sc} / ${min}`, done: sc >= min, progress: Math.min(1, sc / min) });
+    const sc = mastery(s, compId, req.masteryScope).score;
+    const scopeNote = req.masteryScope ? ` (from ${req.masteryScope.map((t) => TIERS.find((x) => x.id === t)?.name.toLowerCase() || t).join(' and ')} missions)` : '';
+    items.push({ key: `mastery-${compId}`, label: `${comp ? comp.name : compId} mastery ${min}+${scopeNote}`, detail: `${sc} / ${min}`, done: sc >= min, progress: Math.min(1, sc / min) });
+  }
+  if (req.rank) {
+    const idx = RANKS.findIndex((r) => r.id === req.rank);
+    const have = rankIndex(s);
+    items.push({ key: 'rank', label: `Reach the rank of ${RANKS[idx].name}`, detail: have >= idx ? 'Reached' : RANKS[have].name, done: have >= idx, progress: have >= idx ? 1 : 0 });
   }
   if (req.exam) {
     const exam = missionById(req.exam);
@@ -185,6 +195,16 @@ export function missionStatus(s, id) {
 export const unlockedIds = (s) => MISSIONS.filter((m) => missionStatus(s, m.id).unlocked).map((m) => m.id);
 
 // ── Ranks ───────────────────────────────────────────────────────
+// Rank requirements never contain a `rank` item, so this cannot recurse.
+function rankIndex(s) {
+  let index = 0;
+  for (let i = 1; i < RANKS.length; i++) {
+    if (checklist(RANKS[i].requires, s).every((x) => x.done)) index = i;
+    else break;
+  }
+  return index;
+}
+
 export function rankOf(s) {
   let index = 0;
   for (let i = 1; i < RANKS.length; i++) {

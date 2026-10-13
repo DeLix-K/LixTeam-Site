@@ -20,6 +20,8 @@ export const TRIAGE_ACTIONS = [
 export const EVIDENCE = { strong: 12, weak: 4, falseFlag: 6 };
 export const DECISION_POINTS = [0, 8, 16, 24];
 export const REPORT = { statement: 8, action: 10 };
+export const PRIORITY = { exact: 10, adjacent: 5 }; // points per incident ranked
+export const REVIEW = { flaw: 8 }; // points per flaw found; the same is lost for flagging a sound claim
 
 export function newSim() {
   return { stage: 0, flags: {}, results: [], done: false };
@@ -116,6 +118,35 @@ export function reportText(sim, stage, result) {
   return lines.join('\n');
 }
 
+// ── Prioritise ──────────────────────────────────────────────────
+// order: array of item ids, most urgent first. Being one place out earns half.
+export function scorePrioritise(stage, flags, order) {
+  const items = visible(stage.items, flags);
+  let score = 0;
+  const detail = items.map((it) => {
+    const chosen = order.indexOf(it.id) + 1;
+    const diff = Math.abs(chosen - it.priority);
+    const pts = chosen === 0 ? 0 : diff === 0 ? PRIORITY.exact : diff === 1 ? PRIORITY.adjacent : 0;
+    score += pts;
+    return { id: it.id, chosen, priority: it.priority, points: pts, why: it.why };
+  });
+  return { score, max: items.length * PRIORITY.exact, detail };
+}
+
+// ── Review a junior's draft ─────────────────────────────────────
+// flaggedIds: the claims the player says are flawed or unsupported.
+export function scoreReview(stage, flags, flaggedIds) {
+  const items = visible(stage.statements, flags);
+  let score = 0;
+  const detail = items.map((it) => {
+    const flagged = flaggedIds.includes(it.id);
+    const flawed = !it.sound;
+    if (flagged) score += flawed ? REVIEW.flaw : -REVIEW.flaw;
+    return { ...it, flagged, flawed };
+  });
+  return { score: Math.max(0, score), max: items.filter((x) => !x.sound).length * REVIEW.flaw, detail };
+}
+
 // ── Stage bookkeeping and totals ────────────────────────────────
 // Records a stage's result, applies any flags it set, and advances.
 export function completeStage(sim, st, result) {
@@ -140,6 +171,8 @@ export function stageMax(stage, flags) {
     case 'evidence': return evidenceMax(stage, flags);
     case 'decision': return DECISION_POINTS[3];
     case 'report': return reportMax(stage, flags);
+    case 'prioritise': return visible(stage.items, flags).length * PRIORITY.exact;
+    case 'review': return visible(stage.statements, flags).filter((x) => !x.sound).length * REVIEW.flaw;
     default: return 0;
   }
 }
