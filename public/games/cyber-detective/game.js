@@ -1,8 +1,10 @@
 import { CASES } from './cases.js';
 import * as engine from './engine.js';
 import * as profile from '../core/profile.js';
+import * as missionLink from '../core/mission-link.js';
 
 const BEST_KEY = 'lixteam.cyberDetective.best';
+const MISSION = missionLink.current('cyber-detective');
 const $ = (id) => document.getElementById(id);
 const screens = { pick: $('screen-pick'), play: $('screen-play'), solve: $('screen-solve'), end: $('screen-end') };
 
@@ -342,6 +344,24 @@ function showResults() {
     })
   );
   $('res-missed-wrap').hidden = outcome.missed.length === 0;
+  // Campaign: record the result when this was launched as a mission.
+  $('mission-result').hidden = true;
+  if (MISSION && MISSION.ref === c.id) {
+    const total = Object.keys(c.clues).length;
+    missionLink.render(
+      $('mission-result'),
+      missionLink.report(MISSION, {
+        points: outcome.points,
+        tier: Math.max(0, c.ratings.findIndex((r) => r.name === outcome.rating.name)),
+        summary: [
+          `Found ${st.found.length} of ${total} clues${st.falseFlags ? ` with ${st.falseFlags} wrong flag${st.falseFlags === 1 ? '' : 's'}` : ' with no wrong flags'}`,
+          outcome.attackRight ? 'Named the attack correctly' : 'Did not identify the attack',
+          outcome.actionRight ? 'Chose the right first response' : 'Chose a weaker first response',
+          `Result: ${outcome.rating.name}`,
+        ],
+      })
+    );
+  }
   show('end');
   $('res-again').focus({ preventScroll: true });
 }
@@ -357,3 +377,10 @@ $('res-other').addEventListener('click', () => {
 });
 
 renderPicker();
+
+// Opened from the campaign: go straight to the mission's case.
+if (MISSION) {
+  missionLink.applyChrome();
+  const target = CASES.find((x) => x.id === MISSION.ref);
+  if (target) start(target);
+}

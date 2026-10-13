@@ -1,4 +1,5 @@
 import * as profile from './core/profile.js';
+import * as career from './core/career.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -13,7 +14,7 @@ function h(tag, props = {}, ...kids) {
   return el;
 }
 
-// Order matters: this is the roadmap. Only entries with an `href` are playable today.
+// The free-practice modes. The career campaign (career/) uses these same modes as missions.
 const MODES = [
   { n: 1, name: 'Phish or Legit', blurb: 'Judge emails, calls and everyday choices, say how sure you are, learn the red flags.', href: 'phish-or-legit/' },
   { n: 2, name: 'Incident Commander', blurb: 'An incident unfolds and your choices change what happens next.', href: 'incident-commander/' },
@@ -21,9 +22,24 @@ const MODES = [
   { n: 4, name: 'Social Engineering Simulator', blurb: 'Talk to people who are not who they say they are.', href: 'social-engineering/' },
   { n: 5, name: 'Cyber Escape Room', blurb: 'Solve connected security puzzles to protect the vault.', href: 'escape-room/' },
   { n: 6, name: 'The Breach Room', blurb: 'Reconstruct how an organisation was compromised.', href: 'breach-room/' },
+  { n: 7, name: 'Incident Simulation', blurb: 'Work a whole incident from the first alert to the final report.', href: 'simulation/' },
 ];
 
+function renderCareer() {
+  const s = career.load();
+  const r = career.rankOf(s);
+  const started = s.attempts.length > 0;
+  $('career-rank').textContent = r.rank.name;
+  $('career-line').textContent = started
+    ? r.isTop
+      ? 'You have reached the top rank in this campaign.'
+      : `${s.xp} XP. Next: ${r.next.name}.`
+    : 'Start as a Recruit and work up to SOC Analyst by solving realistic cases.';
+  $('career-btn').textContent = started ? 'Continue your career' : 'Start your career';
+}
+
 function render() {
+  renderCareer();
   const p = profile.load();
   const info = profile.levelInfo(p.xp);
 
@@ -31,14 +47,14 @@ function render() {
   $('p-xp').textContent = `${p.xp} XP`;
   $('p-next').textContent = `${info.to - p.xp} to level ${info.level + 1}`;
   $('p-bar').style.width = `${Math.round(info.progress * 100)}%`;
-  $('p-streak').textContent = String(p.daily.streak);
+  $('p-streak').textContent = String(p.daily.total || 0);
 
   // Daily mission
   const done = profile.dailyDone();
   const due = profile.dueItems().length;
   $('daily').classList.toggle('done', done);
   $('daily-text').textContent = done
-    ? 'Done for today. Come back tomorrow to keep your streak going.'
+    ? 'Done for today. Come back whenever you like for the next one.'
     : due > 0
       ? `Five quick emails, about two minutes. ${Math.min(due, 5)} are ideas you missed before, so they stick.`
       : 'Five quick emails. About two minutes.';

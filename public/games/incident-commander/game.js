@@ -1,8 +1,10 @@
 import { INCIDENTS } from './incidents.js';
 import * as engine from './engine.js';
 import * as profile from '../core/profile.js';
+import * as missionLink from '../core/mission-link.js';
 
 const BEST_KEY = 'lixteam.incidentCommander.best';
+const MISSION = missionLink.current('incident-commander');
 const $ = (id) => document.getElementById(id);
 const screens = { pick: $('screen-pick'), play: $('screen-play'), debrief: $('screen-debrief'), end: $('screen-end') };
 
@@ -281,6 +283,25 @@ function showResults() {
   $('res-missed-wrap').hidden = result.missed.length === 0;
 
   $('res-timeline').replaceChildren(...game.log.map(logItem));
+  // Campaign: record the result when this was launched as a mission.
+  $('mission-result').hidden = true;
+  if (MISSION && MISSION.ref === incident.id) {
+    // "Overkill" is not in the rating list: it counts as no pass.
+    const facts = Object.keys(game.facts).length;
+    missionLink.render(
+      $('mission-result'),
+      missionLink.report(MISSION, {
+        points: result.points,
+        tier: Math.max(0, incident.ratings.findIndex((r) => r.name === result.rating.name)),
+        summary: [
+          `Outcome: ${game.outcome === 'declared' ? 'declared contained' : game.outcome === 'breach' ? 'the attacker got there first' : 'ran out of time'}, with threat at ${game.threat}% and business disruption at ${game.disruption}%`,
+          `Gathered ${facts} piece${facts === 1 ? '' : 's'} of evidence before acting`,
+          `Debrief questions: ${debriefScore.right} of ${incident.debrief.length} right`,
+          `Result: ${result.rating.name}`,
+        ],
+      })
+    );
+  }
   show('end');
   $('res-again').focus({ preventScroll: true });
 }
@@ -296,3 +317,10 @@ $('res-other').addEventListener('click', () => {
 });
 
 renderPicker();
+
+// Opened from the campaign: go straight to the mission's incident.
+if (MISSION) {
+  missionLink.applyChrome();
+  const target = INCIDENTS.find((x) => x.id === MISSION.ref);
+  if (target) start(target);
+}

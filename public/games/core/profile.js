@@ -32,7 +32,7 @@ function blank() {
     skills: Object.fromEntries(SKILLS.map((s) => [s.id, { seen: 0, correct: 0 }])),
     items: {}, // id -> { box, due, skill }   only ideas that needed revisiting
     calibration: { certainRight: 0, certainWrong: 0, unsureRight: 0, unsureWrong: 0 },
-    daily: { last: '', streak: 0 },
+    daily: { last: '', streak: 0, total: 0 },
     played: 0,
   };
 }
@@ -145,12 +145,13 @@ export function dailyDone(now = new Date()) {
 export function completeDaily(now = new Date()) {
   const p = load();
   const today = todayKey(now);
-  if (p.daily.last === today) return { streak: p.daily.streak, first: false };
+  if (p.daily.last === today) return { streak: p.daily.streak, total: p.daily.total || 0, first: false };
   const yesterday = todayKey(new Date(now.getTime() - DAY));
   p.daily.streak = p.daily.last === yesterday ? p.daily.streak + 1 : 1;
   p.daily.last = today;
+  p.daily.total = (p.daily.total || 0) + 1; // a count that never goes down
   save();
-  return { streak: p.daily.streak, first: true };
+  return { streak: p.daily.streak, total: p.daily.total, first: true };
 }
 
 export function noteRoundPlayed() {

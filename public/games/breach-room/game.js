@@ -1,8 +1,10 @@
 import { CASES } from './cases.js';
 import * as engine from './engine.js';
 import * as profile from '../core/profile.js';
+import * as missionLink from '../core/mission-link.js';
 
 const BEST_KEY = 'lixteam.breachRoom.best';
+const MISSION = missionLink.current('breach-room');
 const $ = (id) => document.getElementById(id);
 const screens = { pick: $('screen-pick'), play: $('screen-play'), q: $('screen-q'), end: $('screen-end') };
 
@@ -299,6 +301,23 @@ function showResults() {
   $('res-breakdown').replaceChildren(
     ...out.breakdown.map((b) => h('li', {}, h('span', { text: b.label }), h('span', { class: `pts ${b.points > 0 ? 'pos' : b.points < 0 ? 'neg' : 'zero'}`, text: `${b.points >= 0 ? '+' : ''}${b.points}` })))
   );
+  // Campaign: record the result when this was launched as a mission.
+  $('mission-result').hidden = true;
+  if (MISSION && MISSION.ref === c.id) {
+    missionLink.render(
+      $('mission-result'),
+      missionLink.report(MISSION, {
+        points: out.points,
+        tier: Math.max(0, c.ratings.findIndex((r) => r.name === out.rating.name)),
+        summary: [
+          `Placed ${firstTime} of ${c.cards.length} pieces of evidence correctly first time`,
+          `Pivoted on ${st.pivots.length} indicator${st.pivots.length === 1 ? '' : 's'} to connect evidence`,
+          `Root cause, prevention and last-chance questions: ${out.right} of ${c.questions.length} right`,
+          `Result: ${out.rating.name}`,
+        ],
+      })
+    );
+  }
   show('end');
   $('res-again').focus({ preventScroll: true });
 }
@@ -314,3 +333,10 @@ $('res-other').addEventListener('click', () => {
 });
 
 renderPicker();
+
+// Opened from the campaign: go straight to the mission's case.
+if (MISSION) {
+  missionLink.applyChrome();
+  const target = CASES.find((x) => x.id === MISSION.ref);
+  if (target) start(target);
+}

@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SOC Analyst Career Campaign · LixTeam</title>
+  <meta name="description" content="Start as a Recruit and work up to SOC Analyst by solving realistic cases. Promotions are earned with mastery and a practical exam, not just time. Free, no sign-up, no tracking." />
+  <meta name="theme-color" content="#0a0a0a" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23a3e635'/%3E%3Ctext x='16' y='22' font-family='Arial' font-weight='900' font-size='15' text-anchor='middle' fill='%230a0a0a'%3ELT%3C/text%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="../shared.css" />
+  <link rel="stylesheet" href="career.css" />
+</head>
+<body>
+  <header class="top">
+    <a class="back" href="/games/">← All games</a>
+    <span class="title">Career Campaign</span>
+    <span class="spacer" aria-hidden="true"></span>
+  </header>
+
+  <main id="app">
+    <section class="screen" aria-labelledby="c-h">
+      <p class="eyebrow">SOC analyst career</p>
+      <h1 id="c-h">Become the <span class="accent-text">analyst.</span></h1>
+      <p class="lead">Investigate realistic cases, make decisions and prove your skills. Rank is earned through mastery and a practical exam, not by grinding XP.</p>
+      <p class="disclaimer">Ranks and scores are game progression. They are not qualifications, not validated assessments, and not a guarantee of job readiness.</p>
+
+      <!-- Rank -->
+      <div class="panel rank" id="rank-panel">
+        <div class="rank-top">
+          <div>
+            <small>Your rank</small>
+            <h2 id="rank-name"></h2>
+            <p id="rank-blurb"></p>
+          </div>
+          <div class="xp"><span id="xp-num">0</span><small>XP</small></div>
+        </div>
+        <div class="next" id="next-box">
+          <h3 id="next-title"></h3>
+          <ul class="checks" id="checks"></ul>
+        </div>
+      </div>
+
+      <!-- Recommended next -->
+      <div class="panel rec" id="rec-panel" hidden>
+        <small>Recommended next</small>
+        <h3 id="rec-title"></h3>
+        <p id="rec-why"></p>
+        <a class="btn primary big" id="rec-go" href="#">Start</a>
+      </div>
+
+      <!-- Skills -->
+      <h2 class="sec">Skill profile</h2>
+      <p class="section-sub">Mastery comes from your best result on each mission that uses a skill. Missions you have not tried count as zero, so the score reflects breadth as well as ability.</p>
+      <div class="skills" id="skills"></div>
+
+      <!-- Campaign -->
+      <h2 class="sec">The campaign</h2>
+      <div id="campaign"></div>
+
+      <!-- Roadmap -->
+      <h2 class="sec">Coming next</h2>
+      <p class="section-sub">Planned, not built yet.</p>
+      <ul class="roadmap" id="roadmap"></ul>
+
+      <!-- Portfolio -->
+      <h2 class="sec">Case history and portfolio</h2>
+      <p class="section-sub">Every case you complete becomes a short case report. Replay a case to improve it and compare your first attempt with your latest.</p>
+      <div id="portfolio"></div>
+
+      <!-- Progress -->
+      <h2 class="sec">Your progress</h2>
+      <div class="panel" id="progress-panel">
+        <p class="section-sub">Progress is saved only in this browser. To move to another device, copy your progress code here and paste it there.</p>
+        <textarea id="code-box" rows="3" readonly aria-label="Your progress code"></textarea>
+        <div class="btn-row">
+          <button class="btn" id="copy-code" type="button">Copy progress code</button>
+          <button class="btn" id="show-import" type="button">Restore from a code</button>
+          <button class="btn danger" id="reset-career" type="button">Reset my career</button>
+        </div>
+        <div id="import-box" hidden>
+          <label for="import-input">Paste a progress code</label>
+          <textarea id="import-input" rows="3"></textarea>
+          <button class="btn primary" id="do-import" type="button">Restore</button>
+        </div>
+        <p class="status" id="progress-status" role="status" aria-live="polite"></p>
+      </div>
+
+      <p class="fine">Everything here is fictional. Nothing you do is sent anywhere.</p>
+    </section>
+  </main>
+
+  <script type="module" src="career.js"></script>
+</body>
+</html>

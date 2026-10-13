@@ -43,3 +43,12 @@ a.mode:hover { transform: translateY(-3px); border-color: rgba(163, 230, 53, 0.5
   .daily .btn { justify-content: center; }
   .mode .tag { display: none; }
 }
+
+/* Career card at the top of the hub */
+.career-card { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 18px 20px; margin: 4px 0 14px; border-radius: var(--radius); border: 1px solid rgba(163, 230, 53, 0.55); background: linear-gradient(135deg, rgba(163, 230, 53, 0.14), var(--surface) 65%); text-decoration: none; color: var(--text); transition: transform 0.25s var(--ease), box-shadow 0.25s; }
+.career-card:hover { transform: translateY(-3px); box-shadow: 0 18px 40px -24px rgba(163, 230, 53, 0.5); }
+.career-card small { color: var(--accent); font-size: 12px; text-transform: uppercase; letter-spacing: 0.7px; font-weight: 800; }
+.career-card h2 { margin: 2px 0 2px; font-size: 24px; letter-spacing: -0.4px; }
+.career-card p { margin: 0; color: #d4d4d4; font-size: 14.5px; }
+@media (max-width: 520px) { .career-card { flex-direction: column; align-items: stretch; } .career-card .btn { justify-content: center; } }
+@media (prefers-reduced-motion: reduce) { .career-card { transition: none; } .career-card:hover { transform: none; } }

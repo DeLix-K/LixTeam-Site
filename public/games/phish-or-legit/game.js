@@ -1,11 +1,14 @@
 import { SCENARIOS } from './scenarios.js';
 import * as profile from '../core/profile.js';
+import * as missionLink from '../core/mission-link.js';
 
 const LIVES = 3;
 const BEST_KEY = 'lixteam.phishOrLegit.best';
 const KIND_LABEL = { email: 'Email', text: 'Text message', call: 'Phone call', situation: 'Situation' };
 const DAILY = new URLSearchParams(location.search).get('mode') === 'daily';
-const ROUNDS = DAILY ? 5 : 10;
+// Opened from the career campaign: a fixed set of ten cases (see core/missions.js).
+const MISSION = missionLink.current('phish-or-legit');
+const ROUNDS = MISSION ? 10 : DAILY ? 5 : 10;
 
 const $ = (id) => document.getElementById(id);
 const screens = { start: $('screen-start'), play: $('screen-play'), end: $('screen-end') };
@@ -49,6 +52,7 @@ function shuffle(list) {
 
 // A normal round mixes four to six scams so the answer is never a pattern.
 function buildRound() {
+  if (MISSION) return shuffle(MISSION.items.map((id) => SCENARIOS.find((x) => x.id === id)).filter(Boolean));
   const phishCount = 4 + Math.floor(Math.random() * 3);
   const phish = shuffle(SCENARIOS.filter((s) => s.kind === 'phish')).slice(0, phishCount);
   const legit = shuffle(SCENARIOS.filter((s) => s.kind === 'legit')).slice(0, ROUNDS - phishCount);
@@ -258,7 +262,7 @@ function finish() {
     const d = profile.completeDaily();
     if (d.first) {
       bonusXp += 50;
-      dailyMsg = `Daily mission complete. ${d.streak} ${d.streak === 1 ? 'day' : 'days'} in a row.`;
+      dailyMsg = `Daily mission complete. ${d.total} completed so far.`;
     } else {
       dailyMsg = "You have already finished today's mission. Come back tomorrow for the next one.";
     }
@@ -308,6 +312,25 @@ function finish() {
   }
   $('end-lessons').hidden = game.missed.length === 0;
   $('copy-status').textContent = '';
+
+  // Campaign: record the result when this was launched as a mission.
+  $('mission-result').hidden = true;
+  if (MISSION) {
+    const tier = game.score >= 1200 ? 3 : game.score >= 800 ? 2 : game.score >= 400 ? 1 : 0;
+    missionLink.render(
+      $('mission-result'),
+      missionLink.report(MISSION, {
+        points: game.score,
+        tier,
+        summary: [
+          `Judged ${answered} case${answered === 1 ? '' : 's'} with ${accuracy}% accuracy`,
+          `Longest run of correct calls: ${game.bestStreak}`,
+          game.certainWrong > 0 ? `Was certain about ${game.certainWrong} answer${game.certainWrong === 1 ? '' : 's'} that turned out wrong` : 'No confident mistakes: confidence matched results',
+          `Score ${game.score}`,
+        ],
+      })
+    );
+  }
   show('end');
   $('again-btn').focus({ preventScroll: true });
 }
@@ -331,6 +354,12 @@ function setup() {
       `Five cases, about two minutes. ${due > 0 ? `${Math.min(due, 5)} of them are ideas you missed before, to help them stick.` : 'Fresh ones today.'}`;
     $('start-btn').textContent = "Start today's mission";
     $('again-btn').hidden = true;
+    $('copy-btn').hidden = true;
+  } else if (MISSION) {
+    missionLink.applyChrome();
+    $('start-eyebrow').textContent = 'Campaign mission';
+    $('start-lead').textContent = 'Ten messages and alerts. Decide, say how sure you are, and learn what gave each one away. Bronze needs a score of 400, silver 800, gold 1,200.';
+    $('start-btn').textContent = 'Begin the mission';
     $('copy-btn').hidden = true;
   } else if (best > 0) {
     $('best-line').hidden = false;

@@ -65,3 +65,17 @@ kbd { font: inherit; font-size: 13px; opacity: 0.7; border: 1px solid currentCol
   .btn, .progress div { transition: none; }
   .btn:hover { transform: none; }
 }
+
+/* Campaign result card, shown on a mode's results screen when played as a mission */
+.mission-result { margin: 8px 0 18px; }
+.mission-card { padding: 18px; border-radius: var(--radius); background: var(--surface); border: 1px solid var(--border); }
+.mission-card h2 { margin: 2px 0 8px; font-size: 22px; }
+.mission-card p { margin: 0 0 8px; color: #d4d4d4; }
+.mission-card .mission-eyebrow { color: var(--muted); font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.7px; }
+.mission-card .mission-promo { color: var(--accent); font-weight: 800; font-size: 17px; }
+.mission-card .mission-unlock { color: var(--accent); }
+.mission-card .btn { margin-top: 8px; }
+.mission-card.medal-3 { border-color: #fbbf24; box-shadow: 0 0 0 1px rgba(251, 191, 36, 0.3); }
+.mission-card.medal-2 { border-color: #cbd5e1; }
+.mission-card.medal-1 { border-color: #d97706; }
+.mission-card.medal-0 { border-color: rgba(248, 113, 113, 0.5); }

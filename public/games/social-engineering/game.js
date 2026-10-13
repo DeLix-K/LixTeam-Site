@@ -1,8 +1,10 @@
 import { SCENARIOS } from './scenarios.js';
 import * as engine from './engine.js';
 import * as profile from '../core/profile.js';
+import * as missionLink from '../core/mission-link.js';
 
 const BEST_KEY = 'lixteam.socialEngineering.best';
+const MISSION = missionLink.current('social-engineering');
 const $ = (id) => document.getElementById(id);
 const screens = { pick: $('screen-pick'), play: $('screen-play'), debrief: $('screen-debrief'), end: $('screen-end') };
 
@@ -271,6 +273,24 @@ function showResults() {
       h('li', {}, h('span', { text: b.label }), h('span', { class: `pts ${b.points >= 0 ? 'pos' : 'neg'}`, text: `${b.points >= 0 ? '+' : ''}${b.points}` }))
     )
   );
+  // Campaign: record the result when this was launched as a mission.
+  $('mission-result').hidden = true;
+  if (MISSION && MISSION.ref === sc.id) {
+    missionLink.render(
+      $('mission-result'),
+      missionLink.report(MISSION, {
+        points: outcome.points,
+        tier: Math.max(0, sc.ratings.findIndex((r) => r.name === outcome.rating.name)),
+        summary: [
+          `Ending: ${end.title}`,
+          run.flags.verified ? 'Verified the request through a channel I controlled' : 'Did not verify the request independently',
+          run.flags.reported ? 'Reported it to the right people' : 'Did not report it',
+          debriefAnswer && debriefAnswer.right ? 'Identified the manipulation tactic' : 'Missed the manipulation tactic',
+          `Result: ${outcome.rating.name}`,
+        ],
+      })
+    );
+  }
   show('end');
   $('res-again').focus({ preventScroll: true });
 }
@@ -286,3 +306,10 @@ $('res-other').addEventListener('click', () => {
 });
 
 renderPicker();
+
+// Opened from the campaign: go straight to the mission's scenario.
+if (MISSION) {
+  missionLink.applyChrome();
+  const target = SCENARIOS.find((x) => x.id === MISSION.ref);
+  if (target) start(target);
+}

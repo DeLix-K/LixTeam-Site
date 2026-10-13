@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Incident Simulation · LixTeam</title>
+  <meta name="description" content="Work a whole security incident from the first alert to the final report: triage, investigate, decide and write it up. Free, no sign-up, no tracking." />
+  <meta name="theme-color" content="#0a0a0a" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23a3e635'/%3E%3Ctext x='16' y='22' font-family='Arial' font-weight='900' font-size='15' text-anchor='middle' fill='%230a0a0a'%3ELT%3C/text%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="../shared.css" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="top">
+    <a class="back" href="/games/">← All games</a>
+    <span class="title">Incident Simulation</span>
+    <span class="spacer" aria-hidden="true"></span>
+  </header>
+
+  <main id="app">
+    <!-- Choose a simulation -->
+    <section id="screen-pick" class="screen" aria-labelledby="pick-h">
+      <p class="eyebrow">Full incident</p>
+      <h1 id="pick-h">Incident <span class="accent-text">Simulation</span></h1>
+      <p class="lead">Work a whole incident the way an analyst does: triage the alerts, investigate the evidence, make decisions, then write the report. Your early choices change what you face later.</p>
+      <ul class="howto">
+        <li><strong>Five stages.</strong> Triage, investigate, contain, communicate, report.</li>
+        <li><strong>Precision matters.</strong> Wrong triage calls, red herrings and unsupported claims in your report all cost points.</li>
+        <li><strong>Be honest in the report.</strong> If your own choices caused a problem, a good report says so.</li>
+      </ul>
+      <div class="sims" id="sim-list"></div>
+      <p class="fine">Everything here is fictional. Your progress stays on this device and is never sent anywhere.</p>
+    </section>
+
+    <!-- A stage -->
+    <section id="screen-stage" class="screen" hidden aria-label="Simulation stage">
+      <div class="stage-head">
+        <p class="eyebrow" id="stage-count"></p>
+        <div class="progress" aria-hidden="true"><div id="stage-bar"></div></div>
+        <h2 id="stage-title"></h2>
+      </div>
+      <details class="brief" id="brief" open>
+        <summary>The situation</summary>
+        <div id="brief-body"></div>
+      </details>
+      <div id="stage-notes" class="notes" aria-live="polite"></div>
+      <p class="stage-intro" id="stage-intro"></p>
+      <div id="stage-body"></div>
+      <div class="stage-actions">
+        <button class="btn primary big" id="stage-submit" type="button">Submit</button>
+        <button class="btn primary big" id="stage-next" type="button" hidden>Continue</button>
+      </div>
+      <p class="stage-msg" id="stage-msg" role="status" aria-live="polite"></p>
+    </section>
+
+    <!-- Results -->
+    <section id="screen-end" class="screen" hidden aria-labelledby="end-h">
+      <p class="eyebrow" id="res-eyebrow"></p>
+      <h1 id="end-h"><span id="res-rating" class="accent-text"></span></h1>
+      <p class="lead" id="res-blurb"></p>
+      <div id="mission-result" class="mission-result" hidden></div>
+      <div class="stats">
+        <div><span id="res-points">0</span><small id="res-of">points</small></div>
+        <div><span id="res-pct">0%</span><small>of full marks</small></div>
+        <div><span id="res-xp">0</span><small>XP earned</small></div>
+      </div>
+      <p class="callout" id="res-level"></p>
+      <h2>Stage by stage</h2>
+      <ul class="breakdown" id="res-stages"></ul>
+      <h2>The report you wrote</h2>
+      <pre class="reporttext" id="res-report"></pre>
+      <div class="btn-row">
+        <button class="btn big" id="copy-report" type="button">Copy the report</button>
+        <button class="btn primary big" id="res-again" type="button">Try again</button>
+        <button class="btn big" id="res-other" type="button">Another simulation</button>
+        <a class="btn big" href="/games/">All games</a>
+      </div>
+      <p class="fine" id="copy-status" role="status" aria-live="polite"></p>
+    </section>
+  </main>
+
+  <script type="module" src="game.js"></script>
+</body>
+</html>
