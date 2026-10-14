@@ -7,6 +7,7 @@
 // does little, overreact = disproportionate, bad = harmful.
 
 import { EXTRA } from './incidents-extra.js';
+import { LEAD } from './incidents-lead.js';
 
 const CORE = [
   // ─────────────────────────────────────────────────────────────
@@ -403,4 +404,4 @@ const CORE = [
 ];
 
 // Everything the game draws from.
-export const INCIDENTS = [...CORE, ...EXTRA];
+export const INCIDENTS = [...CORE, ...EXTRA, ...LEAD];

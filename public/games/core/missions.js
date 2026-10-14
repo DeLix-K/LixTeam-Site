@@ -16,6 +16,8 @@ export const COMPETENCIES = [
   { id: 'hunting', name: 'Threat hunting', blurb: 'Looking for the attack nobody has alerted on yet.' },
   { id: 'response', name: 'Incident response', blurb: 'Containing, eradicating and recovering in the right order.' },
   { id: 'reporting', name: 'Reporting and communication', blurb: 'Telling people what happened, accurately and usefully.' },
+  // A specialism, not needed for any rank. Shown once a player reaches SOC Analyst.
+  { id: 'cloud', name: 'Cloud security', blurb: 'Keys, roles, storage and consoles in the cloud.', optional: true },
 ];
 
 export const TIERS = [
@@ -23,6 +25,8 @@ export const TIERS = [
   { id: 'intermediate', name: 'Intermediate', xpMultiplier: 1.5 },
   { id: 'advanced', name: 'Advanced', xpMultiplier: 2 },
   { id: 'senior', name: 'Senior', xpMultiplier: 2.5 },
+  { id: 'lead', name: 'Lead', xpMultiplier: 3, note: 'Needs the Senior Analyst rank.' },
+  { id: 'cloud', name: 'Specialist: Cloud', xpMultiplier: 2, note: 'Optional track. Opens at SOC Analyst; finish all three for the Cloud Security Specialist title.' },
 ];
 
 // XP for a mission by medal (before the tier multiplier). Medal 0 = no pass.
@@ -58,7 +62,11 @@ export const RANKS = [
   },
   {
     id: 'lead', name: 'Incident Response Lead', blurb: 'You coordinate containment, weigh business impact and brief leadership.',
-    requires: { xp: 1900, passedTier: { senior: 3 }, mastery: { response: 75, reporting: 70, correlation: 70 }, exam: 'lead-exam' },
+    requires: {
+      xp: 1900, passedTier: { lead: 3 },
+      mastery: { response: 70, reporting: 65, correlation: 65 }, masteryScope: ['beginner', 'intermediate', 'advanced', 'senior'],
+      exam: 'lead-exam',
+    },
   },
 ];
 
@@ -179,6 +187,50 @@ export const MISSIONS = [
     competencies: { triage: 0.3, correlation: 0.2, response: 0.3, reporting: 0.2 },
     unlock: { rank: 'analyst' },
   },
+  // ── Lead (needs the Senior Analyst rank)
+  {
+    id: 'm19-supplier', title: 'The update that came with a visitor', tier: 'lead', kind: 'breach', mode: 'breach-room', ref: 'supply-chain', minutes: 14, par: 255, access: 'plus',
+    blurb: 'A trusted monitoring tool updated itself overnight. By afternoon, 3.4 GB had left the building.',
+    competencies: { correlation: 0.5, hunting: 0.3, response: 0.2 },
+    unlock: { rank: 'senior' },
+  },
+  {
+    id: 'm20-insider', title: 'The departing engineer', tier: 'lead', kind: 'detective', mode: 'cyber-detective', ref: 'insider', minutes: 14, par: 250, access: 'plus',
+    blurb: 'An engineer who resigned has been moving a lot of data. Is it theft, and how do you handle it properly?',
+    competencies: { correlation: 0.4, reporting: 0.3, identity: 0.3 },
+    unlock: { rank: 'senior' },
+  },
+  {
+    id: 'm21-extortion', title: 'We have your data', tier: 'lead', kind: 'incident', mode: 'incident-commander', ref: 'data-extortion', minutes: 12, par: 160, access: 'plus',
+    blurb: 'An email claims 40 GB of customer data has been stolen. Is it true, and what must you do first?',
+    competencies: { response: 0.4, reporting: 0.6 },
+    unlock: { rank: 'senior' },
+  },
+  {
+    id: 'm22-board', title: 'Operation Glass House', tier: 'lead', kind: 'simulation', mode: 'simulation', ref: 'board-brief', minutes: 22, par: 0, access: 'plus',
+    blurb: 'A payment problem and a suspected breach in peak trading. Establish the facts, brief the board and meet your obligations.',
+    competencies: { reporting: 0.5, triage: 0.2, response: 0.2, correlation: 0.1 },
+    unlock: { rank: 'senior' },
+  },
+  // ── Specialist track: Cloud (needs the SOC Analyst rank, then each other mission needs the first)
+  {
+    id: 'c01-bucket', title: 'The bucket anyone could read', tier: 'cloud', kind: 'detective', mode: 'cyber-detective', ref: 'open-bucket', minutes: 12, par: 250, access: 'plus',
+    blurb: 'A scanner says a cloud storage bucket is readable by the whole internet. It was private yesterday.',
+    competencies: { cloud: 0.6, reporting: 0.2, correlation: 0.2 },
+    unlock: { rank: 'analyst' },
+  },
+  {
+    id: 'c02-role', title: 'The role anyone could assume', tier: 'cloud', kind: 'breach', mode: 'breach-room', ref: 'role-chain', minutes: 14, par: 250, access: 'plus',
+    blurb: 'A read-only key leaks in a build log. Within an hour it has become administrator access.',
+    competencies: { cloud: 0.6, identity: 0.3, correlation: 0.1 },
+    unlock: { passedTier: { cloud: 1 } },
+  },
+  {
+    id: 'c03-console', title: 'The open admin console', tier: 'cloud', kind: 'incident', mode: 'incident-commander', ref: 'exposed-console', minutes: 10, par: 135, access: 'plus',
+    blurb: 'Your cloud bill is climbing and the cluster is at full load. The management console has no sign-in.',
+    competencies: { cloud: 0.6, response: 0.4 },
+    unlock: { passedTier: { cloud: 1 } },
+  },
   // ── Promotion exams
   {
     id: 'soc-exam', title: 'Promotion exam: SOC Analyst', tier: 'advanced', kind: 'simulation', mode: 'simulation', ref: 'soc-exam', minutes: 20, par: 0, access: 'plus',
@@ -194,14 +246,28 @@ export const MISSIONS = [
     competencies: { triage: 0.2, correlation: 0.2, hunting: 0.2, reporting: 0.2, response: 0.2 },
     unlock: { rank: 'analyst', passedTier: { advanced: 3, senior: 2 }, mastery: { correlation: 60, endpoint: 55, response: 55 }, masteryScope: ['beginner', 'intermediate', 'advanced', 'senior'] },
   },
+  {
+    id: 'lead-exam', title: 'Promotion exam: Incident Response Lead', tier: 'lead', kind: 'simulation', mode: 'simulation', ref: 'lead-exam', minutes: 28, par: 0, access: 'plus',
+    exam: true, promotes: 'lead', passTier: 2,
+    blurb: 'Launch day. A hidden script is stealing card details at checkout while the business wants the launch to go ahead. Silver or better to pass.',
+    competencies: { triage: 0.2, correlation: 0.2, response: 0.3, reporting: 0.3 },
+    unlock: { rank: 'senior', passedTier: { lead: 3 }, mastery: { response: 70, reporting: 65, correlation: 65 }, masteryScope: ['beginner', 'intermediate', 'advanced', 'senior'] },
+  },
+];
+
+// Titles earned for finishing a specialist track. They do not affect rank.
+export const SPECIALISMS = [
+  {
+    id: 'cloud', name: 'Cloud Security Specialist', track: 'cloud',
+    blurb: 'Investigate exposure, keys, roles and consoles in the cloud.',
+    requires: { passedTier: { cloud: 3 }, mastery: { cloud: 60 } },
+  },
 ];
 
 // Planned, not built. Shown on the roadmap so players can see what is coming.
 export const ROADMAP = [
-  { id: 'lead-exam', title: 'Promotion exam: Incident Response Lead', note: 'Unlocks the Incident Response Lead rank, with major-incident command and executive briefings.' },
-  { id: 'cloud', title: 'Cloud security career path', note: 'Investigate identity events, misconfigurations and suspicious cloud activity.' },
-  { id: 'dfir', title: 'Digital forensics and incident response path', note: 'Reconstruct what happened and determine scope.' },
-  { id: 'weekly', title: 'New cases on a regular schedule', note: 'Fresh incidents added to the campaign over time.' },
+  { id: 'dfir', title: 'Digital forensics and incident response track', note: 'Reconstruct what happened from disk, memory and logs, and determine scope.' },
+  { id: 'weekly', title: 'New cases on a regular schedule', note: 'New incidents added to the campaign over time. Until then, one existing case is featured each week.' },
 ];
 
 export function missionById(id) {

@@ -76,6 +76,7 @@ export function render(container, res) {
     up.append(rankBadge(res.promoted.id, 58), txt);
     box.append(up);
   }
+  if (res.featuredDone) box.append(el('p', 'mission-unlock', "This week's featured case: done."));
   if (res.newlyUnlocked.length) box.append(el('p', 'mission-unlock', `Unlocked: ${res.newlyUnlocked.map((u) => u.title).join(', ')}.`));
 
   const a = el('a', 'btn primary big', 'Back to the campaign');

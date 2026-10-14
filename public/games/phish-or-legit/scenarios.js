@@ -5,6 +5,7 @@
 // link: { text } is what the email shows; { href } is where it really goes (shown when the player inspects it).
 // flags (phish): what gave it away. why (legit): what makes it safe.
 import { EXTRA } from './scenarios-extra.js';
+import { MORE } from './scenarios-more.js';
 
 const CORE = [
   // ───────────── PHISH ─────────────
@@ -362,4 +363,4 @@ const CORE = [
 ];
 
 // Everything the game draws from.
-export const SCENARIOS = [...CORE, ...EXTRA];
+export const SCENARIOS = [...CORE, ...EXTRA, ...MORE];

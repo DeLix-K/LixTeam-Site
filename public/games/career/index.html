@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>SOC Analyst Career Campaign · LixTeam</title>
-  <meta name="description" content="Start as a Recruit and work up to SOC Analyst by solving realistic cases. Promotions are earned with mastery and a practical exam, not just time. Free, no sign-up, no tracking." />
+  <meta name="description" content="Start as a Recruit and work up to Incident Response Lead by solving realistic cases. Promotions are earned with mastery and a practical exam, not just time. Free, no sign-up, no tracking." />
   <meta name="theme-color" content="#0a0a0a" />
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23a3e635'/%3E%3Ctext x='16' y='22' font-family='Arial' font-weight='900' font-size='15' text-anchor='middle' fill='%230a0a0a'%3ELT%3C/text%3E%3C/svg%3E" />
   <link rel="stylesheet" href="../shared.css" />
@@ -36,6 +36,7 @@
           <div class="xp"><span id="xp-num">0</span><small>XP</small></div>
         </div>
         <ol class="path" id="rank-path" aria-label="The rank ladder"></ol>
+        <ul class="titles" id="titles" aria-label="Specialist titles earned" hidden></ul>
         <div class="next" id="next-box">
           <h3 id="next-title"></h3>
           <ul class="checks" id="checks"></ul>
@@ -48,6 +49,17 @@
         <h3 id="rec-title"></h3>
         <p id="rec-why"></p>
         <a class="btn primary big" id="rec-go" href="#">Start</a>
+      </div>
+
+      <!-- Featured case of the week -->
+      <div class="panel feat" id="feat-panel" hidden>
+        <small>Featured this week</small>
+        <h3 id="feat-title"></h3>
+        <p id="feat-why"></p>
+        <div class="feat-row">
+          <a class="btn big" id="feat-go" href="#">Play</a>
+          <span class="feat-count" id="feat-count"></span>
+        </div>
       </div>
 
       <!-- Skills -->

@@ -64,10 +64,30 @@ function render() {
     $('rec-go').textContent = rec.mission.exam ? 'Take the promotion exam' : career.bestTier(s, rec.mission.id) > 0 ? 'Replay this mission' : 'Start this mission';
   }
 
+  // Featured case of the week
+  const feat = career.featured(s);
+  $('feat-panel').hidden = !feat;
+  if (feat) {
+    $('feat-panel').classList.toggle('done', feat.done);
+    $('feat-title').textContent = feat.mission.title;
+    $('feat-why').textContent = feat.done ? 'Finished this week. A different case is featured from next Monday.' : feat.mission.blurb;
+    $('feat-go').href = missionUrl(feat.mission);
+    $('feat-go').textContent = feat.done ? 'Replay it' : "Play this week's case";
+    $('feat-go').classList.toggle('primary', !feat.done);
+    const n = career.featuredCount(s);
+    $('feat-count').textContent = n ? `Featured cases finished: ${n}` : 'Finish it with any medal to count it.';
+  }
+
+  // Specialist titles
+  const earned = career.specialisms(s).filter((x) => x.earned);
+  $('titles').hidden = !earned.length;
+  $('titles').replaceChildren(...earned.map((x) => h('li', { text: x.name })));
+
   // Skills
-  $('radar').replaceChildren(skillRadar(COMPETENCIES.map((c) => ({ id: c.id, name: c.name, score: career.mastery(s, c.id).score }))));
+  const comps = career.visibleCompetencies(s);
+  $('radar').replaceChildren(skillRadar(comps.map((c) => ({ id: c.id, name: c.name, score: career.mastery(s, c.id).score }))));
   $('skills').replaceChildren(
-    ...COMPETENCIES.map((c) => {
+    ...comps.map((c) => {
       const m = career.mastery(s, c.id);
       const bar = h('div', { class: 'bar', role: 'progressbar', 'aria-label': `${c.name} mastery`, 'aria-valuemin': '0', 'aria-valuemax': '100', 'aria-valuenow': String(m.score) }, Object.assign(h('div'), { style: `width:${m.score}%` }));
       return h('div', { class: 'skill' }, h('div', { class: 'skill-top' }, h('span', { text: c.name }), h('span', { text: m.attempted ? `${m.score}/100 · ${m.attempted} of ${m.count} missions` : `Not started · 0 of ${m.count} missions` })), h('small', { text: c.blurb }), bar);
@@ -84,6 +104,7 @@ function render() {
     const done = career.passedCount(s, tier.id);
     const total = career.tierTotal(tier.id);
     camp.append(h('div', { class: 'tier-head' }, h('p', { class: 'tier', text: tier.name }), h('span', { class: 'tier-count', text: `${done} of ${total} passed` }), h('div', { class: 'bar tier-bar', 'aria-hidden': 'true' }, Object.assign(h('div'), { style: `width:${total ? Math.round((done / total) * 100) : 0}%` }))));
+    if (tier.note) camp.append(h('p', { class: 'tier-note', text: tier.note }));
     const wrap = h('div', { class: 'missions' });
     for (const m of [...list, ...exams]) wrap.append(missionCard(s, m));
     camp.append(wrap);

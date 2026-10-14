@@ -35,7 +35,7 @@ function renderCareer() {
     ? r.isTop
       ? 'You have reached the top rank in this campaign.'
       : `${s.xp} XP. Next: ${r.next.name}.`
-    : 'Start as a Recruit and work up to SOC Analyst by solving realistic cases.';
+    : 'Start as a Recruit and work up to Incident Response Lead by solving realistic cases.';
   $('career-btn').textContent = started ? 'Continue your career' : 'Start your career';
   $('career-badge').replaceChildren(rankBadge(r.rank.id, 76));
   // How far through the checklist for the next promotion

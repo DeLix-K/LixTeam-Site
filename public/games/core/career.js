@@ -13,13 +13,13 @@
 // server. A progress code lets a player move between devices by hand.
 // Ranks and scores are game progression, not qualifications.
 
-import { MISSIONS, RANKS, COMPETENCIES, TIERS, MEDAL_XP, MEDALS, TRY_XP, EXAM_XP, missionById } from './missions.js';
+import { MISSIONS, RANKS, COMPETENCIES, TIERS, MEDAL_XP, MEDALS, TRY_XP, EXAM_XP, SPECIALISMS, missionById } from './missions.js';
 
 const KEY = 'lixteam.career.v1';
 const MAX_ATTEMPTS = 300;
 
 export function blank() {
-  return { v: 1, xp: 0, missions: {}, attempts: [] };
+  return { v: 1, xp: 0, missions: {}, attempts: [], weekly: [] };
 }
 
 // ── Storage ─────────────────────────────────────────────────────
@@ -66,6 +66,9 @@ function sanitize(d) {
       bestPoints: Math.max(0, Math.min(1e5, Math.round(Number(r.bestPoints) || 0))),
       tried: !!r.tried,
     };
+  }
+  if (Array.isArray(d.weekly)) {
+    out.weekly = [...new Set(d.weekly.filter((w) => Number.isInteger(w) && w > 0 && w < 100000))].sort((a, b) => a - b).slice(-520);
   }
   if (Array.isArray(d.attempts)) {
     out.attempts = d.attempts
@@ -228,6 +231,8 @@ export function recordAttempt(s, input) {
 
   const beforeRank = rankOf(s).index;
   const beforeUnlocked = new Set(unlockedIds(s));
+  const when = input.now ? new Date(input.now) : new Date();
+  const feat = Number.isNaN(when.getTime()) ? null : featured(s, when);
   const wasPassed = isPassed(s, m.id);
 
   const r = (s.missions[m.id] ||= { attempts: 0, bestTier: 0, bestPerf: 0, bestPoints: 0, tried: false });
@@ -249,6 +254,16 @@ export function recordAttempt(s, input) {
   s.attempts.push({ id: m.id, at: input.now || new Date().toISOString(), points, tier, perf, summary: (input.summary || []).slice(0, 8) });
   if (s.attempts.length > MAX_ATTEMPTS) s.attempts.splice(0, s.attempts.length - MAX_ATTEMPTS);
 
+  let featuredDone = false;
+  if (feat && feat.mission.id === m.id && tier >= 1) {
+    if (!s.weekly) s.weekly = [];
+    if (!s.weekly.includes(feat.week)) {
+      s.weekly.push(feat.week);
+      s.weekly = s.weekly.slice(-520);
+      featuredDone = true;
+    }
+  }
+
   const after = rankOf(s);
   const nowUnlocked = unlockedIds(s).filter((id) => !beforeUnlocked.has(id));
   return {
@@ -262,6 +277,7 @@ export function recordAttempt(s, input) {
     xpGained,
     xp: s.xp,
     perf,
+    featuredDone,
     promoted: after.index > beforeRank ? after.rank : null,
     newlyUnlocked: nowUnlocked.map((id) => missionById(id)),
   };
@@ -276,9 +292,14 @@ export function recommend(s) {
 
   const open = MISSIONS.filter((m) => !m.exam && missionStatus(s, m.id).unlocked && bestTier(s, m.id) < 3);
   if (!open.length) return null;
-  const comps = COMPETENCIES.map((c) => ({ c, ...mastery(s, c.id) }))
-    .filter((x) => open.some((m) => m.competencies[x.c.id]))
-    .sort((a, b) => a.score - b.score);
+  const weakest = (list) =>
+    list
+      .map((c) => ({ c, ...mastery(s, c.id) }))
+      .filter((x) => open.some((m) => m.competencies[x.c.id]))
+      .sort((a, b) => a.score - b.score);
+  // Specialist skills are never needed for a rank, so they only drive the advice when nothing else can.
+  let comps = weakest(COMPETENCIES.filter((c) => !c.optional));
+  if (!comps.length) comps = weakest(COMPETENCIES);
   for (const x of comps) {
     const pick = open
       .filter((m) => m.competencies[x.c.id])
@@ -290,6 +311,40 @@ export function recommend(s) {
   }
   return null;
 }
+
+// ── Specialist tracks ───────────────────────────────────────────
+// Titles for finishing an optional track. They never affect rank.
+export function specialisms(s) {
+  return SPECIALISMS.map((sp) => {
+    const items = checklist(sp.requires, s);
+    return { ...sp, checklist: items, earned: items.every((i) => i.done), started: MISSIONS.some((m) => m.tier === sp.track && s.missions[m.id]?.attempts > 0) };
+  });
+}
+
+// Optional skills only appear once they are relevant: from SOC Analyst up, or once tried.
+export function visibleCompetencies(s) {
+  const analyst = RANKS.findIndex((r) => r.id === 'analyst');
+  const open = rankOf(s).index >= analyst;
+  return COMPETENCIES.filter((c) => !c.optional || open || mastery(s, c.id).attempted > 0);
+}
+
+// ── The featured case of the week ───────────────────────────────
+// There is no server, so "this week" is worked out from the date. One case that the player
+// can already play is featured each week, and the same one is featured for the whole week.
+// Finishing it with a medal is counted once, and the count never goes down.
+export function weekNumber(d = new Date()) {
+  const day = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) / 86400000;
+  return Math.floor((day + 3) / 7); // weeks start on Monday
+}
+
+export function featured(s, when = new Date()) {
+  const week = weekNumber(when);
+  const open = MISSIONS.filter((m) => !m.exam && missionStatus(s, m.id).unlocked);
+  if (!open.length) return null;
+  return { mission: open[week % open.length], week, done: (s.weekly || []).includes(week) };
+}
+
+export const featuredCount = (s) => (s.weekly || []).length;
 
 // ── Case history and portfolio ──────────────────────────────────
 export const historyFor = (s, id) => s.attempts.filter((a) => a.id === id);
