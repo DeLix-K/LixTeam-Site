@@ -15,20 +15,19 @@ h2.sec { font-size: 22px; margin: 36px 0 14px; letter-spacing: -0.4px; }
 .daily.done { border-color: var(--border); background: var(--surface); }
 a.btn { text-decoration: none; }
 
-.modes { display: grid; gap: 12px; }
-.mode { display: flex; gap: 14px; align-items: flex-start; padding: 16px 18px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); text-decoration: none; color: var(--text); transition: transform 0.25s var(--ease), border-color 0.25s, box-shadow 0.25s; }
-a.mode:hover { transform: translateY(-3px); border-color: rgba(163, 230, 53, 0.5); box-shadow: 0 16px 36px -22px rgba(163, 230, 53, 0.4); }
+.modes { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); }
+.mode { --mode: #a3e635; display: flex; gap: 14px; align-items: flex-start; padding: 16px 18px; background: linear-gradient(160deg, color-mix(in srgb, var(--mode) 7%, var(--surface)), var(--surface) 70%); border: 1px solid var(--border); border-radius: var(--radius); text-decoration: none; color: var(--text); transition: transform 0.25s var(--ease), border-color 0.25s, box-shadow 0.25s; position: relative; }
+a.mode:hover { transform: translateY(-3px); border-color: color-mix(in srgb, var(--mode) 60%, transparent); box-shadow: 0 16px 36px -22px var(--mode); }
 .mode.soon { opacity: 0.85; }
-.mode .num { flex: 0 0 auto; width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; background: rgba(163, 230, 53, 0.12); color: var(--accent); font-weight: 800; }
-.mode h3 { margin: 0 0 2px; font-size: 18px; }
+.mode .mode-tile { flex: 0 0 auto; width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; background: color-mix(in srgb, var(--mode) 14%, transparent); border: 1px solid color-mix(in srgb, var(--mode) 35%, transparent); color: var(--mode); }
+.mode h3 { margin: 0 0 2px; font-size: 17px; letter-spacing: -0.2px; }
 .mode p { margin: 0; color: var(--muted); font-size: 14px; }
-.mode .tag { margin-left: auto; align-self: center; flex: 0 0 auto; font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--border); color: var(--muted); }
-.mode .tag.play { background: var(--accent); border-color: var(--accent); color: #0a0a0a; }
+.mode .tag { display: none; }
 
-.skills { display: grid; gap: 12px; }
+.skills { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); }
 .skill { padding: 12px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; }
 .skill-top { display: flex; justify-content: space-between; gap: 12px; font-size: 14px; font-weight: 700; }
-.skill-top span:last-child { color: var(--muted); font-weight: 600; font-variant-numeric: tabular-nums; }
+.skill-top span:last-child { color: var(--muted); font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .skill small { display: block; color: var(--muted); margin: 2px 0 8px; font-size: 13px; }
 .skill .progress { margin: 0; height: 6px; }
 
@@ -45,10 +44,13 @@ a.mode:hover { transform: translateY(-3px); border-color: rgba(163, 230, 53, 0.5
 }
 
 /* Career card at the top of the hub */
-.career-card { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 18px 20px; margin: 4px 0 14px; border-radius: var(--radius); border: 1px solid rgba(163, 230, 53, 0.55); background: linear-gradient(135deg, rgba(163, 230, 53, 0.14), var(--surface) 65%); text-decoration: none; color: var(--text); transition: transform 0.25s var(--ease), box-shadow 0.25s; }
-.career-card:hover { transform: translateY(-3px); box-shadow: 0 18px 40px -24px rgba(163, 230, 53, 0.5); }
-.career-card small { color: var(--accent); font-size: 12px; text-transform: uppercase; letter-spacing: 0.7px; font-weight: 800; }
-.career-card h2 { margin: 2px 0 2px; font-size: 24px; letter-spacing: -0.4px; }
+.career-card { display: flex; align-items: center; gap: 20px; padding: 20px 22px; margin: 4px 0 14px; border-radius: 20px; border: 1px solid rgba(163, 230, 53, 0.5); background: radial-gradient(520px 220px at 0% 0%, rgba(163, 230, 53, 0.16), transparent 70%), linear-gradient(135deg, rgba(163, 230, 53, 0.06), var(--surface) 65%); text-decoration: none; color: var(--text); transition: transform 0.25s var(--ease), box-shadow 0.25s; }
+.career-card:hover { transform: translateY(-3px); box-shadow: 0 18px 40px -24px rgba(163, 230, 53, 0.55); }
+.career-badge { flex: 0 0 auto; filter: drop-shadow(0 0 16px rgba(163, 230, 53, 0.25)); line-height: 0; }
+.career-text { flex: 1 1 auto; min-width: 0; }
+.career-card small { color: var(--accent); font-family: var(--mono); font-size: 12px; text-transform: uppercase; letter-spacing: 1.2px; font-weight: 700; }
+.career-card h2 { margin: 2px 0 2px; font-size: 26px; letter-spacing: -0.5px; }
 .career-card p { margin: 0; color: #d4d4d4; font-size: 14.5px; }
-@media (max-width: 520px) { .career-card { flex-direction: column; align-items: stretch; } .career-card .btn { justify-content: center; } }
+.progress.thin { height: 6px; margin: 12px 0 0; max-width: 340px; }
+@media (max-width: 560px) { .career-card { flex-wrap: wrap; } .career-card .btn { flex: 1 1 100%; justify-content: center; } .career-badge svg { width: 60px; height: auto; } }
 @media (prefers-reduced-motion: reduce) { .career-card { transition: none; } .career-card:hover { transform: none; } }

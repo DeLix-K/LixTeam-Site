@@ -17,7 +17,7 @@
     <span class="spacer" aria-hidden="true"></span>
   </header>
 
-  <main id="app">
+  <main id="app" class="wide">
     <section class="screen" aria-labelledby="c-h">
       <p class="eyebrow">SOC analyst career</p>
       <h1 id="c-h">Become the <span class="accent-text">analyst.</span></h1>
@@ -27,13 +27,15 @@
       <!-- Rank -->
       <div class="panel rank" id="rank-panel">
         <div class="rank-top">
-          <div>
+          <div class="rank-badge-slot" id="rank-badge"></div>
+          <div class="rank-text">
             <small>Your rank</small>
             <h2 id="rank-name"></h2>
             <p id="rank-blurb"></p>
           </div>
           <div class="xp"><span id="xp-num">0</span><small>XP</small></div>
         </div>
+        <ol class="path" id="rank-path" aria-label="The rank ladder"></ol>
         <div class="next" id="next-box">
           <h3 id="next-title"></h3>
           <ul class="checks" id="checks"></ul>
@@ -51,7 +53,10 @@
       <!-- Skills -->
       <h2 class="sec">Skill profile</h2>
       <p class="section-sub">Mastery comes from your best result on each mission that uses a skill. Missions you have not tried count as zero, so the score reflects breadth as well as ability.</p>
-      <div class="skills" id="skills"></div>
+      <div class="skills-wrap">
+        <div class="radar-box" id="radar"></div>
+        <div class="skills" id="skills"></div>
+      </div>
 
       <!-- Campaign -->
       <h2 class="sec">The campaign</h2>

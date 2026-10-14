@@ -1,5 +1,6 @@
 import * as profile from './core/profile.js';
 import * as career from './core/career.js';
+import { rankBadge, modeIcon, MODE_COLOUR } from './core/art.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -16,13 +17,13 @@ function h(tag, props = {}, ...kids) {
 
 // The free-practice modes. The career campaign (career/) uses these same modes as missions.
 const MODES = [
-  { n: 1, name: 'Phish or Legit', blurb: 'Judge emails, calls and everyday choices, say how sure you are, learn the red flags.', href: 'phish-or-legit/' },
-  { n: 2, name: 'Incident Commander', blurb: 'An incident unfolds and your choices change what happens next.', href: 'incident-commander/' },
-  { n: 3, name: 'Cyber Detective', blurb: 'Collect clues from headers, URLs and logs, then name the attack.', href: 'cyber-detective/' },
-  { n: 4, name: 'Social Engineering Simulator', blurb: 'Talk to people who are not who they say they are.', href: 'social-engineering/' },
-  { n: 5, name: 'Cyber Escape Room', blurb: 'Solve connected security puzzles to protect the vault.', href: 'escape-room/' },
-  { n: 6, name: 'The Breach Room', blurb: 'Reconstruct how an organisation was compromised.', href: 'breach-room/' },
-  { n: 7, name: 'Incident Simulation', blurb: 'Work a whole incident from the first alert to the final report.', href: 'simulation/' },
+  { n: 1, name: 'Phish or Legit', blurb: 'Judge emails, calls and everyday choices, say how sure you are, learn the red flags.', href: 'phish-or-legit/', id: 'phish-or-legit' },
+  { n: 2, name: 'Incident Commander', blurb: 'An incident unfolds and your choices change what happens next.', href: 'incident-commander/', id: 'incident-commander' },
+  { n: 3, name: 'Cyber Detective', blurb: 'Collect clues from headers, URLs and logs, then name the attack.', href: 'cyber-detective/', id: 'cyber-detective' },
+  { n: 4, name: 'Social Engineering Simulator', blurb: 'Talk to people who are not who they say they are.', href: 'social-engineering/', id: 'social-engineering' },
+  { n: 5, name: 'Cyber Escape Room', blurb: 'Solve connected security puzzles to protect the vault.', href: 'escape-room/', id: 'escape-room' },
+  { n: 6, name: 'The Breach Room', blurb: 'Reconstruct how an organisation was compromised.', href: 'breach-room/', id: 'breach-room' },
+  { n: 7, name: 'Incident Simulation', blurb: 'Work a whole incident from the first alert to the final report.', href: 'simulation/', id: 'simulation' },
 ];
 
 function renderCareer() {
@@ -36,6 +37,12 @@ function renderCareer() {
       : `${s.xp} XP. Next: ${r.next.name}.`
     : 'Start as a Recruit and work up to SOC Analyst by solving realistic cases.';
   $('career-btn').textContent = started ? 'Continue your career' : 'Start your career';
+  $('career-badge').replaceChildren(rankBadge(r.rank.id, 76));
+  // How far through the checklist for the next promotion
+  const items = r.isTop ? [] : r.checklist;
+  const frac = r.isTop ? 1 : items.length ? items.reduce((a, c) => a + (c.done ? 1 : Math.min(1, c.progress || 0)), 0) / items.length : 0;
+  $('career-bar').style.width = `${Math.round(frac * 100)}%`;
+  $('career-progress').hidden = !started;
 }
 
 function render() {
@@ -67,11 +74,13 @@ function render() {
   modes.replaceChildren();
   for (const m of MODES) {
     const inner = [
-      h('span', { class: 'num', text: String(m.n) }),
+      h('span', { class: 'mode-tile' }, modeIcon(m.id, 24)),
       h('div', {}, h('h3', { text: m.name }), h('p', { text: m.blurb })),
       h('span', { class: m.href ? 'tag play' : 'tag', text: m.href ? 'Play' : 'Coming soon' }),
     ];
-    modes.append(m.href ? h('a', { class: 'mode', href: m.href }, ...inner) : h('div', { class: 'mode soon' }, ...inner));
+    const card = m.href ? h('a', { class: 'mode', href: m.href }, ...inner) : h('div', { class: 'mode soon' }, ...inner);
+    card.style.setProperty('--mode', MODE_COLOUR[m.id] || '#a3e635');
+    modes.append(card);
   }
 
   // Skills

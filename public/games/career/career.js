@@ -1,5 +1,6 @@
 import * as career from '../core/career.js';
-import { COMPETENCIES, MISSIONS, TIERS, MEDALS, ROADMAP } from '../core/missions.js';
+import { COMPETENCIES, MISSIONS, TIERS, MEDALS, ROADMAP, RANKS } from '../core/missions.js';
+import { rankBadge, medalIcon, skillRadar } from '../core/art.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -25,6 +26,13 @@ function render() {
 
   // Rank and what the next promotion needs
   $('rank-name').textContent = r.rank.name;
+  $('rank-badge').replaceChildren(rankBadge(r.rank.id, 96, { label: `Rank: ${r.rank.name}` }));
+  const at = RANKS.findIndex((x) => x.id === r.rank.id);
+  $('rank-path').replaceChildren(
+    ...RANKS.map((x, i) =>
+      h('li', { class: i < at ? 'passed' : i === at ? 'current' : 'ahead', 'aria-current': i === at ? 'step' : null }, rankBadge(x.id, 40, { locked: i > at }), h('span', { text: x.name }))
+    )
+  );
   $('rank-blurb').textContent = r.rank.blurb;
   $('xp-num').textContent = String(s.xp);
   if (r.isTop) {
@@ -57,6 +65,7 @@ function render() {
   }
 
   // Skills
+  $('radar').replaceChildren(skillRadar(COMPETENCIES.map((c) => ({ id: c.id, name: c.name, score: career.mastery(s, c.id).score }))));
   $('skills').replaceChildren(
     ...COMPETENCIES.map((c) => {
       const m = career.mastery(s, c.id);
@@ -72,7 +81,9 @@ function render() {
     const list = MISSIONS.filter((m) => m.tier === tier.id && !m.exam);
     const exams = MISSIONS.filter((m) => m.tier === tier.id && m.exam);
     if (!list.length && !exams.length) continue;
-    camp.append(h('p', { class: 'tier', text: `${tier.name} (${career.passedCount(s, tier.id)} of ${career.tierTotal(tier.id)} passed)` }));
+    const done = career.passedCount(s, tier.id);
+    const total = career.tierTotal(tier.id);
+    camp.append(h('div', { class: 'tier-head' }, h('p', { class: 'tier', text: tier.name }), h('span', { class: 'tier-count', text: `${done} of ${total} passed` }), h('div', { class: 'bar tier-bar', 'aria-hidden': 'true' }, Object.assign(h('div'), { style: `width:${total ? Math.round((done / total) * 100) : 0}%` }))));
     const wrap = h('div', { class: 'missions' });
     for (const m of [...list, ...exams]) wrap.append(missionCard(s, m));
     camp.append(wrap);
@@ -91,7 +102,7 @@ function missionCard(s, m) {
   const card = h(
     'div',
     { class: `mission${st.unlocked ? '' : ' locked'}${m.exam ? ' exam' : ''}` },
-    h('div', { class: 'mission-top' }, h('div', {}, h('h3', { text: m.title }), h('p', { text: m.blurb })), badge),
+    h('div', { class: 'mission-top' }, medalIcon(st.passed && st.medal > 0 ? st.medal : st.unlocked ? 0 : 'lock', 40), h('div', { class: 'mission-main' }, h('h3', { text: m.title }), h('p', { text: m.blurb })), badge),
     h('div', { class: 'meta' }, h('span', { text: `About ${m.minutes} min` }), m.exam ? h('span', { text: 'Silver or better to pass' }) : null, st.attempts ? h('span', { text: `Best ${pct(st.bestPerf)} of full marks` }) : null, st.attempts ? h('span', { text: `${st.attempts} attempt${st.attempts === 1 ? '' : 's'}` }) : null)
   );
   if (!st.unlocked) {
@@ -127,7 +138,7 @@ function renderPortfolio(s) {
       h(
         'details',
         { class: 'case' },
-        h('summary', {}, h('span', {}, p.mission.title, h('small', { text: `${p.medal} · ${pct(p.bestPerf)} of full marks · ${p.attempts} attempt${p.attempts === 1 ? '' : 's'}` })), h('span', { class: `badge m${p.tier}`, text: p.medal })),
+        h('summary', {}, medalIcon(p.tier, 28), h('span', { class: 'case-title' }, p.mission.title, h('small', { text: `${p.medal} · ${pct(p.bestPerf)} of full marks · ${p.attempts} attempt${p.attempts === 1 ? '' : 's'}` })), h('span', { class: `badge m${p.tier}`, text: p.medal })),
         h(
           'div',
           { class: 'inner' },

@@ -7,6 +7,7 @@
 
 import * as career from './career.js';
 import { missionById, MEDALS } from './missions.js';
+import { medalIcon, rankBadge } from './art.js';
 
 const CAMPAIGN_URL = '/games/career/';
 
@@ -54,7 +55,12 @@ export function render(container, res) {
   let heading;
   if (m.exam) heading = res.passed ? 'Promotion exam passed' : 'Promotion exam not passed yet';
   else heading = res.tier > 0 ? `Mission complete: ${MEDALS[res.tier]}` : 'Not passed yet';
-  box.append(el('p', 'mission-eyebrow', `Campaign · ${m.title}`), el('h2', '', heading));
+  const head = el('div', 'result-head');
+  head.append(medalIcon(res.tier, 44));
+  const headText = el('div');
+  headText.append(el('p', 'mission-eyebrow', `Campaign · ${m.title}`), el('h2', '', heading));
+  head.append(headText);
+  box.append(head);
 
   const lines = [];
   if (m.exam && !res.passed) lines.push(`You need silver or better to pass. Your best so far is ${res.bestMedal.toLowerCase()}.`);
@@ -63,7 +69,13 @@ export function render(container, res) {
   else if (res.tier > 0) lines.push(res.improved ? '' : `No new XP: XP is only earned by improving your medal (best so far: ${res.bestMedal.toLowerCase()}).`);
   for (const l of lines.filter(Boolean)) box.append(el('p', '', l));
 
-  if (res.promoted) box.append(el('p', 'mission-promo', `Promoted to ${res.promoted.name}!`));
+  if (res.promoted) {
+    const up = el('div', 'rankup');
+    const txt = el('div');
+    txt.append(el('small', '', 'Rank up'), el('strong', '', `Promoted to ${res.promoted.name}!`));
+    up.append(rankBadge(res.promoted.id, 58), txt);
+    box.append(up);
+  }
   if (res.newlyUnlocked.length) box.append(el('p', 'mission-unlock', `Unlocked: ${res.newlyUnlocked.map((u) => u.title).join(', ')}.`));
 
   const a = el('a', 'btn primary big', 'Back to the campaign');

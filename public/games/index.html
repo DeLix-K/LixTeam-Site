@@ -17,17 +17,19 @@
     <span class="spacer" aria-hidden="true"></span>
   </header>
 
-  <main id="hub">
+  <main id="hub" class="wide">
     <section class="screen" aria-labelledby="hub-h">
       <p class="eyebrow">Free security training games</p>
       <h1 id="hub-h">Train like an <span class="accent-text">analyst.</span></h1>
       <p class="lead">Short, hands-on scenarios that build real instincts for spotting scams and handling incidents. No sign-up. Your progress stays on this device.</p>
 
       <a class="career-card" href="career/" id="career-card">
-        <div>
+        <span class="career-badge" id="career-badge"></span>
+        <div class="career-text">
           <small>Career campaign</small>
           <h2 id="career-rank">Recruit</h2>
           <p id="career-line">Start as a Recruit and work up to SOC Analyst by solving realistic cases.</p>
+          <div class="progress thin" id="career-progress" aria-hidden="true"><div id="career-bar"></div></div>
         </div>
         <span class="btn primary" id="career-btn">Start your career</span>
       </a>
