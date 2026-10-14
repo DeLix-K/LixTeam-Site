@@ -1,0 +1,129 @@
+/* Visual skin shared by the seven game modes. Loaded after each mode's own style.css, so
+   it overrides on equal specificity. --mode is set from <body data-mode> by core/chrome.js
+   and is only ever decorative: buttons keep the lime accent, and correct/wrong keep
+   green/red, so a mode colour is never mistaken for feedback. */
+
+body { --mode: var(--accent); }
+
+/* ── Top bar ─────────────────────────────────────────────────── */
+.top .mode-chip { justify-self: end; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; color: var(--mode); background: color-mix(in srgb, var(--mode) 14%, transparent); border: 1px solid color-mix(in srgb, var(--mode) 32%, transparent); }
+.top .mode-chip svg { display: block; }
+
+/* ── Intro screens ───────────────────────────────────────────── */
+.eyebrow { color: var(--mode); }
+.mode-hero { width: 68px; height: 68px; border-radius: 20px; display: grid; place-items: center; margin: 4px 0 14px; color: var(--mode); background: radial-gradient(circle at 30% 20%, color-mix(in srgb, var(--mode) 30%, transparent), color-mix(in srgb, var(--mode) 8%, transparent) 70%); border: 1px solid color-mix(in srgb, var(--mode) 45%, transparent); box-shadow: 0 10px 34px -12px var(--mode); animation: hero-in 0.6s var(--ease) both; }
+@keyframes hero-in { from { opacity: 0; transform: scale(0.7) rotate(-6deg); } to { opacity: 1; transform: none; } }
+
+.howto { counter-reset: step; gap: 12px; }
+.howto li { counter-increment: step; position: relative; padding: 14px 16px 14px 60px; border-radius: 14px; }
+.howto li::before { content: counter(step); position: absolute; left: 14px; top: 50%; transform: translateY(-50%); width: 32px; height: 32px; border-radius: 10px; display: grid; place-items: center; font: 800 15px var(--mono); color: var(--mode); background: color-mix(in srgb, var(--mode) 14%, transparent); border: 1px solid color-mix(in srgb, var(--mode) 35%, transparent); }
+
+/* ── Case / scenario pickers ─────────────────────────────────── */
+.case-card, .incident-card, .scenario-card, .escape-card, .sim-card { position: relative; overflow: hidden; background: linear-gradient(160deg, color-mix(in srgb, var(--mode) 7%, var(--surface)), var(--surface) 65%); border-radius: 18px; padding-left: 22px; }
+.case-card::before, .incident-card::before, .scenario-card::before, .escape-card::before, .sim-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--mode); opacity: 0.75; transition: opacity 0.25s, width 0.25s var(--ease); }
+.case-card:hover::before, .incident-card:hover::before, .scenario-card:hover::before, .escape-card:hover::before, .sim-card:hover::before { opacity: 1; width: 6px; }
+.case-card:hover, .incident-card:hover, .scenario-card:hover, .escape-card:hover, .sim-card:hover { border-color: color-mix(in srgb, var(--mode) 55%, transparent); box-shadow: 0 16px 36px -22px var(--mode); }
+.case-card h3, .incident-card h3, .scenario-card h3, .escape-card h3, .sim-card h3 { letter-spacing: -0.3px; font-size: 20px; }
+.chip { background: color-mix(in srgb, var(--mode) 8%, transparent); border-color: color-mix(in srgb, var(--mode) 25%, var(--border)); }
+.chip.best { color: #0a0a0a; background: var(--accent); border-color: var(--accent); }
+
+/* ── Panels, briefs and labels ───────────────────────────────── */
+.panel h3, .group-title { display: flex; align-items: center; gap: 9px; }
+.panel h3::before { content: ''; flex: 0 0 auto; width: 8px; height: 8px; border-radius: 2px; background: var(--mode); }
+.brief { border-radius: 16px; }
+.brief summary { color: var(--text); }
+
+/* ── Meters: a gauge that warms as it fills ──────────────────── */
+.bar { height: 10px; }
+.threat .bar > div, .risk .bar > div { background: linear-gradient(90deg, #facc15, #fb923c 55%, #f87171); }
+.disruption .bar > div { background: linear-gradient(90deg, #38bdf8, #a78bfa 60%, #fb923c); }
+.rel .bar > div { background: linear-gradient(90deg, #4ade80, #a3e635); }
+.meter.hot { box-shadow: 0 0 0 1px rgba(248, 113, 113, 0.25), 0 10px 30px -16px rgba(248, 113, 113, 0.6); }
+
+/* ── Feedback after an answer ────────────────────────────────── */
+.feedback h3, .solved h3 { display: flex; align-items: center; gap: 10px; }
+.feedback.good h3::before, .feedback.bad h3::before { flex: 0 0 auto; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-size: 15px; font-weight: 900; color: #0a0a0a; }
+.feedback.good h3::before { content: '\2713'; background: var(--good); }
+.feedback.bad h3::before { content: '\00D7'; background: var(--bad); font-size: 19px; }
+.feedback.good { background: linear-gradient(135deg, rgba(74, 222, 128, 0.08), var(--surface) 55%); }
+.feedback.bad { background: linear-gradient(135deg, rgba(248, 113, 113, 0.08), var(--surface) 55%); }
+
+/* ── Results ─────────────────────────────────────────────────── */
+.stats { gap: 12px; }
+.stats div { position: relative; overflow: hidden; padding: 16px 12px 14px; border-radius: 16px; background: linear-gradient(180deg, color-mix(in srgb, var(--mode) 9%, var(--surface)), var(--surface)); }
+.stats div::before { content: ''; position: absolute; left: 14px; right: 14px; top: 0; height: 3px; border-radius: 0 0 3px 3px; background: var(--mode); opacity: 0.8; }
+.stats span { font-size: 30px; letter-spacing: -0.5px; }
+.breakdown li { border-radius: 12px; }
+.callout { border-radius: 14px; }
+
+/* ── Phish or Legit: the message looks like a mail window ────── */
+[data-mode='phish-or-legit'] .mail { position: relative; padding-top: 44px; }
+[data-mode='phish-or-legit'] .mail::before { content: ''; position: absolute; top: 16px; left: 20px; width: 10px; height: 10px; border-radius: 50%; background: #f87171; box-shadow: 16px 0 #fbbf24, 32px 0 #4ade80; opacity: 0.75; }
+[data-mode='phish-or-legit'] .mail::after { content: ''; position: absolute; left: 0; right: 0; top: 38px; height: 1px; background: var(--border); }
+[data-mode='phish-or-legit'] .mail-head { padding: 10px 12px; margin: 0 -8px 14px; border-radius: 12px; background: var(--surface-2); }
+[data-mode='phish-or-legit'] .avatar { color: #0a0a0a; background: linear-gradient(135deg, var(--accent), #65a30d); border: 0; }
+[data-mode='phish-or-legit'] .kind { display: inline-block; padding: 3px 10px; border-radius: 999px; background: rgba(163, 230, 53, 0.12); border: 1px solid rgba(163, 230, 53, 0.3); letter-spacing: 1px; }
+[data-mode='phish-or-legit'] .ans.legit { border-color: rgba(74, 222, 128, 0.38); }
+[data-mode='phish-or-legit'] .ans.phish { border-color: rgba(248, 113, 113, 0.38); }
+[data-mode='phish-or-legit'] .hud .score { font-family: var(--mono); font-size: 18px; }
+[data-mode='phish-or-legit'] .pip { box-shadow: 0 0 10px -2px var(--bad); }
+[data-mode='phish-or-legit'] .pip.lost { box-shadow: none; }
+
+/* ── Incident Commander: a status-board feel ─────────────────── */
+[data-mode='incident-commander'] .clock { padding: 8px 14px; border-radius: 14px; background: var(--surface); border: 1px solid var(--border); text-align: center; }
+[data-mode='incident-commander'] .clock span { font-family: var(--mono); letter-spacing: 1px; text-shadow: 0 0 18px color-mix(in srgb, var(--accent) 50%, transparent); }
+[data-mode='incident-commander'] .group h4 { color: var(--mode); }
+[data-mode='incident-commander'] .act { border-radius: 14px; }
+[data-mode='incident-commander'] .act:hover { border-color: color-mix(in srgb, var(--mode) 60%, transparent); }
+[data-mode='incident-commander'] .act .cost { font-family: var(--mono); }
+[data-mode='incident-commander'] .feed time { font-family: var(--mono); }
+
+/* ── Social Engineering: real chat bubbles ───────────────────── */
+[data-mode='social-engineering'] .bubble { border-radius: 20px; box-shadow: 0 6px 18px -12px #000; }
+[data-mode='social-engineering'] .bubble.other { border-top-left-radius: 6px; }
+[data-mode='social-engineering'] .bubble.you { border-top-right-radius: 6px; background: color-mix(in srgb, var(--mode) 18%, var(--surface)); border-color: color-mix(in srgb, var(--mode) 45%, transparent); }
+[data-mode='social-engineering'] .bubble .who { color: var(--mode); opacity: 1; }
+[data-mode='social-engineering'] .reply { border-radius: 16px 16px 16px 6px; padding-left: 40px; position: relative; }
+[data-mode='social-engineering'] .reply::before { content: '\203A'; position: absolute; left: 16px; top: 50%; transform: translateY(-50%); font-size: 22px; font-weight: 800; color: var(--mode); }
+[data-mode='social-engineering'] .reply:hover { border-color: color-mix(in srgb, var(--mode) 60%, transparent); }
+
+/* ── Cyber Detective: terminal-style evidence ────────────────── */
+[data-mode='cyber-detective'] .tab[aria-selected='true'] { border-color: var(--mode); background: color-mix(in srgb, var(--mode) 12%, var(--surface-2)); }
+[data-mode='cyber-detective'] .line { border-left: 3px solid transparent; }
+[data-mode='cyber-detective'] .line:hover:not(:disabled) { border-left-color: var(--mode); border-color: color-mix(in srgb, var(--mode) 45%, transparent); }
+[data-mode='cyber-detective'] .counters span { font-family: var(--mono); }
+
+/* ── The Breach Room: each attack stage has its own colour ───── */
+[data-mode='breach-room'] { --s1: #38bdf8; --s2: #c084fc; --s3: #fbbf24; --s4: #f87171; }
+[data-mode='breach-room'] .stage-btns button:nth-child(1) { border-left: 3px solid var(--s1); }
+[data-mode='breach-room'] .stage-btns button:nth-child(2) { border-left: 3px solid var(--s2); }
+[data-mode='breach-room'] .stage-btns button:nth-child(3) { border-left: 3px solid var(--s3); }
+[data-mode='breach-room'] .stage-btns button:nth-child(4) { border-left: 3px solid var(--s4); }
+[data-mode='breach-room'] .path li:nth-child(1) { border-top: 3px solid var(--s1); }
+[data-mode='breach-room'] .path li:nth-child(2) { border-top: 3px solid var(--s2); }
+[data-mode='breach-room'] .path li:nth-child(3) { border-top: 3px solid var(--s3); }
+[data-mode='breach-room'] .path li:nth-child(4) { border-top: 3px solid var(--s4); }
+[data-mode='breach-room'] .ind { font-family: var(--mono); }
+[data-mode='breach-room'] .counters span { font-family: var(--mono); }
+
+/* ── Cyber Escape Room: a vault with code slots ──────────────── */
+[data-mode='escape-room'] .rooms-bar li { height: 10px; }
+[data-mode='escape-room'] .rooms-bar li.done { background: var(--mode); box-shadow: 0 0 12px -2px var(--mode); }
+[data-mode='escape-room'] .rooms-bar li.now { background: color-mix(in srgb, var(--mode) 45%, transparent); }
+[data-mode='escape-room'] .timer .time { font-family: var(--mono); }
+[data-mode='escape-room'] .code span { border-radius: 12px; border-style: dashed; }
+[data-mode='escape-room'] .code span.on { background: var(--mode); border-color: var(--mode); border-style: solid; box-shadow: 0 0 18px -4px var(--mode); }
+[data-mode='escape-room'] .obj:hover:not(:disabled) { border-color: color-mix(in srgb, var(--mode) 60%, transparent); }
+
+/* ── Incident Simulation: a console with a stage tracker ─────── */
+[data-mode='simulation'] .stage-head .eyebrow { font-weight: 800; }
+[data-mode='simulation'] .progress { height: 6px; }
+[data-mode='simulation'] .progress div { background: linear-gradient(90deg, var(--mode), var(--accent)); }
+[data-mode='simulation'] .card .src { font-family: var(--mono); }
+[data-mode='simulation'] .reporttext { border-left: 3px solid var(--mode); }
+
+@media (prefers-reduced-motion: reduce) { .mode-hero { animation: none; } }
+@media (max-width: 480px) {
+  .howto li { padding-left: 56px; }
+  .stats span { font-size: 26px; }
+}
