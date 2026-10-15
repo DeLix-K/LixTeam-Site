@@ -113,3 +113,14 @@ h2 { font-size: 20px; margin: 28px 0 10px; }
 .step .src { flex: 0 0 auto; }
 .order-col.picked .step { border-color: rgba(163, 230, 53, 0.45); background: rgba(163, 230, 53, 0.07); }
 .linkbtn { background: none; border: 0; padding: 0; color: var(--muted); text-decoration: underline; font: inherit; cursor: pointer; margin-top: 8px; }
+
+/* ── Allocate stage ──────────────────────────────────────────── */
+.budget { position: sticky; top: 56px; z-index: 3; margin: 0 0 12px; padding: 10px 14px; border-radius: 12px; background: var(--surface); border: 1px solid var(--border); font-weight: 800; font-variant-numeric: tabular-nums; }
+.budget.done { border-color: var(--accent); color: var(--accent); }
+.alloc-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
+.alloc-card .stepper { display: flex; align-items: center; justify-content: flex-end; gap: 14px; margin-top: 10px; }
+.step-btn { width: 44px; height: 44px; border-radius: 12px; border: 1px solid var(--border); background: var(--surface-2); color: var(--text); font: 800 22px/1 var(--mono, monospace); cursor: pointer; }
+.step-btn:hover:not(:disabled) { border-color: var(--mode, var(--accent)); }
+.step-btn:disabled { opacity: 0.5; cursor: default; }
+.alloc-card .count { min-width: 2ch; text-align: center; font: 800 26px var(--mono, monospace); font-variant-numeric: tabular-nums; }
+.card.near { border-color: rgba(251, 191, 36, 0.5); }

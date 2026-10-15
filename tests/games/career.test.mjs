@@ -1,0 +1,659 @@
+import { fileURLToPath as __fileURLToPath } from 'node:url';
+const GAMES = __fileURLToPath(new URL('../../public/games/', import.meta.url)).replace(/\\/g, '/');
+import { pathToFileURL } from 'node:url';
+import assert from 'node:assert/strict';
+const store = new Map();
+globalThis.localStorage = { getItem: (k) => (store.has(k) ? store.get(k) : null), setItem: (k, v) => store.set(k, String(v)), removeItem: (k) => store.delete(k) };
+const root = GAMES + '';
+const U = (p) => pathToFileURL(root + p).href;
+const C = await import(U('core/career.js'));
+const M = await import(U('core/missions.js'));
+let n = 0;
+const t = (name, fn) => {
+  try { fn(); console.log('  ok  ', name); n++; } catch (e) { console.log('  FAIL', name, '\n      ', e.message); process.exitCode = 1; }
+};
+const ids = (tier) => M.MISSIONS.filter((m) => m.tier === tier && !m.exam).map((m) => m.id);
+const play = (s, id, tier, perf = tier === 3 ? 1 : tier === 2 ? 0.8 : tier === 1 ? 0.6 : 0.3) => C.recordAttempt(s, { missionId: id, points: Math.round(perf * 100), tier, perf, summary: ['did the thing'] });
+const goldAll = (s, list) => list.forEach((id) => play(s, id, 3));
+const everything = () => [...ids('beginner'), ...ids('intermediate'), ...ids('advanced'), ...ids('senior')];
+
+// ── content integrity: every mission must point at something that exists ──
+const { CASES: DET } = await import(U('cyber-detective/cases.js'));
+const { CASES: BR } = await import(U('breach-room/cases.js'));
+const { INCIDENTS: IC } = await import(U('incident-commander/incidents.js'));
+const { SCENARIOS: SE } = await import(U('social-engineering/scenarios.js'));
+const { SCENARIOS: POL } = await import(U('phish-or-legit/scenarios.js'));
+const { SIMS } = await import(U('simulation/sims.js'));
+const contentIds = { 'cyber-detective': DET.map((x) => x.id), 'breach-room': BR.map((x) => x.id), 'incident-commander': IC.map((x) => x.id), 'social-engineering': SE.map((x) => x.id), simulation: SIMS.map((x) => x.id) };
+
+t('content integrity: every mission points at a case that exists in its mode', () => {
+  for (const m of M.MISSIONS) {
+    if (m.kind === 'triage') {
+      const have = new Set(POL.map((x) => x.id));
+      for (const i of m.items) assert.ok(have.has(i), `${m.id}: unknown item ${i}`);
+      assert.equal(new Set(m.items).size, m.items.length);
+      assert.ok(m.items.length >= 8);
+      continue;
+    }
+    assert.ok(contentIds[m.mode], `${m.id}: unknown mode ${m.mode}`);
+    assert.ok(contentIds[m.mode].includes(m.ref), `${m.id}: "${m.ref}" is not a case in ${m.mode}`);
+  }
+});
+t('content integrity: no two missions use the same case, and each mission has a par (or reports its own)', () => {
+  const refs = M.MISSIONS.filter((m) => m.kind !== 'triage').map((m) => `${m.mode}/${m.ref}`);
+  assert.equal(new Set(refs).size, refs.length, 'a case is used by two missions');
+  for (const m of M.MISSIONS) if (m.kind !== 'simulation') assert.ok(m.par > 0, m.id + ' needs a par'); else assert.equal(m.par, 0);
+});
+t('content integrity: requirements only reference real tiers, competencies, exams and ranks', () => {
+  const tiers = new Set(M.TIERS.map((x) => x.id)); const comps = new Set(M.COMPETENCIES.map((x) => x.id)); const ranks = new Set(M.RANKS.map((x) => x.id));
+  const check = (req, where) => {
+    for (const k of Object.keys(req.passedTier || {})) assert.ok(tiers.has(k), `${where}: tier ${k}`);
+    for (const k of Object.keys(req.mastery || {})) assert.ok(comps.has(k), `${where}: competency ${k}`);
+    for (const k of req.masteryScope || []) assert.ok(tiers.has(k), `${where}: scope ${k}`);
+    if (req.rank) assert.ok(ranks.has(req.rank), `${where}: rank ${req.rank}`);
+  };
+  for (const r of M.RANKS) check(r.requires, 'rank ' + r.id);
+  for (const m of M.MISSIONS) check(m.unlock || {}, 'mission ' + m.id);
+  // every exam named by a rank is either built or listed on the roadmap
+  const built = new Set(M.MISSIONS.filter((m) => m.exam).map((m) => m.id)); const planned = new Set(M.ROADMAP.map((x) => x.id));
+  for (const r of M.RANKS) if (r.requires.exam) assert.ok(built.has(r.requires.exam) || planned.has(r.requires.exam), `${r.id}: exam ${r.requires.exam} is neither built nor on the roadmap`);
+});
+t('mission data is well formed, with the right numbers per tier', () => {
+  const comps = new Set(M.COMPETENCIES.map((c) => c.id));
+  const seen = new Set();
+  for (const m of M.MISSIONS) {
+    assert.ok(!seen.has(m.id), 'dup ' + m.id); seen.add(m.id);
+    assert.ok(m.title && m.blurb && m.mode && m.kind && m.minutes > 0, m.id);
+    assert.ok(M.TIERS.some((x) => x.id === m.tier));
+    const w = Object.entries(m.competencies);
+    assert.ok(w.length >= 1);
+    for (const [c, x] of w) { assert.ok(comps.has(c), m.id + ' unknown competency ' + c); assert.ok(x > 0 && x <= 1); }
+    assert.ok(Math.abs(w.reduce((a, [, x]) => a + x, 0) - 1) < 1e-9, m.id + ' weights should sum to 1');
+    if (m.exam) assert.ok(m.promotes && m.passTier >= 2);
+  }
+  assert.deepEqual([ids('beginner').length, ids('intermediate').length, ids('advanced').length, ids('senior').length, ids('lead').length, ids('manager').length, ids('cloud').length], [4, 7, 4, 3, 4, 2, 3]);
+  assert.equal(M.MISSIONS.filter((m) => m.exam).length, 4);
+  assert.equal(M.RANKS.length, 6);
+  assert.equal(M.COMPETENCIES.length, 10);
+  for (const c of M.COMPETENCIES) assert.ok(M.MISSIONS.filter((m) => m.competencies[c.id]).length >= 2, c.id + ' needs at least two missions');
+});
+t('a new player is a Recruit with only beginner missions open', () => {
+  const s = C.blank();
+  assert.equal(C.rankOf(s).rank.id, 'recruit');
+  assert.deepEqual(C.unlockedIds(s).sort(), ids('beginner').sort());
+});
+t('promotion to Junior needs XP and two beginner passes', () => {
+  const s = C.blank();
+  play(s, 'm01-triage', 1);
+  assert.equal(C.rankOf(s).rank.id, 'recruit');
+  const r = play(s, 'm02-invoice', 3);
+  assert.equal(C.rankOf(s).rank.id, 'junior', JSON.stringify(C.rankOf(s).checklist));
+  assert.equal(r.promoted.id, 'junior');
+});
+t('intermediate missions unlock after two beginner passes', () => {
+  const s = C.blank();
+  play(s, 'm01-triage', 1);
+  assert.equal(C.missionStatus(s, 'm04-spray').unlocked, false);
+  assert.ok(C.missionStatus(s, 'm04-spray').missing.length > 0);
+  const r = play(s, 'm02-invoice', 2);
+  assert.equal(C.missionStatus(s, 'm04-spray').unlocked, true);
+  assert.ok(r.newlyUnlocked.some((m) => m.id === 'm04-spray'));
+});
+t('failing a mission (no medal) does not count as passed or unlock anything', () => {
+  const s = C.blank();
+  play(s, 'm01-triage', 0); play(s, 'm02-invoice', 0);
+  assert.equal(C.passedCount(s, 'beginner'), 0);
+  assert.equal(C.missionStatus(s, 'm04-spray').unlocked, false);
+});
+t('XP cannot be farmed: replaying at the same medal earns nothing, improving earns the difference', () => {
+  const s = C.blank();
+  assert.equal(play(s, 'm02-invoice', 1).xpGained, 30);
+  assert.equal(play(s, 'm02-invoice', 1).xpGained, 0);
+  assert.equal(play(s, 'm02-invoice', 0).xpGained, 0);
+  assert.equal(play(s, 'm02-invoice', 3).xpGained, 30);
+  assert.equal(s.xp, 60);
+  for (let i = 0; i < 20; i++) play(s, 'm02-invoice', 3);
+  assert.equal(s.xp, 60, 'twenty gold replays added nothing');
+});
+t('a failed first try earns a one-off 5 XP, not repeatable', () => {
+  const s = C.blank();
+  assert.equal(play(s, 'm01-triage', 0).xpGained, 5);
+  assert.equal(play(s, 'm01-triage', 0).xpGained, 0);
+});
+t('harder tiers are worth more XP, all the way up to Senior', () => {
+  const s = C.blank();
+  const x = (id) => play(s, id, 3).xpGained;
+  const b = x('m02-invoice'), i = x('m04-spray'), a = x('m08-ransom'), sn = x('m16-hunt');
+  assert.ok(b < i && i < a && a < sn, `${b} ${i} ${a} ${sn}`);
+});
+t('XP alone never promotes to SOC Analyst: every non-exam mission at gold still leaves you a Junior', () => {
+  const s = C.blank();
+  goldAll(s, [...ids('beginner'), ...ids('intermediate'), ...ids('advanced')]);
+  assert.ok(s.xp >= 400, 'enough XP: ' + s.xp);
+  assert.equal(C.rankOf(s).rank.id, 'junior');
+  assert.deepEqual(C.rankOf(s).checklist.filter((x) => !x.done).map((x) => x.key), ['exam']);
+});
+t('the SOC exam only unlocks with the right missions AND mastery', () => {
+  const s = C.blank();
+  goldAll(s, ids('beginner'));
+  assert.equal(C.missionStatus(s, 'soc-exam').unlocked, false, 'needs intermediate too');
+  play(s, 'm04-spray', 3); play(s, 'm06-prompt', 3);
+  assert.equal(C.missionStatus(s, 'soc-exam').unlocked, true, JSON.stringify(C.missionStatus(s, 'soc-exam').missing));
+});
+t('grinding easy missions at bronze cannot unlock the exam (mastery gate)', () => {
+  const s = C.blank();
+  for (const id of ids('beginner')) play(s, id, 1, 0.55);
+  play(s, 'm04-spray', 1, 0.5); play(s, 'm06-prompt', 1, 0.5);
+  const st = C.missionStatus(s, 'soc-exam');
+  assert.equal(st.unlocked, false);
+  assert.ok(st.missing.some((x) => x.key.startsWith('mastery-')), JSON.stringify(st.missing.map((x) => x.key)));
+});
+t('the mastery gate for SOC Analyst only counts missions a player could have reached', () => {
+  const s = C.blank();
+  goldAll(s, ids('beginner'));
+  // advanced and senior missions are not part of the analyst gate, however well they are played
+  const inScope = C.mastery(s, 'triage', ['beginner', 'intermediate']).score;
+  goldAll(s, ['m10-harbour', 'm18-weekend']);
+  assert.equal(C.mastery(s, 'triage', ['beginner', 'intermediate']).score, inScope);
+  assert.ok(C.mastery(s, 'triage').attempted > C.mastery(s, 'triage', ['beginner', 'intermediate']).attempted, 'the unscoped view counts the advanced and senior missions too');
+  // and the checklist says so
+  const label = C.rankOf(s).checklist.find((x) => x.key === 'mastery-triage').label;
+  assert.match(label, /beginner and intermediate missions/);
+});
+t('passing the SOC exam at bronze is not enough; silver is', () => {
+  const s = C.blank();
+  goldAll(s, [...ids('beginner'), 'm04-spray', 'm06-prompt']);
+  play(s, 'soc-exam', 1);
+  assert.equal(C.isPassed(s, 'soc-exam'), false);
+  assert.equal(C.rankOf(s).rank.id, 'junior');
+  const r = play(s, 'soc-exam', 2);
+  assert.equal(C.isPassed(s, 'soc-exam'), true);
+  assert.equal(C.rankOf(s).rank.id, 'analyst');
+  assert.equal(r.promoted.id, 'analyst');
+  assert.equal(r.xpGained, 120);
+});
+t('senior-tier missions need the SOC Analyst rank, however much else you have done', () => {
+  const s = C.blank();
+  goldAll(s, [...ids('beginner'), ...ids('intermediate'), ...ids('advanced')]);
+  for (const id of ids('senior')) { const st = C.missionStatus(s, id); assert.equal(st.unlocked, false, id); assert.ok(st.missing.some((x) => x.key === 'rank')); }
+  const r = play(s, 'soc-exam', 2);
+  assert.ok(r.promoted && r.promoted.id === 'analyst');
+  assert.ok(r.newlyUnlocked.map((m) => m.id).sort().join() === [...ids('senior'), 'c01-bucket'].sort().join(), 'passing the exam opens the three senior missions and the cloud track: ' + r.newlyUnlocked.map((m) => m.id));
+});
+t('the Senior exam needs the rank, advanced and senior passes, and mastery', () => {
+  const s = C.blank();
+  goldAll(s, [...ids('beginner'), ...ids('intermediate'), ...ids('advanced')]);
+  play(s, 'soc-exam', 2);
+  assert.equal(C.missionStatus(s, 'senior-exam').unlocked, false);
+  play(s, 'm16-hunt', 3);
+  assert.equal(C.missionStatus(s, 'senior-exam').unlocked, false, 'one senior mission is not enough');
+  play(s, 'm17-cloudkey', 3);
+  assert.equal(C.missionStatus(s, 'senior-exam').unlocked, true, JSON.stringify(C.missionStatus(s, 'senior-exam').missing));
+});
+t('the ladder reaches Senior Analyst, and the lead exam is now a real, later step', () => {
+  const s = C.blank();
+  goldAll(s, everything());
+  assert.equal(C.rankOf(s).rank.id, 'junior');
+  play(s, 'soc-exam', 3);
+  assert.equal(C.rankOf(s).rank.id, 'analyst');
+  assert.equal(C.rankOf(s).next.id, 'senior');
+  const r = play(s, 'senior-exam', 3);
+  assert.equal(C.rankOf(s).rank.id, 'senior', JSON.stringify(C.rankOf(s).checklist));
+  assert.equal(r.promoted.id, 'senior');
+  const top = C.rankOf(s);
+  assert.equal(top.next.id, 'lead');
+  const ex = top.checklist.find((x) => x.key === 'exam');
+  assert.equal(ex.available, true);
+  assert.doesNotMatch(ex.label, /future update/);
+});
+t('Senior needs the senior exam at silver: bronze does not promote', () => {
+  const s = C.blank();
+  goldAll(s, everything());
+  play(s, 'soc-exam', 3);
+  play(s, 'senior-exam', 1);
+  assert.equal(C.rankOf(s).rank.id, 'analyst');
+  play(s, 'senior-exam', 2);
+  assert.equal(C.rankOf(s).rank.id, 'senior');
+});
+t('mastery: breadth counts, best result counts, a worse replay never lowers it', () => {
+  const s = C.blank();
+  play(s, 'm01-triage', 3, 1);
+  const m1 = C.mastery(s, 'triage');
+  assert.ok(m1.score > 0 && m1.score < 100, 'one mission is not mastery: ' + m1.score);
+  assert.equal(m1.attempted, 1); assert.ok(m1.count >= 3);
+  play(s, 'm01-triage', 0, 0.1);
+  assert.equal(C.mastery(s, 'triage').score, m1.score);
+  play(s, 'm10-harbour', 3, 1);
+  assert.ok(C.mastery(s, 'triage').score > m1.score);
+  assert.equal(C.mastery(s, 'endpoint').score, 0);
+  assert.equal(C.mastery(s, 'hunting').score, 0);
+});
+t('recommendation targets the weakest area, and prefers the exam when it is open', () => {
+  const s = C.blank();
+  play(s, 'm01-triage', 3, 1); play(s, 'm02-invoice', 3, 1);
+  const rec = C.recommend(s);
+  assert.ok(rec && !rec.mission.exam && C.missionStatus(s, rec.mission.id).unlocked);
+  assert.match(rec.reason, /weakest area/);
+  goldAll(s, ids('beginner')); play(s, 'm04-spray', 3); play(s, 'm06-prompt', 3);
+  assert.equal(C.recommend(s).mission.id, 'soc-exam');
+});
+t('recommendation is null only when everything open is gold', () => {
+  const s = C.blank();
+  goldAll(s, [...ids('beginner'), ...ids('intermediate'), ...ids('advanced')]);
+  play(s, 'soc-exam', 3);
+  assert.ok(C.recommend(s), 'senior missions are now open and not gold');
+  goldAll(s, ids('senior'));
+  play(s, 'senior-exam', 3);
+  assert.ok(C.recommend(s), 'lead and cloud missions are open and not gold');
+  goldAll(s, [...ids('lead'), ...ids('cloud')]);
+  play(s, 'lead-exam', 3);
+  assert.ok(C.recommend(s), 'manager missions are open and not gold');
+  goldAll(s, ids('manager'));
+  play(s, 'manager-exam', 3);
+  assert.equal(C.recommend(s), null);
+});
+t('case history keeps every attempt and compares first with latest', () => {
+  const s = C.blank();
+  play(s, 'm02-invoice', 1, 0.5); play(s, 'm02-invoice', 2, 0.7); play(s, 'm02-invoice', 3, 0.95);
+  assert.equal(C.historyFor(s, 'm02-invoice').length, 3);
+  const cmp = C.compare(s, 'm02-invoice');
+  assert.equal(cmp.count, 3); assert.ok(cmp.latest.perf > cmp.first.perf);
+  assert.equal(C.compare(s, 'm01-triage'), null);
+});
+t('portfolio and report text: only attempted cases, with the disclaimer', () => {
+  const s = C.blank();
+  play(s, 'm02-invoice', 3);
+  const p = C.portfolio(s);
+  assert.equal(p.length, 1);
+  assert.equal(p[0].medal, 'Gold');
+  const txt = C.reportText(s, 'm02-invoice');
+  assert.match(txt, /CASE REPORT: The invoice that was not/);
+  assert.match(txt, /not qualifications or validated assessments/);
+  assert.match(txt, /did the thing/);
+  assert.equal(C.reportText(s, 'm05-macro'), '');
+});
+t('export and import round-trip; junk is refused', () => {
+  C.reset();
+  const s = C.load();
+  play(s, 'm02-invoice', 3); play(s, 'm01-triage', 2); play(s, 'm16-hunt', 2);
+  C.save();
+  const code = C.exportCode();
+  assert.match(code, /^LQ1:/);
+  C.reset();
+  assert.equal(C.load().xp, 0);
+  assert.equal(C.importCode(code).ok, true);
+  assert.equal(C.load().missions['m02-invoice'].bestTier, 3);
+  assert.equal(C.load().missions['m16-hunt'].bestTier, 2);
+  assert.equal(C.importCode('hello').ok, false);
+  assert.equal(C.importCode('LQ1:@@@@').ok, false);
+  assert.equal(C.importCode(12345).ok, false);
+});
+t('a save from before the new missions existed still loads (progress is never lost to an update)', () => {
+  const old = { v: 1, xp: 300, missions: { 'm02-invoice': { attempts: 2, bestTier: 3, bestPerf: 0.98, bestPoints: 250, tried: false }, 'retired-mission': { attempts: 1, bestTier: 2 } }, attempts: [{ id: 'm02-invoice', at: '2026-10-13T10:00:00Z', points: 250, tier: 3, perf: 0.98, summary: ['x'] }, { id: 'retired-mission', tier: 1 }] };
+  const code = 'LQ1:' + Buffer.from(JSON.stringify(old)).toString('base64');
+  assert.equal(C.importCode(code).ok, true);
+  const s = C.load();
+  assert.equal(s.xp, 300);
+  assert.equal(s.missions['m02-invoice'].bestTier, 3);
+  assert.equal(s.missions['retired-mission'], undefined, 'unknown missions are dropped, known ones are kept');
+  assert.equal(s.attempts.length, 1);
+  assert.equal(C.missionStatus(s, 'm16-hunt').unlocked, false);
+});
+t('import is sanitised: unknown missions dropped, silly numbers clamped', () => {
+  const evil = { v: 1, xp: 9e12, missions: { 'm02-invoice': { attempts: -5, bestTier: 99, bestPerf: 7, bestPoints: 1e9 }, hacked: { attempts: 1, bestTier: 3 } }, attempts: [{ id: 'nope' }, { id: 'm02-invoice', tier: 50, perf: 9, points: 1e12, summary: ['x'.repeat(5000)] }] };
+  const code = 'LQ1:' + Buffer.from(JSON.stringify(evil)).toString('base64');
+  assert.equal(C.importCode(code).ok, true);
+  const s = C.load();
+  assert.ok(s.xp <= 1e6);
+  assert.deepEqual(Object.keys(s.missions), ['m02-invoice']);
+  assert.ok(s.missions['m02-invoice'].bestTier <= 3 && s.missions['m02-invoice'].bestPerf <= 1 && s.missions['m02-invoice'].attempts >= 0);
+  assert.equal(s.attempts.length, 1);
+  assert.ok(s.attempts[0].summary[0].length <= 300 && s.attempts[0].tier <= 3);
+});
+t('corrupt or blocked storage falls back to a fresh career', () => {
+  store.set('lixteam.career.v1', '{broken');
+  return import(U('core/career.js') + '?fresh=1').then((m) => { assert.equal(m.load().xp, 0); });
+});
+
+// ═══════════════ wave 3: lead tier, cloud track, featured case ═══════════════
+const toSenior = () => {
+  const s = C.blank();
+  goldAll(s, everything());
+  play(s, 'soc-exam', 3);
+  play(s, 'senior-exam', 3);
+  return s;
+};
+t('lead missions need the Senior Analyst rank, and the lead exam needs three lead passes and mastery', () => {
+  const s = C.blank();
+  goldAll(s, everything());
+  play(s, 'soc-exam', 3);
+  for (const id of ids('lead')) assert.equal(C.missionStatus(s, id).unlocked, false, id + ' is locked at SOC Analyst');
+  const r = play(s, 'senior-exam', 3);
+  assert.equal(r.promoted.id, 'senior');
+  assert.deepEqual(r.newlyUnlocked.map((m) => m.id).sort(), [...ids('lead')].sort());
+  assert.equal(C.missionStatus(s, 'lead-exam').unlocked, false);
+  goldAll(s, ids('lead').slice(0, 2));
+  assert.equal(C.missionStatus(s, 'lead-exam').unlocked, false, 'two lead passes is not enough');
+  play(s, ids('lead')[2], 3);
+  assert.equal(C.missionStatus(s, 'lead-exam').unlocked, true, JSON.stringify(C.missionStatus(s, 'lead-exam').missing));
+});
+t('the ladder reaches Incident Response Lead, and a bronze exam does not promote', () => {
+  const s = toSenior();
+  goldAll(s, ids('lead'));
+  assert.equal(C.rankOf(s).rank.id, 'senior');
+  play(s, 'lead-exam', 1);
+  assert.equal(C.rankOf(s).rank.id, 'senior', 'bronze is not a pass');
+  const r = play(s, 'lead-exam', 2);
+  assert.equal(r.promoted.id, 'lead', JSON.stringify(C.rankOf(s).checklist));
+  assert.equal(C.rankOf(s).isTop, false);
+  assert.equal(C.rankOf(s).next.id, 'manager');
+});
+t('Lead needs the exam even when everything else is done', () => {
+  const s = toSenior();
+  goldAll(s, ids('lead'));
+  const items = C.rankOf(s).checklist;
+  assert.ok(items.filter((x) => x.key !== 'exam').every((x) => x.done), JSON.stringify(items.filter((x) => !x.done)));
+  assert.equal(C.rankOf(s).rank.id, 'senior');
+});
+t('the rank ladder is reachable with silver medals alone (no gold needed)', () => {
+  const s = C.blank();
+  for (const id of everything()) play(s, id, 2);
+  play(s, 'soc-exam', 2);
+  assert.equal(C.rankOf(s).rank.id, 'analyst', JSON.stringify(C.rankOf(s).checklist.filter((x) => !x.done)));
+  play(s, 'senior-exam', 2);
+  assert.equal(C.rankOf(s).rank.id, 'senior', JSON.stringify(C.rankOf(s).checklist.filter((x) => !x.done)));
+  for (const id of ids('lead')) play(s, id, 2);
+  play(s, 'lead-exam', 2);
+  assert.equal(C.rankOf(s).rank.id, 'lead', JSON.stringify(C.rankOf(s).checklist.filter((x) => !x.done)));
+});
+
+t('the cloud track opens at SOC Analyst; the other two cloud missions need the first', () => {
+  const s = C.blank();
+  goldAll(s, [...ids('beginner'), ...ids('intermediate'), ...ids('advanced')]);
+  assert.equal(C.missionStatus(s, 'c01-bucket').unlocked, false);
+  play(s, 'soc-exam', 2);
+  assert.equal(C.missionStatus(s, 'c01-bucket').unlocked, true);
+  for (const id of ['c02-role', 'c03-console']) assert.equal(C.missionStatus(s, id).unlocked, false, id);
+  const r = play(s, 'c01-bucket', 2);
+  assert.deepEqual(r.newlyUnlocked.map((m) => m.id).sort(), ['c02-role', 'c03-console']);
+});
+t('finishing the cloud track earns a title, and the title never changes rank', () => {
+  const s = C.blank();
+  goldAll(s, [...ids('beginner'), ...ids('intermediate'), ...ids('advanced')]);
+  play(s, 'soc-exam', 2);
+  const rankBefore = C.rankOf(s).rank.id;
+  assert.equal(C.specialisms(s)[0].earned, false);
+  play(s, 'c01-bucket', 2); play(s, 'c02-role', 2);
+  assert.equal(C.specialisms(s)[0].earned, false, 'two of three is not enough');
+  play(s, 'c03-console', 2);
+  const sp = C.specialisms(s)[0];
+  assert.equal(sp.earned, true, JSON.stringify(sp.checklist));
+  assert.equal(sp.id, 'cloud');
+  assert.equal(C.rankOf(s).rank.id, rankBefore);
+});
+t('the cloud title needs real mastery, not just three bronze passes', () => {
+  const s = C.blank();
+  goldAll(s, [...ids('beginner'), ...ids('intermediate'), ...ids('advanced')]);
+  play(s, 'soc-exam', 2);
+  for (const id of ids('cloud')) play(s, id, 1, 0.3);
+  assert.equal(C.specialisms(s)[0].earned, false);
+  for (const id of ids('cloud')) play(s, id, 3);
+  assert.equal(C.specialisms(s)[0].earned, true);
+});
+t('cloud skill is hidden until SOC Analyst (or until tried), and never decides the next-step advice while core skills are open', () => {
+  const s = C.blank();
+  assert.ok(!C.visibleCompetencies(s).some((c) => c.id === 'cloud'));
+  goldAll(s, [...ids('beginner'), ...ids('intermediate'), ...ids('advanced')]);
+  play(s, 'soc-exam', 2);
+  assert.ok(C.visibleCompetencies(s).some((c) => c.id === 'cloud'));
+  const rec = C.recommend(s);
+  assert.ok(rec && !/Cloud security is your weakest/.test(rec.reason), rec && rec.reason);
+});
+t('every cloud, lead and exam mission points at a case that exists (content integrity)', () => {
+  for (const id of [...ids('lead'), ...ids('cloud'), 'lead-exam']) {
+    const m = M.missionById(id);
+    const pool = contentIds[m.mode];
+    assert.ok(pool.includes(m.ref), id + ' -> ' + m.mode + '/' + m.ref);
+  }
+});
+
+t('week numbers change on Monday and are stable through the week (UTC)', () => {
+  const mon = C.weekNumber(new Date('2026-10-12T00:00:00Z'));
+  assert.equal(C.weekNumber(new Date('2026-10-18T23:59:59Z')), mon);
+  assert.equal(C.weekNumber(new Date('2026-10-19T00:00:00Z')), mon + 1);
+  assert.equal(C.weekNumber(new Date('2026-10-11T23:59:59Z')), mon - 1);
+});
+t('the featured case is playable, stable all week, and rotates', () => {
+  const s = C.blank();
+  const a = C.featured(s, new Date('2026-10-12T09:00:00Z'));
+  const b = C.featured(s, new Date('2026-10-18T20:00:00Z'));
+  assert.equal(a.mission.id, b.mission.id);
+  assert.equal(C.missionStatus(s, a.mission.id).unlocked, true);
+  assert.equal(a.mission.exam, undefined);
+  const seen = new Set();
+  for (let w = 0; w < 8; w++) seen.add(C.featured(s, new Date(Date.UTC(2026, 9, 12 + 7 * w))).mission.id);
+  assert.ok(seen.size >= 3, 'rotates through the open missions: ' + [...seen]);
+});
+t('finishing the featured case with a medal counts once, and never goes down', () => {
+  const s = C.blank();
+  const day = new Date('2026-10-14T10:00:00Z');
+  const f = C.featured(s, day);
+  const bad = C.recordAttempt(s, { missionId: f.mission.id, points: 10, tier: 0, perf: 0.1, now: day.toISOString() });
+  assert.equal(bad.featuredDone, false, 'no medal, no credit');
+  assert.equal(C.featuredCount(s), 0);
+  const ok = C.recordAttempt(s, { missionId: f.mission.id, points: 100, tier: 2, perf: 0.8, now: day.toISOString() });
+  assert.equal(ok.featuredDone, true);
+  assert.equal(C.featuredCount(s), 1);
+  const again = C.recordAttempt(s, { missionId: f.mission.id, points: 100, tier: 3, perf: 1, now: new Date('2026-10-16T10:00:00Z').toISOString() });
+  assert.equal(again.featuredDone, false, 'the same week is only counted once');
+  assert.equal(C.featuredCount(s), 1);
+  assert.equal(C.featured(s, new Date('2026-10-17T10:00:00Z')).done, true);
+  assert.equal(C.featured(s, new Date('2026-10-21T10:00:00Z')).done, false, 'a new week starts fresh');
+  const nextWeek = new Date('2026-10-21T10:00:00Z');
+  const f2 = C.featured(s, nextWeek);
+  const other = ids('beginner').find((id) => id !== f2.mission.id);
+  const off = C.recordAttempt(s, { missionId: other, points: 100, tier: 3, perf: 1, now: nextWeek.toISOString() });
+  assert.equal(off.featuredDone, false, 'a different mission is not the featured one');
+});
+t('the featured count survives export and import, and bad values are cleaned up', () => {
+  const s = C.blank();
+  s.weekly = [2900, 2901];
+  const code = C.exportCode(s);
+  C.reset();
+  assert.equal(C.importCode(code).ok, true);
+  assert.deepEqual(C.load().weekly, [2900, 2901]);
+  const dirty = { v: 1, xp: 0, missions: {}, attempts: [], weekly: [5, 5, -1, 'x', 1.5, 3e9, 7] };
+  const enc = 'LQ1:' + Buffer.from(JSON.stringify(dirty)).toString('base64');
+  assert.equal(C.importCode(enc).ok, true);
+  assert.deepEqual(C.load().weekly, [5, 7]);
+  C.reset();
+});
+
+
+// ═══════════════ gap fixes: rank progress, summary, challenge codes ═══════════════
+t('rank progress is 0 for a new player, rises as requirements are met, and is 1 at the top', () => {
+  const s = C.blank();
+  assert.equal(C.rankOf(s).progress, 0);
+  play(s, 'm01-triage', 3);
+  const p1 = C.rankOf(s).progress;
+  assert.ok(p1 > 0 && p1 < 1, String(p1));
+  play(s, 'm03-signin', 0, 0.2);
+  const p2 = C.rankOf(s).progress;
+  assert.ok(p2 > p1, 'earning XP towards the same promotion moves the bar');
+  play(s, 'm02-invoice', 3);
+  assert.equal(C.rankOf(s).rank.id, 'junior');
+  assert.ok(C.rankOf(s).progress < 1, 'after a promotion the bar restarts towards the next rank');
+  const top = C.blank();
+  goldAll(top, everything()); play(top, 'soc-exam', 3); play(top, 'senior-exam', 3); goldAll(top, ids('lead')); play(top, 'lead-exam', 3); goldAll(top, ids('manager')); play(top, 'manager-exam', 3);
+  assert.equal(C.rankOf(top).rank.id, 'manager');
+  assert.equal(C.rankOf(top).isTop, true);
+  assert.equal(C.rankOf(top).progress, 1);
+});
+t('the summary lists rank, skills, titles and cases, and says it is not a qualification', () => {
+  const s = C.blank();
+  goldAll(s, [...ids('beginner'), ...ids('intermediate'), ...ids('advanced')]);
+  play(s, 'soc-exam', 2);
+  for (const id of ids('cloud')) play(s, id, 3);
+  const text = C.summaryText(s, new Date('2026-10-15T10:00:00Z'));
+  assert.match(text, /Date: 2026-10-15/);
+  assert.match(text, /Rank: SOC Analyst/);
+  assert.match(text, /Alert triage: \d+\/100/);
+  assert.match(text, /Cloud security: \d+\/100/);
+  assert.match(text, /Cloud Security Specialist/);
+  assert.match(text, /The invoice that was not .*Gold/);
+  assert.match(text, /promotion exam/);
+  assert.match(text, /not qualifications/);
+  assert.equal(C.summaryText(C.blank()).includes('None yet'), true);
+});
+t('the summary of a brand new player is honest: no rank beyond Recruit, no cases', () => {
+  const text = C.summaryText(C.blank());
+  assert.match(text, /Rank: Recruit/);
+  assert.match(text, /Cases completed \(0\)/);
+  assert.doesNotMatch(text, /Cloud security/);
+});
+t('a challenge code round-trips, and carries nothing but the case and the result', () => {
+  const s = C.blank();
+  play(s, 'm02-invoice', 2, 0.83);
+  const code = C.challengeCode(s, 'm02-invoice');
+  assert.match(code, /^LC1:/);
+  const body = JSON.parse(atob(code.slice(4)));
+  assert.deepEqual(Object.keys(body).sort(), ['m', 'p', 't', 'v', 'x']);
+  const ch = C.readChallenge(code);
+  assert.equal(ch.ok, true);
+  assert.equal(ch.mission.id, 'm02-invoice');
+  assert.equal(ch.tier, 2);
+  assert.equal(ch.percent, 83);
+});
+t('no challenge code for a case you have not played', () => {
+  assert.equal(C.challengeCode(C.blank(), 'm02-invoice'), '');
+  assert.equal(C.challengeCode(C.blank(), 'no-such-case'), '');
+});
+t('bad or tampered challenge codes are refused', () => {
+  const bad = [
+    'nonsense', '', 'LC1:', 'LC1:%%%', 'LC1:' + btoa('not json'),
+    'LC1:' + btoa(JSON.stringify({ v: 1, m: 'no-such-case', t: 2, p: 80 })),
+    'LC1:' + btoa(JSON.stringify({ v: 1, m: 'm02-invoice', t: 9, p: 80 })),
+    'LC1:' + btoa(JSON.stringify({ v: 1, m: 'm02-invoice', t: 2, p: 500 })),
+    'LC1:' + btoa(JSON.stringify({ v: 2, m: 'm02-invoice', t: 2, p: 80 })),
+    'LC1:' + btoa(JSON.stringify({ v: 1, m: '<script>alert(1)</script>', t: 2, p: 80 })),
+  ];
+  for (const code of bad) assert.equal(C.readChallenge(code).ok, false, code);
+  assert.equal(C.readChallenge(null).ok, false);
+  assert.equal(C.readChallenge(42).ok, false);
+});
+t('comparing with a friend: ahead, level, behind or not played', () => {
+  const friend = C.blank();
+  play(friend, 'm02-invoice', 2, 0.8);
+  const ch = C.readChallenge(C.challengeCode(friend, 'm02-invoice'));
+  const me = C.blank();
+  assert.equal(C.compareChallenge(me, ch).result, 'untried');
+  play(me, 'm02-invoice', 1, 0.6);
+  assert.equal(C.compareChallenge(me, ch).result, 'behind');
+  play(me, 'm02-invoice', 2, 0.8);
+  assert.equal(C.compareChallenge(me, ch).result, 'level');
+  play(me, 'm02-invoice', 3, 0.95);
+  const c = C.compareChallenge(me, ch);
+  assert.equal(c.result, 'ahead');
+  assert.equal(c.yours.percent, 95);
+});
+
+
+// ═══════════════ level 5: SOC Manager ═══════════════
+const toLead = () => {
+  const s = C.blank();
+  goldAll(s, everything());
+  play(s, 'soc-exam', 3); play(s, 'senior-exam', 3);
+  goldAll(s, ids('lead'));
+  play(s, 'lead-exam', 3);
+  return s;
+};
+t('manager missions need the Incident Response Lead rank, and the manager exam needs both manager missions plus leadership mastery', () => {
+  const s = C.blank();
+  goldAll(s, everything());
+  play(s, 'soc-exam', 3); play(s, 'senior-exam', 3);
+  goldAll(s, ids('lead'));
+  for (const id of ids('manager')) assert.equal(C.missionStatus(s, id).unlocked, false, id + ' is locked at Senior Analyst');
+  const r = play(s, 'lead-exam', 3);
+  assert.equal(r.promoted.id, 'lead');
+  assert.deepEqual(r.newlyUnlocked.map((m) => m.id).sort(), [...ids('manager')].sort());
+  assert.equal(C.missionStatus(s, 'manager-exam').unlocked, false);
+  play(s, ids('manager')[0], 3);
+  assert.equal(C.missionStatus(s, 'manager-exam').unlocked, false, 'one manager mission is not enough');
+  play(s, ids('manager')[1], 3);
+  assert.equal(C.missionStatus(s, 'manager-exam').unlocked, true, JSON.stringify(C.missionStatus(s, 'manager-exam').missing));
+});
+t('the ladder reaches SOC Manager as the top rank, and a bronze exam does not promote', () => {
+  const s = toLead();
+  goldAll(s, ids('manager'));
+  assert.equal(C.rankOf(s).rank.id, 'lead');
+  play(s, 'manager-exam', 1);
+  assert.equal(C.rankOf(s).rank.id, 'lead', 'bronze is not a pass');
+  const r = play(s, 'manager-exam', 2);
+  assert.equal(r.promoted.id, 'manager', JSON.stringify(C.rankOf(s).checklist));
+  assert.equal(C.rankOf(s).isTop, true);
+  assert.equal(C.rankOf(s).progress, 1);
+});
+t('the whole six-rank ladder is reachable with silver medals alone', () => {
+  const s = C.blank();
+  for (const id of everything()) play(s, id, 2);
+  play(s, 'soc-exam', 2); play(s, 'senior-exam', 2);
+  for (const id of ids('lead')) play(s, id, 2);
+  play(s, 'lead-exam', 2);
+  for (const id of ids('manager')) play(s, id, 2);
+  play(s, 'manager-exam', 2);
+  assert.equal(C.rankOf(s).rank.id, 'manager', JSON.stringify(C.rankOf(s).checklist.filter((x) => !x.done)));
+});
+t('Manager needs the exam even when everything else is done', () => {
+  const s = toLead();
+  goldAll(s, ids('manager'));
+  const items = C.rankOf(s).checklist;
+  assert.ok(items.filter((x) => x.key !== 'exam').every((x) => x.done), JSON.stringify(items.filter((x) => !x.done)));
+  assert.equal(C.rankOf(s).rank.id, 'lead');
+});
+t('leadership skill appears from Incident Response Lead (or once tried) and never before', () => {
+  const s = C.blank();
+  assert.ok(!C.visibleCompetencies(s).some((c) => c.id === 'leadership'));
+  goldAll(s, everything());
+  play(s, 'soc-exam', 3); play(s, 'senior-exam', 3);
+  assert.ok(!C.visibleCompetencies(s).some((c) => c.id === 'leadership'), 'still hidden at Senior Analyst before any lead mission');
+  assert.ok(C.visibleCompetencies(toLead()).some((c) => c.id === 'leadership'), 'shown once Incident Response Lead');
+  const fresh = C.blank();
+  play(fresh, 'm21-extortion', 1, 0.5);
+  assert.ok(C.visibleCompetencies(fresh).some((c) => c.id === 'leadership'), 'visible once attempted');
+});
+t('leadership mastery comes from lead and manager missions, and is weighted into the manager rank gate', () => {
+  const s = toLead();
+  const before = C.mastery(s, 'leadership').score;
+  assert.ok(before > 0 && before < 100, 'lead missions build it part-way: ' + before);
+  goldAll(s, ids('manager'));
+  assert.equal(C.mastery(s, 'leadership').score > before, true);
+  const gate = M.RANKS.find((r) => r.id === 'manager').requires;
+  assert.ok(gate.mastery.leadership >= 60 && gate.exam === 'manager-exam');
+});
+t('every manager mission points at a simulation that exists and uses the allocate stage', () => {
+  for (const id of [...ids('manager'), 'manager-exam']) {
+    const m = M.missionById(id);
+    const sim = SIMS.find((x) => x.id === m.ref);
+    assert.ok(sim, id);
+    assert.ok(sim.stages.some((x) => x.type === 'allocate'), id + ' has an allocation stage');
+  }
+});
+
+
+t('a short-session recommendation never picks an exam or a case over the time limit', () => {
+  const s = C.blank();
+  for (const id of [...ids('beginner'), ...ids('intermediate'), ...ids('advanced')]) play(s, id, 2);
+  const q = C.recommend(s, { maxMinutes: 12 });
+  assert.ok(q && !q.mission.exam && q.mission.minutes <= 12, JSON.stringify(q && q.mission.id));
+  assert.equal(C.recommend(s).mission.id, 'soc-exam', 'the full recommendation is still the exam');
+  assert.equal(C.recommend(C.blank(), { maxMinutes: 1 }), null, 'nothing that short means no suggestion');
+});
+t('the short-session suggestion works on the weakest skill, and prefers the shorter case', () => {
+  const s = C.blank();
+  play(s, 'm01-triage', 3); play(s, 'm02-invoice', 3);
+  const q = C.recommend(s, { maxMinutes: 12 });
+  assert.ok(q.reason.includes('weakest area'));
+  assert.ok(q.mission.minutes <= 12);
+});
+
+console.log(n, 'passed');

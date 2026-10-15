@@ -4,6 +4,8 @@ import * as profile from '../core/profile.js';
 import * as missionLink from '../core/mission-link.js';
 
 const BEST_KEY = 'lixteam.simulation.best';
+const SAVE_KEY = 'lixteam.simulation.save';
+const SAVE_DAYS = 14;
 const MISSION = missionLink.current('simulation');
 const $ = (id) => document.getElementById(id);
 const screens = { pick: $('screen-pick'), stage: $('screen-stage'), end: $('screen-end') };
@@ -34,6 +36,72 @@ function writeBest(o) {
     /* progress just is not remembered */
   }
 }
+// ── Pause and resume ────────────────────────────────────────────
+// Progress is saved after every finished stage, so a long simulation can be left and
+// picked up later. A save belongs to one context: a campaign mission or free practice.
+const contextId = () => (MISSION ? MISSION.id : null);
+
+function writeSave() {
+  try {
+    localStorage.setItem(SAVE_KEY, JSON.stringify({ id: sim.id, mission: contextId(), at: new Date().toISOString(), st, details }));
+  } catch {
+    /* progress just is not remembered */
+  }
+}
+function clearSave() {
+  try {
+    localStorage.removeItem(SAVE_KEY);
+  } catch {
+    /* nothing to clear */
+  }
+}
+// Returns { sim, st, details } for a save that is current, belongs to this context and is consistent.
+function readSave() {
+  try {
+    const d = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null');
+    if (!d || typeof d !== 'object' || d.mission !== contextId()) return null;
+    const target = SIMS.find((x) => x.id === d.id);
+    const age = Date.now() - Date.parse(d.at);
+    if (!target || !(age >= 0 && age < SAVE_DAYS * 86400000)) return null;
+    const s = d.st;
+    if (!s || !Number.isInteger(s.stage) || s.stage < 1 || s.stage >= target.stages.length || s.done) return null;
+    if (!Array.isArray(s.results) || s.results.length !== s.stage || !s.flags || typeof s.flags !== 'object') return null;
+    const results = s.results.map((r, i) => ({ stageId: target.stages[i].id, score: Number(r && r.score) || 0, max: Number(r && r.max) || 0 }));
+    const flags = {};
+    for (const [k, v] of Object.entries(s.flags)) if (typeof v === 'boolean') flags[k] = v;
+    const details = {};
+    for (const [k, v] of Object.entries(d.details || {})) {
+      if (v && typeof v === 'object') details[k] = { line: typeof v.line === 'string' ? v.line : undefined, text: typeof v.text === 'string' ? v.text : undefined };
+    }
+    return { sim: target, st: { stage: s.stage, flags, results, done: false }, details };
+  } catch {
+    return null;
+  }
+}
+function renderResume() {
+  const save = readSave();
+  $('resume-box').hidden = !save;
+  if (!save) return;
+  $('resume-text').textContent = `You have ${save.sim.title} in progress: ${save.st.stage} of ${save.sim.stages.length} stages done. Pick up where you left off, or start it again from the beginning.`;
+  $('resume-go').onclick = () => {
+    profile.load();
+    sim = save.sim;
+    st = save.st;
+    details = save.details;
+    $('brief-body').replaceChildren(...sim.brief.map((p) => h('p', { text: p })));
+    show('stage');
+    renderStage();
+  };
+  $('resume-drop').onclick = () => {
+    clearSave();
+    renderResume();
+    if (MISSION) {
+      const target = SIMS.find((x) => x.id === MISSION.ref);
+      if (target) start(target);
+    }
+  };
+}
+
 function shuffle(list) {
   const a = [...list];
   for (let i = a.length - 1; i > 0; i--) {
@@ -83,6 +151,7 @@ function renderPicker() {
 // ── Stages ──────────────────────────────────────────────────────
 function start(s) {
   profile.load();
+  clearSave();
   sim = s;
   st = engine.newSim();
   details = {};
@@ -106,7 +175,7 @@ function renderStage() {
   $('stage-next').hidden = true;
   $('stage-body').replaceChildren();
   if (st.stage > 0) $('brief').open = false;
-  ({ triage: buildTriage, evidence: buildEvidence, decision: buildDecision, report: buildReport, prioritise: buildPrioritise, review: buildReview })[stage.type](stage);
+  ({ triage: buildTriage, evidence: buildEvidence, decision: buildDecision, report: buildReport, prioritise: buildPrioritise, review: buildReview, allocate: buildAllocate })[stage.type](stage);
   $('stage-title').scrollIntoView({ block: 'start' });
 }
 
@@ -348,6 +417,60 @@ function buildPrioritise(stage) {
   };
 }
 
+// ── Allocate a limited budget ───────────────────────────────────
+function buildAllocate(stage) {
+  const body = $('stage-body');
+  const items = engine.visible(stage.items, st.flags);
+  const alloc = Object.fromEntries(items.map((it) => [it.id, 0]));
+  const unit = stage.unit || 'units';
+  const word = (n) => (n === 1 && unit.endsWith('s') ? unit.slice(0, -1) : unit);
+  const left = h('p', { class: 'budget', 'aria-live': 'polite' });
+  const list = h('ul', { class: 'alloc-list' });
+  const counts = {};
+  let locked = false;
+  const remaining = () => stage.budget - engine.allocateTotal(alloc);
+  const draw = () => {
+    left.textContent = `${remaining()} of ${stage.budget} ${unit} left to assign`;
+    left.classList.toggle('done', remaining() === 0);
+    for (const it of items) counts[it.id].textContent = String(alloc[it.id]);
+    $('stage-submit').disabled = remaining() !== 0;
+  };
+  for (const it of items) {
+    const minus = h('button', { class: 'step-btn', type: 'button', 'aria-label': `Take one ${unit} off: ${it.text}`, text: '\u2212' });
+    const plus = h('button', { class: 'step-btn', type: 'button', 'aria-label': `Give one ${unit} to: ${it.text}`, text: '+' });
+    const n = h('span', { class: 'count', text: '0' });
+    counts[it.id] = n;
+    minus.addEventListener('click', () => {
+      if (locked || alloc[it.id] <= 0) return;
+      alloc[it.id] -= 1;
+      draw();
+    });
+    plus.addEventListener('click', () => {
+      if (locked || remaining() <= 0) return;
+      alloc[it.id] += 1;
+      draw();
+    });
+    list.append(h('li', { 'data-id': it.id }, h('div', { class: 'card alloc-card' }, h('div', { class: 'card-top' }, h('span', { class: 'src', text: it.source })), h('p', { class: 'card-text', text: it.text }), h('div', { class: 'stepper' }, minus, n, plus))));
+  }
+  body.append(left, list);
+  draw();
+  $('stage-submit').textContent = 'Lock in my plan';
+  $('stage-submit').onclick = () => {
+    locked = true;
+    const res = engine.scoreAllocate(stage, st.flags, alloc);
+    for (const b of body.querySelectorAll('button')) b.disabled = true;
+    for (const d of res.detail) {
+      const li = list.querySelector(`li[data-id="${d.id}"] .card`);
+      const good = d.points === engine.ALLOCATE.exact;
+      li.classList.add(good ? 'right' : d.points ? 'near' : 'wrong');
+      li.append(h('div', { class: `verdict ${good ? 'ok' : 'no'}` }, h('b', { text: good ? `Spot on: ${d.ideal} ${word(d.ideal)}.` : `You gave ${d.chosen}; a sound plan gives about ${d.ideal} (+${d.points}).` }), d.why));
+    }
+    const exact = res.detail.filter((d) => d.points === engine.ALLOCATE.exact).length;
+    details[stage.id] = { line: `Resource allocation: ${exact} of ${res.detail.length} demands given the right amount of ${unit}` };
+    finishStage(res, `${exact} of ${res.detail.length} allocated well (+${res.score}).`);
+  };
+}
+
 // ── Review a junior's draft ─────────────────────────────────────
 function buildReview(stage) {
   const body = $('stage-body');
@@ -390,7 +513,11 @@ function next() {
   const stage = sim.stages[st.stage];
   const res = pending;
   engine.completeStage(sim, st, { score: res.score, max: res.max, set: res.set });
-  if (st.done) return showResults();
+  if (st.done) {
+    clearSave();
+    return showResults();
+  }
+  writeSave();
   renderStage();
 }
 
@@ -464,14 +591,17 @@ $('copy-report').addEventListener('click', copyReport);
 $('res-again').addEventListener('click', () => start(sim));
 $('res-other').addEventListener('click', () => {
   renderPicker();
+  renderResume();
   show('pick');
 });
 
 renderPicker();
+renderResume();
 
-// Opened from the campaign: go straight to the mission's simulation.
+// Opened from the campaign: go straight to the mission's simulation, unless there is a saved
+// attempt, in which case the player chooses between continuing and starting over.
 if (MISSION) {
   missionLink.applyChrome();
   const target = SIMS.find((x) => x.id === MISSION.ref);
-  if (target) start(target);
+  if (target && !readSave()) start(target);
 }

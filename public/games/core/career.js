@@ -215,7 +215,10 @@ export function rankOf(s) {
     else break;
   }
   const next = RANKS[index + 1] || null;
-  return { rank: RANKS[index], index, next, checklist: next ? checklist(next.requires, s) : [], isTop: !next };
+  const items = next ? checklist(next.requires, s) : [];
+  // How far through the next promotion: the average completion of its requirements.
+  const progress = !next ? 1 : items.length ? items.reduce((a, c) => a + (c.done ? 1 : Math.min(1, c.progress || 0)), 0) / items.length : 0;
+  return { rank: RANKS[index], index, next, checklist: items, isTop: !next, progress };
 }
 
 // ── Recording a result ──────────────────────────────────────────
@@ -286,11 +289,12 @@ export function recordAttempt(s, input) {
 // ── What to do next ─────────────────────────────────────────────
 // Prefer the promotion exam when it is open; otherwise the unlocked mission
 // that best exercises the player's weakest competency.
-export function recommend(s) {
-  const exam = MISSIONS.find((m) => m.exam && !isPassed(s, m.id) && missionStatus(s, m.id).unlocked);
+// With `maxMinutes` it picks a short session instead (no promotion exams, which are long).
+export function recommend(s, { maxMinutes } = {}) {
+  const exam = maxMinutes ? null : MISSIONS.find((m) => m.exam && !isPassed(s, m.id) && missionStatus(s, m.id).unlocked);
   if (exam) return { mission: exam, reason: 'You meet the requirements for a promotion exam. Ready when you are.' };
 
-  const open = MISSIONS.filter((m) => !m.exam && missionStatus(s, m.id).unlocked && bestTier(s, m.id) < 3);
+  const open = MISSIONS.filter((m) => !m.exam && missionStatus(s, m.id).unlocked && bestTier(s, m.id) < 3 && (!maxMinutes || m.minutes <= maxMinutes));
   if (!open.length) return null;
   const weakest = (list) =>
     list
@@ -303,7 +307,7 @@ export function recommend(s) {
   for (const x of comps) {
     const pick = open
       .filter((m) => m.competencies[x.c.id])
-      .sort((a, b) => (s.missions[a.id]?.attempts ? 1 : 0) - (s.missions[b.id]?.attempts ? 1 : 0) || b.competencies[x.c.id] - a.competencies[x.c.id])[0];
+      .sort((a, b) => (s.missions[a.id]?.attempts ? 1 : 0) - (s.missions[b.id]?.attempts ? 1 : 0) || b.competencies[x.c.id] - a.competencies[x.c.id] || a.minutes - b.minutes)[0];
     if (pick) {
       const tried = s.missions[pick.id]?.attempts > 0;
       return { mission: pick, reason: `${x.c.name} is your weakest area (${x.score}/100). ${tried ? 'Replay this one to improve your medal.' : 'This mission will build it.'}` };
@@ -323,9 +327,12 @@ export function specialisms(s) {
 
 // Optional skills only appear once they are relevant: from SOC Analyst up, or once tried.
 export function visibleCompetencies(s) {
-  const analyst = RANKS.findIndex((r) => r.id === 'analyst');
-  const open = rankOf(s).index >= analyst;
-  return COMPETENCIES.filter((c) => !c.optional || open || mastery(s, c.id).attempted > 0);
+  const have = rankOf(s).index;
+  const at = (id) => RANKS.findIndex((r) => r.id === id);
+  return COMPETENCIES.filter((c) => {
+    const from = c.optional ? 'analyst' : c.visibleFrom;
+    return !from || have >= at(from) || mastery(s, c.id).attempted > 0;
+  });
 }
 
 // ── The featured case of the week ───────────────────────────────
@@ -361,6 +368,62 @@ export function portfolio(s) {
     const best = historyFor(s, m.id).sort((a, b) => b.perf - a.perf || b.points - a.points)[0];
     return { mission: m, medal: MEDALS[r.bestTier], tier: r.bestTier, attempts: r.attempts, bestPoints: r.bestPoints, bestPerf: r.bestPerf, summary: best ? best.summary : [], at: best ? best.at : '' };
   });
+}
+
+// A plain-text competency summary the player can keep or share. It only lists what the
+// game recorded, and says plainly that it is not a qualification.
+export function summaryText(s, now = new Date()) {
+  const r = rankOf(s);
+  const lines = [
+    'CAREER SUMMARY (training game)',
+    `Date: ${now.toISOString().slice(0, 10)}`,
+    `Rank: ${r.rank.name}`,
+    `XP: ${s.xp}`,
+    r.isTop ? 'Next rank: none, this is the top rank' : `Next rank: ${r.next.name} (${Math.round(r.progress * 100)}% of the requirements met)`,
+    '',
+    'Skill profile (best result on each mission, out of 100):',
+    ...visibleCompetencies(s).map((c) => {
+      const m = mastery(s, c.id);
+      return `- ${c.name}: ${m.score}/100 (${m.attempted} of ${m.count} missions tried)`;
+    }),
+  ];
+  const titles = specialisms(s).filter((x) => x.earned);
+  if (titles.length) lines.push('', 'Specialist titles:', ...titles.map((x) => `- ${x.name}`));
+  const done = portfolio(s);
+  lines.push('', `Cases completed (${done.length}):`);
+  for (const p of done) lines.push(`- ${p.mission.title} [${TIERS.find((t) => t.id === p.mission.tier)?.name}${p.mission.exam ? ', promotion exam' : ''}]: ${p.medal}, ${Math.round(p.bestPerf * 100)}% of full marks`);
+  if (!done.length) lines.push('- None yet');
+  lines.push('', 'This is a training-game record. Ranks and scores are not qualifications or validated assessments.');
+  return lines.join('\n');
+}
+
+// ── Challenge codes ─────────────────────────────────────────────
+// A code carries one case result, so a friend can compare it with their own. There is no
+// account and no server: only people you send the code to ever see it.
+export function challengeCode(s, id) {
+  const m = missionById(id);
+  const r = s.missions[id];
+  if (!m || !r || !r.attempts) return '';
+  const body = { v: 1, m: id, t: r.bestTier, p: Math.round(r.bestPerf * 100), x: r.bestPoints };
+  return 'LC1:' + btoa(JSON.stringify(body));
+}
+export function readChallenge(code) {
+  try {
+    if (typeof code !== 'string' || !code.trim().startsWith('LC1:')) return { ok: false, error: 'That does not look like a challenge code.' };
+    const d = JSON.parse(atob(code.trim().slice(4)));
+    const m = d && d.v === 1 ? missionById(d.m) : null;
+    if (!m || !Number.isInteger(d.t) || d.t < 0 || d.t > 3 || !Number.isInteger(d.p) || d.p < 0 || d.p > 100) return { ok: false, error: 'That challenge code is not valid.' };
+    return { ok: true, mission: m, tier: d.t, percent: d.p, points: Number.isFinite(d.x) ? Math.max(0, Math.min(1e5, Math.round(d.x))) : 0 };
+  } catch {
+    return { ok: false, error: 'That challenge code could not be read.' };
+  }
+}
+// How your best compares with a friend's: 'ahead' | 'level' | 'behind' | 'untried'.
+export function compareChallenge(s, ch) {
+  const r = s.missions[ch.mission.id];
+  if (!r || !r.attempts) return { result: 'untried', yours: null };
+  const mine = Math.round(r.bestPerf * 100);
+  return { result: mine > ch.percent ? 'ahead' : mine === ch.percent ? 'level' : 'behind', yours: { tier: r.bestTier, percent: mine } };
 }
 
 export function reportText(s, id) {

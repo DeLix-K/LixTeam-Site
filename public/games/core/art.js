@@ -18,6 +18,7 @@ export const RANK_COLOUR = {
   analyst: '#a3e635',
   senior: '#fbbf24',
   lead: '#c084fc',
+  manager: '#f472b6',
 };
 const CHEVRONS = { recruit: 0, junior: 1, analyst: 2, senior: 3, lead: 0 };
 
@@ -43,6 +44,10 @@ export function rankBadge(rankId, size = 64, { locked = false, label } = {}) {
   const n = CHEVRONS[rankId] ?? 0;
   if (rankId === 'lead') {
     g.append(s('polygon', { points: star(32, 36, 15, 6.5), fill: colour, stroke: colour, 'stroke-width': 2, 'stroke-linejoin': 'round' }));
+  } else if (rankId === 'manager') {
+    // a crown: the top of the ladder
+    g.append(s('polygon', { points: '19,46 21,27 28,35 32,24 36,35 43,27 45,46', fill: colour, 'fill-opacity': 0.25, stroke: colour, 'stroke-width': 3, 'stroke-linejoin': 'round' }));
+    g.append(s('line', { x1: 19, y1: 51, x2: 45, y2: 51, stroke: colour, 'stroke-width': 4, 'stroke-linecap': 'round' }));
   } else if (n === 0) {
     g.append(s('circle', { cx: 32, cy: 36, r: 6, fill: 'none', stroke: colour, 'stroke-width': 3 }));
   } else {

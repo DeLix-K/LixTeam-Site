@@ -16,6 +16,7 @@ const RATINGS = [
 
 import { SENIOR } from './sims-senior.js';
 import { LEAD } from './sims-lead.js';
+import { MANAGER } from './sims-manager.js';
 
 const CORE = [
   // ─────────────────────────────────────────────────────────────
@@ -257,4 +258,4 @@ const CORE = [
 ];
 
 // Everything the simulation draws from.
-export const SIMS = [...CORE, ...SENIOR, ...LEAD];
+export const SIMS = [...CORE, ...SENIOR, ...LEAD, ...MANAGER];

@@ -27,6 +27,11 @@ function render() {
   // Rank and what the next promotion needs
   $('rank-name').textContent = r.rank.name;
   $('rank-badge').replaceChildren(rankBadge(r.rank.id, 96, { label: `Rank: ${r.rank.name}` }));
+  const pct100 = Math.round(r.progress * 100);
+  $('rank-progress').hidden = r.isTop;
+  $('rank-bar').setAttribute('aria-valuenow', String(pct100));
+  $('rank-bar').firstChild.style.width = `${pct100}%`;
+  $('rank-pct').textContent = r.isTop ? '' : `${pct100}% of the way to ${r.next.name}`;
   const at = RANKS.findIndex((x) => x.id === r.rank.id);
   $('rank-path').replaceChildren(
     ...RANKS.map((x, i) =>
@@ -62,6 +67,14 @@ function render() {
     $('rec-why').textContent = rec.reason;
     $('rec-go').href = missionUrl(rec.mission);
     $('rec-go').textContent = rec.mission.exam ? 'Take the promotion exam' : career.bestTier(s, rec.mission.id) > 0 ? 'Replay this mission' : 'Start this mission';
+  }
+  // Short on time? A different, shorter case that still works on the weakest skill.
+  const quick = career.recommend(s, { maxMinutes: 12 });
+  const showQuick = quick && (!rec || quick.mission.id !== rec.mission.id);
+  $('rec-quick').hidden = !showQuick;
+  if (showQuick) {
+    const a = h('a', { href: missionUrl(quick.mission), text: quick.mission.title });
+    $('rec-quick').replaceChildren(document.createTextNode('Short on time? '), a, document.createTextNode(` (about ${quick.mission.minutes} minutes).`));
   }
 
   // Featured case of the week
@@ -146,6 +159,16 @@ function renderPortfolio(s) {
   for (const p of items) {
     const cmp = career.compare(s, p.mission.id);
     const text = career.reportText(s, p.mission.id);
+    const challenge = h('button', { class: 'btn', type: 'button', text: 'Copy challenge code' });
+    challenge.addEventListener('click', async () => {
+      const code = career.challengeCode(s, p.mission.id);
+      try {
+        await navigator.clipboard.writeText(code);
+        $('progress-status').textContent = `Challenge code copied for "${p.mission.title}". Send it to a friend.`;
+      } catch {
+        $('progress-status').textContent = `Select and copy this code: ${code}`;
+      }
+    });
     const copy = h('button', { class: 'btn', type: 'button', text: 'Copy case report' });
     copy.addEventListener('click', async () => {
       try {
@@ -165,12 +188,35 @@ function renderPortfolio(s) {
           { class: 'inner' },
           cmp ? h('p', { class: 'compare', text: `First attempt ${pct(cmp.first.perf)}, latest ${pct(cmp.latest.perf)}${cmp.latest.perf > cmp.first.perf ? ': you have improved.' : '.'}` }) : null,
           h('pre', { text }),
-          copy
+          h('div', { class: 'btn-row' }, copy, challenge)
         )
       )
     );
   }
 }
+
+// ── Challenge a friend ──────────────────────────────────────────
+$('challenge-go').addEventListener('click', () => {
+  const out = $('challenge-out');
+  const ch = career.readChallenge($('challenge-input').value);
+  if (!ch.ok) {
+    out.replaceChildren(h('p', { class: 'empty', text: ch.error }));
+    return;
+  }
+  const s = career.load();
+  const cmp = career.compareChallenge(s, ch);
+  const st = career.missionStatus(s, ch.mission.id);
+  const verdict = { ahead: 'You are ahead of your friend.', level: 'You are level with your friend.', behind: 'Your friend is ahead. Replay it to catch up.', untried: 'You have not tried this case yet.' }[cmp.result];
+  const kids = [
+    h('h3', { text: ch.mission.title }),
+    h('p', { text: `Your friend: ${MEDALS[ch.tier]}, ${ch.percent}% of full marks.` }),
+    h('p', { text: cmp.yours ? `You: ${MEDALS[cmp.yours.tier]}, ${cmp.yours.percent}% of full marks.` : 'You: not played yet.' }),
+    h('p', { class: 'verdict-line', text: verdict }),
+  ];
+  if (st.unlocked) kids.push(h('a', { class: 'btn primary', href: missionUrl(ch.mission), text: cmp.yours ? 'Replay this case' : 'Play this case' }));
+  else kids.push(h('p', { class: 'empty', text: `This case is still locked for you. ${st.missing.map((x) => `${x.label} (${x.detail})`).join('; ')}` }));
+  out.replaceChildren(...kids);
+});
 
 // ── Progress export / import / reset ────────────────────────────
 $('copy-code').addEventListener('click', async () => {
@@ -180,6 +226,27 @@ $('copy-code').addEventListener('click', async () => {
   } catch {
     $('code-box').select();
     $('progress-status').textContent = 'Select the code above and copy it.';
+  }
+});
+$('copy-summary').addEventListener('click', async () => {
+  try {
+    await navigator.clipboard.writeText(career.summaryText(career.load()));
+    $('progress-status').textContent = 'Summary copied.';
+  } catch {
+    $('progress-status').textContent = 'Could not copy automatically. Use Download my summary instead.';
+  }
+});
+$('download-summary').addEventListener('click', () => {
+  try {
+    const url = URL.createObjectURL(new Blob([career.summaryText(career.load())], { type: 'text/plain' }));
+    const a = h('a', { href: url, download: 'career-summary.txt' });
+    document.body.append(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    $('progress-status').textContent = 'Summary downloaded.';
+  } catch {
+    $('progress-status').textContent = 'Could not download. Use Copy my summary instead.';
   }
 });
 $('show-import').addEventListener('click', () => {

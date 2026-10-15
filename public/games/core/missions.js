@@ -16,6 +16,7 @@ export const COMPETENCIES = [
   { id: 'hunting', name: 'Threat hunting', blurb: 'Looking for the attack nobody has alerted on yet.' },
   { id: 'response', name: 'Incident response', blurb: 'Containing, eradicating and recovering in the right order.' },
   { id: 'reporting', name: 'Reporting and communication', blurb: 'Telling people what happened, accurately and usefully.' },
+  { id: 'leadership', name: 'Leadership and risk', blurb: 'Putting people and money where the risk is, and being straight with the board.', visibleFrom: 'lead' },
   // A specialism, not needed for any rank. Shown once a player reaches SOC Analyst.
   { id: 'cloud', name: 'Cloud security', blurb: 'Keys, roles, storage and consoles in the cloud.', optional: true },
 ];
@@ -26,6 +27,7 @@ export const TIERS = [
   { id: 'advanced', name: 'Advanced', xpMultiplier: 2 },
   { id: 'senior', name: 'Senior', xpMultiplier: 2.5 },
   { id: 'lead', name: 'Lead', xpMultiplier: 3, note: 'Needs the Senior Analyst rank.' },
+  { id: 'manager', name: 'Manager', xpMultiplier: 3.5, note: 'Needs the Incident Response Lead rank.' },
   { id: 'cloud', name: 'Specialist: Cloud', xpMultiplier: 2, note: 'Optional track. Opens at SOC Analyst; finish all three for the Cloud Security Specialist title.' },
 ];
 
@@ -66,6 +68,14 @@ export const RANKS = [
       xp: 1900, passedTier: { lead: 3 },
       mastery: { response: 70, reporting: 65, correlation: 65 }, masteryScope: ['beginner', 'intermediate', 'advanced', 'senior'],
       exam: 'lead-exam',
+    },
+  },
+  {
+    id: 'manager', name: 'SOC Manager', blurb: 'You manage team capacity, put resources where the risk is, and give the board an honest account.',
+    requires: {
+      xp: 2600, passedTier: { manager: 2 },
+      mastery: { leadership: 65, reporting: 70, response: 70 }, masteryScope: ['beginner', 'intermediate', 'advanced', 'senior', 'lead', 'manager'],
+      exam: 'manager-exam',
     },
   },
 ];
@@ -203,14 +213,27 @@ export const MISSIONS = [
   {
     id: 'm21-extortion', title: 'We have your data', tier: 'lead', kind: 'incident', mode: 'incident-commander', ref: 'data-extortion', minutes: 12, par: 160, access: 'plus',
     blurb: 'An email claims 40 GB of customer data has been stolen. Is it true, and what must you do first?',
-    competencies: { response: 0.4, reporting: 0.6 },
+    competencies: { response: 0.3, reporting: 0.5, leadership: 0.2 },
     unlock: { rank: 'senior' },
   },
   {
     id: 'm22-board', title: 'Operation Glass House', tier: 'lead', kind: 'simulation', mode: 'simulation', ref: 'board-brief', minutes: 22, par: 0, access: 'plus',
     blurb: 'A payment problem and a suspected breach in peak trading. Establish the facts, brief the board and meet your obligations.',
-    competencies: { reporting: 0.5, triage: 0.2, response: 0.2, correlation: 0.1 },
+    competencies: { reporting: 0.3, triage: 0.2, response: 0.2, correlation: 0.1, leadership: 0.2 },
     unlock: { rank: 'senior' },
+  },
+  // ── Manager (needs the Incident Response Lead rank)
+  {
+    id: 'm23-capacity', title: 'Operation Short Staffed', tier: 'manager', kind: 'simulation', mode: 'simulation', ref: 'night-shift', minutes: 22, par: 0, access: 'plus',
+    blurb: 'Eight analysts, five demands and a dashboard that looks too good. Allocate people, read the numbers critically and report honestly.',
+    competencies: { leadership: 0.5, reporting: 0.3, triage: 0.1, response: 0.1 },
+    unlock: { rank: 'lead' },
+  },
+  {
+    id: 'm24-risk', title: 'The Risk Appetite Meeting', tier: 'manager', kind: 'simulation', mode: 'simulation', ref: 'risk-register', minutes: 24, par: 0, access: 'plus',
+    blurb: 'Rank the company\'s risks, check the facts on the biggest, spend a limited budget and tell the board what it must hear.',
+    competencies: { leadership: 0.5, reporting: 0.3, correlation: 0.1, response: 0.1 },
+    unlock: { rank: 'lead' },
   },
   // ── Specialist track: Cloud (needs the SOC Analyst rank, then each other mission needs the first)
   {
@@ -250,8 +273,15 @@ export const MISSIONS = [
     id: 'lead-exam', title: 'Promotion exam: Incident Response Lead', tier: 'lead', kind: 'simulation', mode: 'simulation', ref: 'lead-exam', minutes: 28, par: 0, access: 'plus',
     exam: true, promotes: 'lead', passTier: 2,
     blurb: 'Launch day. A hidden script is stealing card details at checkout while the business wants the launch to go ahead. Silver or better to pass.',
-    competencies: { triage: 0.2, correlation: 0.2, response: 0.3, reporting: 0.3 },
+    competencies: { triage: 0.1, correlation: 0.2, response: 0.3, reporting: 0.2, leadership: 0.2 },
     unlock: { rank: 'senior', passedTier: { lead: 3 }, mastery: { response: 70, reporting: 65, correlation: 65 }, masteryScope: ['beginner', 'intermediate', 'advanced', 'senior'] },
+  },
+  {
+    id: 'manager-exam', title: 'Promotion exam: SOC Manager', tier: 'manager', kind: 'simulation', mode: 'simulation', ref: 'manager-exam', minutes: 30, par: 0, access: 'plus',
+    exam: true, promotes: 'manager', passTier: 2,
+    blurb: 'Quarter-end week: a live phishing attack, a supplier breach, an outage and an audit, with eight analysts. Silver or better to pass.',
+    competencies: { leadership: 0.4, reporting: 0.2, response: 0.2, triage: 0.1, correlation: 0.1 },
+    unlock: { rank: 'lead', passedTier: { manager: 2 }, mastery: { leadership: 65 }, masteryScope: ['beginner', 'intermediate', 'advanced', 'senior', 'lead', 'manager'] },
   },
 ];
 
@@ -267,6 +297,8 @@ export const SPECIALISMS = [
 // Planned, not built. Shown on the roadmap so players can see what is coming.
 export const ROADMAP = [
   { id: 'dfir', title: 'Digital forensics and incident response track', note: 'Reconstruct what happened from disk, memory and logs, and determine scope.' },
+  { id: 'grc', title: 'GRC and risk analyst track', note: 'Assess risk, weigh evidence and explain findings to management.' },
+  { id: 'ti', title: 'Threat intelligence track', note: 'Connect indicators, assess context and brief decision-makers.' },
   { id: 'weekly', title: 'New cases on a regular schedule', note: 'New incidents added to the campaign over time. Until then, one existing case is featured each week.' },
 ];
 

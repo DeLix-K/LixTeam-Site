@@ -1,0 +1,22 @@
+import { fileURLToPath as __fileURLToPath } from 'node:url';
+const GAMES = __fileURLToPath(new URL('../../public/games/', import.meta.url)).replace(/\\/g, '/');
+import { pathToFileURL } from 'node:url'; import assert from 'node:assert/strict';
+const store=new Map();globalThis.localStorage={getItem:k=>store.has(k)?store.get(k):null,setItem:(k,v)=>store.set(k,String(v)),removeItem:k=>store.delete(k)};
+const P=await import(pathToFileURL(GAMES + 'core/profile.js').href);
+let n=0;const t=(name,fn)=>{try{fn();console.log('  ok  ',name);n++}catch(e){console.log('  FAIL',name,'\n      ',e.message);process.exitCode=1}};
+const DAY=864e5, T0=Date.UTC(2026,9,11,12);
+t('level curve: 0->L1, 50->L2, 200->L3, 450->L4',()=>{for(const [xp,l] of [[0,1],[49,1],[50,2],[199,2],[200,3],[450,4]])assert.equal(P.levelInfo(xp).level,l)});
+t('xp progress fraction is between 0 and 1',()=>{const i=P.levelInfo(125);assert.ok(i.progress>0&&i.progress<1);assert.equal(i.from,50);assert.equal(i.to,200)});
+t('addXp reports a level-up',()=>{P.reset();assert.equal(P.addXp(40).leveledUp,false);assert.equal(P.addXp(20).leveledUp,true)});
+t('wrong answer queues the idea for tomorrow (not due today)',()=>{P.reset();assert.equal(P.recordAnswer({id:'a',skill:'email',correct:false,confidence:'certain',now:T0}),true);assert.deepEqual(P.dueItems(T0),[]);assert.deepEqual(P.dueItems(T0+DAY+1),['a'])});
+t('a lucky guess is also revisited',()=>{P.reset();assert.equal(P.recordAnswer({id:'g',skill:'email',correct:true,confidence:'guess',now:T0}),true)});
+t('a confident right answer on a new idea is NOT queued',()=>{P.reset();assert.equal(P.recordAnswer({id:'x',skill:'email',correct:true,confidence:'certain',now:T0}),false);assert.equal(P.pendingCount(),0)});
+t('revision steps 1,3,7,14,30 days then is learned',()=>{P.reset();P.recordAnswer({id:'r',skill:'email',correct:false,confidence:'fairly',now:T0});let now=T0;const gaps=[];
+  for(let i=0;i<5;i++){const before=P.load().items.r;now=before.due;P.recordAnswer({id:'r',skill:'email',correct:true,confidence:'certain',now});const after=P.load().items.r;gaps.push(after?Math.round((after.due-now)/DAY):'learned')}
+  assert.deepEqual(gaps,[3,7,14,30,'learned']);assert.equal(P.pendingCount(),0)});
+t('getting it wrong mid-way resets to 1 day',()=>{P.reset();P.recordAnswer({id:'m',skill:'email',correct:false,confidence:'fairly',now:T0});P.recordAnswer({id:'m',skill:'email',correct:true,confidence:'certain',now:T0+DAY});P.recordAnswer({id:'m',skill:'email',correct:false,confidence:'certain',now:T0+2*DAY});assert.equal(P.load().items.m.box,0)});
+t('skill accuracy and calibration are tracked',()=>{P.reset();P.recordAnswer({id:'1',skill:'identity',correct:true,confidence:'certain'});P.recordAnswer({id:'2',skill:'identity',correct:false,confidence:'certain'});assert.equal(P.skillAccuracy('identity'),50);assert.equal(P.skillAccuracy('iot'),null);const c=P.load().calibration;assert.equal(c.certainRight,1);assert.equal(c.certainWrong,1)});
+t('daily streak: day1=1, same day no double count, next day=2, gap resets to 1',()=>{P.reset();const d1=new Date(Date.UTC(2026,9,11,9));assert.deepEqual(P.completeDaily(d1),{streak:1,total:1,first:true});assert.equal(P.dailyDone(d1),true);assert.deepEqual(P.completeDaily(new Date(Date.UTC(2026,9,11,20))),{streak:1,total:1,first:false});assert.equal(P.completeDaily(new Date(Date.UTC(2026,9,12,9))).streak,2);assert.equal(P.completeDaily(new Date(Date.UTC(2026,9,15,9))).streak,1)});
+t('corrupt saved data does not crash (falls back to a fresh profile)',()=>{store.set('lixteam.cyberRange.v1','{not json');import(pathToFileURL(GAMES + 'core/profile.js').href+'?x=1').then(m=>{assert.equal(m.load().xp,0)})});
+t('blocked storage (throws) still works for the session',()=>{globalThis.localStorage={getItem(){throw new Error('blocked')},setItem(){throw new Error('blocked')}};return import(pathToFileURL(GAMES + 'core/profile.js').href+'?x=2').then(m=>{m.addXp(10);assert.equal(m.load().xp,10)})});
+console.log(n,'passed');

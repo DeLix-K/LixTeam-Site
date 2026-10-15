@@ -22,6 +22,7 @@ export const DECISION_POINTS = [0, 8, 16, 24];
 export const REPORT = { statement: 8, action: 10 };
 export const PRIORITY = { exact: 10, adjacent: 5 }; // points per incident ranked
 export const REVIEW = { flaw: 8 }; // points per flaw found; the same is lost for flagging a sound claim
+export const ALLOCATE = { exact: 10, near: 4 }; // points per item given exactly / within one unit of the sensible amount
 
 export function newSim() {
   return { stage: 0, flags: {}, results: [], done: false };
@@ -147,6 +148,26 @@ export function scoreReview(stage, flags, flaggedIds) {
   return { score: Math.max(0, score), max: items.filter((x) => !x.sound).length * REVIEW.flaw, detail };
 }
 
+// ── Allocate ────────────────────────────────────────────────────
+// alloc: { itemId: units }. The player must spend the whole budget. Each item has an `ideal`
+// number of units (the ideals add up to the budget); being exactly right earns full marks and
+// being one unit out earns half. There is more than one defensible split, but not many.
+export function allocateTotal(alloc) {
+  return Object.values(alloc).reduce((n, v) => n + (Number.isFinite(v) ? v : 0), 0);
+}
+export function scoreAllocate(stage, flags, alloc) {
+  const items = visible(stage.items, flags);
+  let score = 0;
+  const detail = items.map((it) => {
+    const chosen = Math.max(0, Math.round(Number(alloc[it.id]) || 0));
+    const diff = Math.abs(chosen - it.ideal);
+    const pts = diff === 0 ? ALLOCATE.exact : diff === 1 ? ALLOCATE.near : 0;
+    score += pts;
+    return { id: it.id, chosen, ideal: it.ideal, points: pts, why: it.why };
+  });
+  return { score, max: items.length * ALLOCATE.exact, detail };
+}
+
 // ── Stage bookkeeping and totals ────────────────────────────────
 // Records a stage's result, applies any flags it set, and advances.
 export function completeStage(sim, st, result) {
@@ -173,6 +194,7 @@ export function stageMax(stage, flags) {
     case 'report': return reportMax(stage, flags);
     case 'prioritise': return visible(stage.items, flags).length * PRIORITY.exact;
     case 'review': return visible(stage.statements, flags).filter((x) => !x.sound).length * REVIEW.flaw;
+    case 'allocate': return visible(stage.items, flags).length * ALLOCATE.exact;
     default: return 0;
   }
 }

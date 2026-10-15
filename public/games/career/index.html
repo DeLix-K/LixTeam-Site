@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>SOC Analyst Career Campaign · LixTeam</title>
-  <meta name="description" content="Start as a Recruit and work up to Incident Response Lead by solving realistic cases. Promotions are earned with mastery and a practical exam, not just time. Free, no sign-up, no tracking." />
+  <meta name="description" content="Start as a Recruit and work up to SOC Manager by solving realistic cases. Promotions are earned with mastery and a practical exam, not just time. Free, no sign-up, no tracking." />
   <meta name="theme-color" content="#0a0a0a" />
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23a3e635'/%3E%3Ctext x='16' y='22' font-family='Arial' font-weight='900' font-size='15' text-anchor='middle' fill='%230a0a0a'%3ELT%3C/text%3E%3C/svg%3E" />
   <link rel="stylesheet" href="../shared.css" />
@@ -35,6 +35,10 @@
           </div>
           <div class="xp"><span id="xp-num">0</span><small>XP</small></div>
         </div>
+        <div class="rank-progress" id="rank-progress">
+          <div class="bar" id="rank-bar" role="progressbar" aria-label="Progress to the next rank" aria-valuemin="0" aria-valuemax="100"><div></div></div>
+          <span id="rank-pct"></span>
+        </div>
         <ol class="path" id="rank-path" aria-label="The rank ladder"></ol>
         <ul class="titles" id="titles" aria-label="Specialist titles earned" hidden></ul>
         <div class="next" id="next-box">
@@ -49,6 +53,7 @@
         <h3 id="rec-title"></h3>
         <p id="rec-why"></p>
         <a class="btn primary big" id="rec-go" href="#">Start</a>
+        <p class="quick" id="rec-quick" hidden></p>
       </div>
 
       <!-- Featured case of the week -->
@@ -84,12 +89,57 @@
       <p class="section-sub">Every case you complete becomes a short case report. Replay a case to improve it and compare your first attempt with your latest.</p>
       <div id="portfolio"></div>
 
+      <!-- Challenge a friend -->
+      <h2 class="sec">Challenge a friend</h2>
+      <p class="section-sub">Copy a challenge code from any case you have finished and send it to a friend. They paste it here to see how their best compares. There are no accounts and no public leaderboard: only people you send a code to see your result.</p>
+      <div class="panel" id="challenge-panel">
+        <label for="challenge-input">Paste a challenge code</label>
+        <textarea id="challenge-input" rows="2"></textarea>
+        <div class="btn-row"><button class="btn" id="challenge-go" type="button">Compare</button></div>
+        <div class="challenge-out" id="challenge-out" role="status" aria-live="polite"></div>
+      </div>
+
+      <!-- Waitlist: a demand test for a possible paid plan -->
+      <h2 class="sec">A possible paid plan</h2>
+      <p class="section-sub">Everything here is free while we test it. We are thinking about a paid plan with new cases every month, a full case library and promotion assessments. Nothing is for sale yet and no payment is taken: tell us if it would interest you, and we will email you if it goes ahead.</p>
+      <div class="panel" id="waitlist-panel">
+        <form id="waitlist-form" novalidate>
+          <label for="wl-email">Email</label>
+          <input id="wl-email" name="email" type="email" autocomplete="email" inputmode="email" maxlength="254" required />
+          <label for="wl-role">Which fits you best? (optional)</label>
+          <select id="wl-role" name="role">
+            <option value="">Prefer not to say</option>
+            <option value="student">Student or just starting out</option>
+            <option value="changer">Changing career into security</option>
+            <option value="analyst">Working analyst</option>
+            <option value="lead">Team lead or manager</option>
+            <option value="other">Something else</option>
+          </select>
+          <label for="wl-price">What monthly price would feel fair? (optional)</label>
+          <select id="wl-price" name="price">
+            <option value="">Prefer not to say</option>
+            <option value="free">I would only use it free</option>
+            <option value="under5">Under 5 pounds</option>
+            <option value="5-10">5 to 10 pounds</option>
+            <option value="10-20">10 to 20 pounds</option>
+            <option value="over20">More than 20 pounds</option>
+          </select>
+          <div class="hp" aria-hidden="true"><label>Website <input name="website" tabindex="-1" autocomplete="off" /></label></div>
+          <label class="check"><input type="checkbox" name="consent" /> <span>I am happy to be emailed about this game and a possible paid plan. I can unsubscribe at any time. See the <a href="/games/privacy/">privacy notice</a>.</span></label>
+          <div class="btn-row"><button class="btn primary" type="submit">Join the waitlist</button></div>
+          <p class="status" id="waitlist-status" role="status" aria-live="polite"></p>
+        </form>
+        <p class="status" id="waitlist-done" role="status" hidden>You are on the list. Thank you: we will only email you about this game, and you can ask us to remove you at any time.</p>
+      </div>
+
       <!-- Progress -->
       <h2 class="sec">Your progress</h2>
       <div class="panel" id="progress-panel">
         <p class="section-sub">Progress is saved only in this browser. To move to another device, copy your progress code here and paste it there.</p>
         <textarea id="code-box" rows="3" readonly aria-label="Your progress code"></textarea>
         <div class="btn-row">
+          <button class="btn" id="download-summary" type="button">Download my summary</button>
+          <button class="btn" id="copy-summary" type="button">Copy my summary</button>
           <button class="btn" id="copy-code" type="button">Copy progress code</button>
           <button class="btn" id="show-import" type="button">Restore from a code</button>
           <button class="btn danger" id="reset-career" type="button">Reset my career</button>
@@ -107,5 +157,6 @@
   </main>
 
   <script type="module" src="career.js"></script>
+  <script type="module" src="waitlist.js"></script>
 </body>
 </html>
