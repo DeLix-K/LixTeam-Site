@@ -309,4 +309,13 @@ $('reset-career').addEventListener('click', () => {
   }
 });
 
+// Deep link from the games home: career/?path=cloud chooses that path (only if it exists and has missions).
+{
+  const want = new URLSearchParams(location.search).get('path');
+  if (want && career.pathById(want) && career.pathSummary(career.load(), want).live) {
+    career.setPath(career.load(), want);
+    career.save();
+  }
+  if (want) history.replaceState(null, '', location.pathname);
+}
 render();

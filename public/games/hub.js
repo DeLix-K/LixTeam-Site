@@ -1,7 +1,7 @@
 import * as profile from './core/profile.js';
 import * as career from './core/career.js';
 import { PATHS } from './core/missions.js';
-import { rankBadge, modeIcon, MODE_COLOUR } from './core/art.js';
+import { rankBadge, modeIcon, pathIcon, MODE_COLOUR } from './core/art.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -27,27 +27,65 @@ const MODES = [
   { n: 7, name: 'Incident Simulation', blurb: 'Work a whole incident from the first alert to the final report.', href: 'simulation/', id: 'simulation' },
 ];
 
-function renderCareer() {
+// The home screen belongs to no single path. It lists every path, and the one you last chose
+// is offered as "Continue". Everything specific to a path (ranks, skills, exams) lives on career/.
+function renderPaths() {
   const s = career.load();
-  const chosen = !!s.path;
+  const list = $('path-list');
+  list.replaceChildren();
+  let startedCount = 0;
+  let gold = 0;
+  for (const m of Object.values(s.missions)) if (m.bestTier === 3) gold += 1;
+  for (const path of PATHS) {
+    const sum = career.pathSummary(s, path.id);
+    if (!sum.live) continue;
+    if (sum.started) startedCount += 1;
+    const ranks = career.ranksOf(path.id);
+    const tile = h(
+      'a',
+      { class: `path-tile${s.path === path.id ? ' active' : ''}`, href: `career/?path=${path.id}`, 'data-path': path.id },
+      h(
+        'div',
+        { class: 'p-top' },
+        h('span', { class: 'p-icon' }, pathIcon(path.id, 28)),
+        h('div', {}, h('span', { class: 'p-tag', text: sum.started ? (sum.isTop ? 'Top rank' : 'In progress') : 'New path' }), h('h3', { text: path.name }))
+      ),
+      h('p', { text: path.blurb }),
+      h(
+        'div',
+        { class: 'p-foot' },
+        h('div', { class: 'pips', 'aria-hidden': 'true' }, ...ranks.map((_, i) => h('span', { class: `pip${sum.started && i <= sum.rankIndex ? ' on' : ''}` }))),
+        h('div', { class: 'p-status' }, h('span', { text: sum.started ? sum.rank.name : 'Not started' }), h('span', { text: sum.started ? `${sum.passed}/${sum.total} missions` : 'Start' }))
+      )
+    );
+    tile.style.setProperty('--path', path.colour);
+    tile.addEventListener('click', () => {
+      const now = career.load();
+      career.setPath(now, path.id);
+      career.save();
+    });
+    list.append(tile);
+  }
+  $('p-gold').textContent = String(gold);
+  $('p-paths').replaceChildren(document.createTextNode(String(startedCount)), h('small', { text: '/' + PATHS.filter((p) => career.pathSummary(s, p.id).live).length }));
+
+  // Continue: only once a path has been chosen and started
   const pid = career.pathOf(s);
   const path = PATHS.find((x) => x.id === pid);
   const r = career.rankOf(s, pid);
-  const started = s.attempts.length > 0;
-  $('career-rank').textContent = chosen ? r.rank.name : 'Choose your path';
-  $('career-line').textContent = !chosen
-    ? 'Six career paths, each its own ladder: analyst, security engineer, cloud, network, vulnerability management and ethical hacking.'
-    : r.isTop
-      ? `${path.name}: you have reached the top rank.`
-      : `${path.name}. ${career.xpOf(s, pid)} XP. Next: ${r.next.name}.`;
-  $('career-btn').textContent = !chosen ? 'Choose your path' : started ? 'Continue your career' : 'Start your career';
-  $('career-badge').replaceChildren(rankBadge(career.rankBadgeSpec(pid, r.rank), 76));
-  $('career-bar').style.width = `${Math.round(r.progress * 100)}%`;
-  $('career-progress').hidden = !chosen || !started;
+  const go = !!s.path && career.pathSummary(s, pid).started;
+  $('continue').hidden = !go;
+  $('hero-btn').textContent = go ? 'Pick another path' : 'Choose your path';
+  if (go) {
+    $('continue').style.setProperty('--path', path.colour);
+    $('continue-path').textContent = path.name;
+    $('continue-line').textContent = r.isTop ? `${r.rank.name} · top rank on this path` : `${r.rank.name} · ${career.xpOf(s, pid)} XP · next: ${r.next.name}`;
+    $('continue-badge').replaceChildren(rankBadge(career.rankBadgeSpec(pid, r.rank), 54));
+  }
 }
 
 function render() {
-  renderCareer();
+  renderPaths();
   const p = profile.load();
   const info = profile.levelInfo(p.xp);
 
@@ -108,7 +146,7 @@ function render() {
 }
 
 $('reset-btn').addEventListener('click', () => {
-  if (confirm('Reset your level, XP, streak and skill history on this device?')) {
+  if (confirm('Reset your practice level, XP, streak and skill history on this device? Your career ranks are kept.')) {
     profile.reset();
     render();
   }

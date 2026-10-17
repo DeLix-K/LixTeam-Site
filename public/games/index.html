@@ -4,13 +4,13 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Cyber Range · LixTeam</title>
-  <meta name="description" content="Free cyber security training games: spot phishing, investigate incidents and build real skills. No sign-up, no tracking." />
+  <meta name="description" content="Free cyber security training games across six career paths: spot phishing, run incidents, hunt attackers and rank up. No sign-up, no tracking." />
   <meta name="theme-color" content="#0a0a0a" />
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23a3e635'/%3E%3Ctext x='16' y='22' font-family='Arial' font-weight='900' font-size='15' text-anchor='middle' fill='%230a0a0a'%3ELT%3C/text%3E%3C/svg%3E" />
   <link rel="stylesheet" href="shared.css" />
   <link rel="stylesheet" href="hub.css" />
 </head>
-<body>
+<body class="home">
   <header class="top">
     <a class="back" href="/">← LixTeam</a>
     <span class="title">Cyber Range</span>
@@ -19,48 +19,100 @@
 
   <main id="hub" class="wide">
     <section class="screen" aria-labelledby="hub-h">
-      <p class="eyebrow">Free security training games</p>
-      <h1 id="hub-h">Train like an <span class="accent-text">analyst.</span></h1>
-      <p class="lead">Short, hands-on scenarios that build real instincts for spotting scams and handling incidents. No sign-up. Your progress stays on this device.</p>
-
-      <a class="career-card" href="career/" id="career-card">
-        <span class="career-badge" id="career-badge"></span>
-        <div class="career-text">
-          <small>Career campaign</small>
-          <h2 id="career-rank">Recruit</h2>
-          <p id="career-line">Start as a Recruit and work up to SOC Manager by solving realistic cases.</p>
-          <div class="progress thin" id="career-progress" aria-hidden="true"><div id="career-bar"></div></div>
+      <div class="hero">
+        <div class="hero-copy">
+          <p class="boot" aria-hidden="true">&gt; range.boot --paths 6 --status online</p>
+          <p class="eyebrow">Free security training games</p>
+          <h1 id="hub-h">Level up in <span class="accent-text">cyber security.</span></h1>
+          <p class="lead">Short, hands-on missions across six career paths. Spot scams, hunt attackers and run live incidents. No sign-up, and your progress stays on this device.</p>
+          <div class="btn-row hero-cta">
+            <a class="btn primary big" id="hero-btn" href="#paths">Choose your path</a>
+            <a class="btn big" href="#modes-h">Jump into a mode</a>
+          </div>
         </div>
-        <span class="btn primary" id="career-btn">Start your career</span>
+        <div class="hero-art" aria-hidden="true">
+          <svg viewBox="0 0 320 320" class="radar-art" focusable="false">
+            <defs>
+              <radialGradient id="rg" cx="50%" cy="50%" r="50%">
+                <stop offset="0" stop-color="#a3e635" stop-opacity="0.16" />
+                <stop offset="1" stop-color="#a3e635" stop-opacity="0" />
+              </radialGradient>
+              <linearGradient id="sweep" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0" stop-color="#a3e635" stop-opacity="0" />
+                <stop offset="1" stop-color="#a3e635" stop-opacity="0.55" />
+              </linearGradient>
+            </defs>
+            <circle cx="160" cy="160" r="150" fill="url(#rg)" />
+            <g fill="none" stroke="#a3e635" stroke-opacity="0.35" stroke-width="1">
+              <circle cx="160" cy="160" r="150" />
+              <circle cx="160" cy="160" r="110" />
+              <circle cx="160" cy="160" r="70" />
+              <circle cx="160" cy="160" r="30" />
+              <line x1="160" y1="6" x2="160" y2="314" />
+              <line x1="6" y1="160" x2="314" y2="160" />
+              <line x1="51" y1="51" x2="269" y2="269" stroke-opacity="0.15" />
+              <line x1="269" y1="51" x2="51" y2="269" stroke-opacity="0.15" />
+            </g>
+            <g class="sweep"><path d="M160 160 L160 10 A150 150 0 0 1 266 54 Z" fill="url(#sweep)" /></g>
+            <g class="blips">
+              <circle class="blip b1" cx="220" cy="92" r="6" fill="#a3e635" />
+              <circle class="blip b2" cx="96" cy="108" r="6" fill="#38bdf8" />
+              <circle class="blip b3" cx="238" cy="188" r="6" fill="#a78bfa" />
+              <circle class="blip b4" cx="132" cy="236" r="6" fill="#2dd4bf" />
+              <circle class="blip b5" cx="74" cy="186" r="6" fill="#fbbf24" />
+              <circle class="blip b6" cx="190" cy="136" r="6" fill="#f87171" />
+            </g>
+            <circle cx="160" cy="160" r="4" fill="#a3e635" />
+          </svg>
+        </div>
+      </div>
+
+      <div class="hud" aria-label="Your progress">
+        <div class="hud-tile hud-level"><span class="hud-label">Level</span><span class="hud-big" id="p-level">1</span></div>
+        <div class="hud-tile hud-xp">
+          <div class="xp-top"><span class="hud-label">Experience</span><span id="p-xp">0 XP</span></div>
+          <div class="progress"><div id="p-bar"></div></div>
+          <small id="p-next"></small>
+        </div>
+        <div class="hud-tile"><span class="hud-label">Daily missions</span><span class="hud-big" id="p-streak">0</span></div>
+        <div class="hud-tile"><span class="hud-label">Gold medals</span><span class="hud-big gold" id="p-gold">0</span></div>
+        <div class="hud-tile"><span class="hud-label">Paths started</span><span class="hud-big" id="p-paths">0<small>/6</small></span></div>
+      </div>
+
+      <a class="continue" href="career/" id="continue" hidden>
+        <span class="continue-badge" id="continue-badge"></span>
+        <span class="continue-text">
+          <small>Continue</small>
+          <strong id="continue-path">Your path</strong>
+          <span id="continue-line"></span>
+        </span>
+        <span class="btn primary">Resume</span>
       </a>
 
-      <div class="profile" aria-label="Your practice progress">
-        <div class="lvl"><span class="lvl-num" id="p-level">1</span><small>practice level</small></div>
-        <div class="xpbar">
-          <div class="xp-top"><span id="p-xp">0 XP</span><span id="p-next"></span></div>
-          <div class="progress"><div id="p-bar"></div></div>
-        </div>
-        <div class="streak"><span id="p-streak">0</span><small>daily missions done</small></div>
-      </div>
+      <h2 class="sec" id="paths">Choose your path</h2>
+      <p class="section-sub">Every path is its own ladder with its own ranks, skills and promotion exams. Try any of them, and switch whenever you like.</p>
+      <div class="paths" id="path-list"></div>
 
       <div class="daily" id="daily">
         <div>
-          <h2>Daily mission</h2>
+          <p class="tag-line">Daily mission</p>
+          <h2>Five quick emails</h2>
           <p id="daily-text">Five quick emails. About two minutes.</p>
         </div>
         <a class="btn primary big" id="daily-btn" href="phish-or-legit/?mode=daily">Start</a>
       </div>
 
-      <h2 class="sec">Game modes</h2>
+      <h2 class="sec" id="modes-h">Training modes</h2>
+      <p class="section-sub">Free practice. The same seven modes are also the missions on every career path.</p>
       <div class="modes" id="modes"></div>
 
-      <h2 class="sec">Your skills</h2>
+      <h2 class="sec">Your stats</h2>
       <p class="section-sub" id="skills-sub">Play a few rounds and your strengths will show here.</p>
       <div class="skills" id="skills"></div>
 
       <p class="fine">
         Everything here is fictional and for learning. Progress is saved only in this browser.
-        <button class="linklike" id="reset-btn" type="button">Reset my progress</button>
+        <button class="linklike" id="reset-btn" type="button">Reset my practice stats</button>
         <a class="linklike" href="privacy/">Privacy</a>
       </p>
     </section>
