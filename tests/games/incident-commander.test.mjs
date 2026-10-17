@@ -378,4 +378,36 @@ t('ci-compromise: wiping the whole build system is an overreaction that withdraw
   assert.ok(r.gr.points < ciIdeal.gr.points - 90);
 });
 
+// ── bucket-wipe (cloud security) ──
+console.log('--- bucket-wipe strategies');
+const BW = 'bucket-wipe';
+const bwIdeal = run(BW, ['logs', 'scope', 'inventory', 'revoke', 'remove-key', 'lock-backups', 'restore', 'dpo', 'mgr', 'declare']);
+t('bucket-wipe: the ideal response is Textbook and ends declared', () => { assert.equal(bwIdeal.gr.rating.name, 'Textbook'); assert.equal(bwIdeal.g.outcome, 'declared'); });
+t('bucket-wipe: skipping the backup lock or the DPO drops below Textbook', () => {
+  const nolock = run(BW, ['logs', 'scope', 'inventory', 'revoke', 'remove-key', 'restore', 'dpo', 'declare'], { quiet: true });
+  assert.notEqual(nolock.gr.rating.name, 'Textbook');
+  const nodpo = run(BW, ['logs', 'scope', 'inventory', 'revoke', 'remove-key', 'lock-backups', 'restore', 'declare'], { quiet: true });
+  assert.notEqual(nodpo.gr.rating.name, 'Textbook');
+});
+t('bucket-wipe: revoking the first key but not the second ends in a Breach, not a declaration', () => {
+  const r = run(BW, ['logs', 'scope', 'revoke', 'lock-backups', 'restore', 'dpo', 'mgr'], { quiet: true });
+  assert.equal(r.gr.rating.name, 'Breach');
+  assert.equal(r.g.flags.persistence, true);
+});
+t('bucket-wipe: you cannot revoke, restore, lock the backups or declare before you have the evidence', () => {
+  const g = E.newGame(byId[BW]);
+  const ids = E.availableActions(byId[BW], g).map((a) => a.id);
+  for (const locked of ['revoke', 'remove-key', 'lock-backups', 'restore', 'dpo', 'declare']) assert.ok(!ids.includes(locked), locked + ' should be locked at the start');
+});
+t('bucket-wipe: paying and shutting everything down are both Breach-level responses', () => {
+  assert.equal(run(BW, ['pay', 'mgr'], { quiet: true }).gr.rating.name, 'Breach');
+  const sd = run(BW, ['shutdown', 'mgr', 'rescan'], { quiet: true });
+  assert.equal(sd.gr.rating.name, 'Breach');
+  assert.ok(sd.g.disruption >= 40);
+});
+t('bucket-wipe: restoring while a key is still live gets the data deleted again', () => {
+  const r = run(BW, ['logs', 'scope', 'restore', 'revoke'], { quiet: true });
+  assert.ok(r.gr.breakdown.some((b) => /deleted again/.test(b.label)) || r.g.flags.deletedAgain, JSON.stringify(r.gr.breakdown));
+});
+
 console.log(n, 'passed');

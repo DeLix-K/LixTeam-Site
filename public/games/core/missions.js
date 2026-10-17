@@ -40,7 +40,8 @@ export const TIERS = [
   { id: 'lead', name: 'Lead', xpMultiplier: 3, note: 'Needs the Senior Analyst rank.' },
   { id: 'manager', name: 'Manager', xpMultiplier: 3.5, note: 'Needs the Incident Response Lead rank.' },
   // Every tier belongs to one career path (see PATHS). A tier with no `path` is on the analyst path.
-  { id: 'cloud', name: 'Cloud security', xpMultiplier: 2, path: 'cloud' },
+  { id: 'cloud', name: 'Foundations', xpMultiplier: 2, path: 'cloud' },
+  { id: 'cloud-prac', name: 'Practitioner', xpMultiplier: 2.5, path: 'cloud', note: 'Needs two Foundations missions passed.' },
   { id: 'se-found', name: 'Foundations', xpMultiplier: 1, path: 'engineer' },
   { id: 'se-prac', name: 'Practitioner', xpMultiplier: 1.5, path: 'engineer', note: 'Needs two Foundations missions passed.' },
   { id: 'pt-found', name: 'Foundations', xpMultiplier: 1, path: 'pentest' },
@@ -274,6 +275,25 @@ export const MISSIONS = [
     competencies: { cloud: 0.6, response: 0.4 },
     unlock: { passedTier: { cloud: 1 } },
   },
+  // ── Cloud Security path: practitioner tier
+  {
+    id: 'c04-iam', title: 'Too many keys', tier: 'cloud-prac', kind: 'simulation', mode: 'simulation', ref: 'iam-review', minutes: 20, par: 0, access: 'plus',
+    blurb: 'Almost everyone has administrator rights in the cloud account. Rank what to fix and cut access down without stopping the developers.',
+    competencies: { cloud: 0.4, identity: 0.4, reporting: 0.2 },
+    unlock: { passedTier: { cloud: 2 } },
+  },
+  {
+    id: 'c05-silent', title: 'The silent week', tier: 'cloud-prac', kind: 'detective', mode: 'cyber-detective', ref: 'logging-gap', minutes: 12, par: 250, access: 'plus',
+    blurb: 'For six days one region produced no audit events at all. Find out why, and what happened while no one was watching.',
+    competencies: { cloud: 0.5, correlation: 0.3, identity: 0.2 },
+    unlock: { passedTier: { cloud: 2 } },
+  },
+  {
+    id: 'c06-wipe', title: 'The bucket that emptied itself', tier: 'cloud-prac', kind: 'incident', mode: 'incident-commander', ref: 'bucket-wipe', minutes: 10, par: 130, access: 'plus',
+    blurb: 'Files are vanishing from production storage and a message demands payment. Stop it, protect the backups and get the data back.',
+    competencies: { cloud: 0.4, response: 0.4, identity: 0.2 },
+    unlock: { passedTier: { cloud: 2 } },
+  },
   // ── Security Engineer path
   {
     id: 'se01-baseline', title: 'The server nobody hardened', tier: 'se-found', kind: 'simulation', mode: 'simulation', ref: 'hardening-baseline', minutes: 18, par: 0, access: 'free',
@@ -479,6 +499,13 @@ export const MISSIONS = [
     competencies: { hardening: 0.2, secretsiam: 0.3, pipeline: 0.3, reporting: 0.2 },
     unlock: { passedTier: { 'se-found': 3, 'se-prac': 2 }, mastery: { hardening: 55, secretsiam: 55 }, masteryScope: ['se-found', 'se-prac'] },
   },
+  {
+    id: 'cloud-exam', title: 'Promotion exam: Cloud Security Engineer', tier: 'cloud-prac', kind: 'simulation', mode: 'simulation', ref: 'cloud-exam', minutes: 26, par: 0, access: 'plus',
+    exam: true, promotes: 'engineer', passTier: 2,
+    blurb: 'An acquired start-up\'s cloud account, a deadline and a request to cut corners. Silver or better to pass.',
+    competencies: { cloud: 0.3, identity: 0.3, response: 0.2, reporting: 0.2 },
+    unlock: { passedTier: { cloud: 3, 'cloud-prac': 2 }, mastery: { cloud: 60, identity: 55 }, masteryScope: ['cloud', 'cloud-prac'] },
+  },
 ];
 
 // ── Career paths ────────────────────────────────────────────────
@@ -528,7 +555,7 @@ const CLOUD_RANKS = [
   { id: 'associate', name: 'Cloud Security Associate', blurb: 'You can read a cloud audit log and spot an exposed resource.', requires: { xp: 100, passedTier: { cloud: 1 } } },
   {
     id: 'engineer', name: 'Cloud Security Engineer', blurb: 'You trace how keys, roles and consoles are abused, and close the gap in the right order.',
-    requires: { xp: 200, passedTier: { cloud: 3 }, mastery: { cloud: 60 }, masteryScope: ['cloud'] },
+    requires: { xp: 400, passedTier: { cloud: 3, 'cloud-prac': 2 }, mastery: { cloud: 60, identity: 55 }, masteryScope: ['cloud', 'cloud-prac'], exam: 'cloud-exam' },
   },
 ];
 
@@ -561,11 +588,11 @@ export const PATHS = [
     headline: ['Secure the ', 'cloud.'],
     lead: 'Investigate how cloud accounts are exposed and abused, and close the gap in the right order.',
     ranks: CLOUD_RANKS,
-    tiers: ['cloud'],
+    tiers: ['cloud', 'cloud-prac'],
     competencies: ['cloud', 'identity', 'correlation', 'response', 'reporting'],
     roadmap: [
-      { id: 'cloud-exam', title: 'Cloud promotion exam and the Senior Cloud Security Engineer rank', note: 'A larger multi-stage case that tests everything on this path.' },
-      { id: 'cloud-more', title: 'More cloud missions', note: 'Containers, logging and detection, and incident response in the cloud.' },
+      { id: 'cloud-senior', title: 'Senior Cloud Security Engineer and Cloud Security Architect ranks', note: 'Multi-account design, policy as code, and cloud detection and response at scale.' },
+      { id: 'cloud-more', title: 'More cloud missions', note: 'Containers and Kubernetes, serverless, data protection and cloud incident response.' },
     ],
   },
   {

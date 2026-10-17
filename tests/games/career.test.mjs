@@ -72,7 +72,7 @@ t('mission data is well formed, with the right numbers per tier', () => {
     if (m.exam) assert.ok(m.promotes && m.passTier >= 2);
   }
   assert.deepEqual([ids('beginner').length, ids('intermediate').length, ids('advanced').length, ids('senior').length, ids('lead').length, ids('manager').length, ids('cloud').length], [4, 7, 4, 3, 4, 2, 3]);
-  assert.equal(M.MISSIONS.filter((m) => m.exam).length, 8);
+  assert.equal(M.MISSIONS.filter((m) => m.exam).length, 9);
   assert.equal(M.RANKS.length, 6);
   assert.equal(M.COMPETENCIES.length, 22);
   for (const c of M.COMPETENCIES) assert.ok(M.MISSIONS.filter((m) => m.competencies[c.id]).length >= 2, c.id + ' needs at least two missions');
@@ -421,28 +421,36 @@ t('the cloud path is open from the start; its other two missions need the first'
   const r = play(s, 'c01-bucket', 2);
   assert.deepEqual(r.newlyUnlocked.map((m) => m.id).sort(), ['c02-role', 'c03-console']);
 });
-t('the cloud ladder: Associate after one pass, Engineer after all three with mastery, and it never touches the analyst rank', () => {
+const cloudAll = () => M.MISSIONS.filter((m) => C.pathOfMission(m) === 'cloud' && !m.exam).map((m) => m.id);
+t('the cloud ladder: Associate after one strong pass, Engineer needs six missions, mastery and the exam; it never touches the analyst rank', () => {
   const s = C.blank();
   assert.equal(C.rankOf(s, 'cloud').rank.id, 'recruit');
   play(s, 'c01-bucket', 2);
   assert.equal(C.rankOf(s, 'cloud').rank.id, 'recruit', 'XP also has to reach 100');
   play(s, 'c01-bucket', 3);
   assert.equal(C.rankOf(s, 'cloud').rank.id, 'associate', JSON.stringify(C.rankOf(s, 'cloud').checklist));
-  play(s, 'c02-role', 2);
-  assert.equal(C.rankOf(s, 'cloud').rank.id, 'associate', 'two of three is not enough');
-  const r = play(s, 'c03-console', 2);
-  assert.equal(C.rankOf(s, 'cloud').rank.id, 'engineer', JSON.stringify(C.rankOf(s, 'cloud').checklist));
+  play(s, 'c02-role', 2); play(s, 'c03-console', 2);
+  for (const id of ids('cloud-prac')) play(s, id, 2);
+  assert.equal(C.rankOf(s, 'cloud').rank.id, 'associate', 'the promotion exam is still outstanding');
+  assert.equal(C.missionStatus(s, 'cloud-exam').unlocked, true, JSON.stringify(C.missionStatus(s, 'cloud-exam').missing));
+  play(s, 'cloud-exam', 1);
+  assert.equal(C.rankOf(s, 'cloud').rank.id, 'associate', 'bronze is not a pass');
+  const r = play(s, 'cloud-exam', 2);
   assert.equal(r.promoted.id, 'engineer');
   assert.equal(r.path, 'cloud');
   assert.equal(C.rankOf(s, 'analyst').rank.id, 'recruit');
   assert.equal(C.rankOf(s, 'cloud').isTop, true);
 });
-t('the cloud ladder needs real mastery, not just three bronze passes', () => {
+t('the cloud practitioner missions need two foundations first, and the exam needs real mastery', () => {
   const s = C.blank();
-  for (const id of ids('cloud')) play(s, id, 1, 0.3);
-  assert.notEqual(C.rankOf(s, 'cloud').rank.id, 'engineer');
-  for (const id of ids('cloud')) play(s, id, 3);
-  assert.equal(C.rankOf(s, 'cloud').rank.id, 'engineer');
+  for (const id of ids('cloud-prac')) assert.equal(C.missionStatus(s, id).unlocked, false, id);
+  play(s, 'c01-bucket', 3); play(s, 'c02-role', 2);
+  for (const id of ids('cloud-prac')) assert.equal(C.missionStatus(s, id).unlocked, true, id);
+  const t2 = C.blank();
+  for (const id of cloudAll()) play(t2, id, 1, 0.3);
+  assert.equal(C.missionStatus(t2, 'cloud-exam').unlocked, false);
+  for (const id of cloudAll()) play(t2, id, 3);
+  assert.equal(C.missionStatus(t2, 'cloud-exam').unlocked, true);
 });
 t('XP is counted per path: cloud XP does not count towards the analyst ladder, and the total still adds up', () => {
   const s = C.blank();
@@ -455,7 +463,8 @@ t('XP is counted per path: cloud XP does not count towards the analyst ladder, a
 });
 t('mastery is per path: cloud missions do not raise analyst skills such as reporting', () => {
   const s = C.blank();
-  for (const id of ids('cloud')) play(s, id, 3);
+  for (const id of cloudAll()) play(s, id, 3);
+  play(s, 'cloud-exam', 3);
   assert.equal(C.mastery(s, 'reporting', undefined, 'analyst').attempted, 0);
   assert.ok(C.mastery(s, 'reporting', undefined, 'cloud').attempted >= 1);
   assert.equal(C.mastery(s, 'cloud', undefined, 'cloud').score, 100);
@@ -490,7 +499,7 @@ t('the chooser summary: live paths report progress, paths without missions are "
   const s = C.blank();
   play(s, 'c01-bucket', 3);
   const cloud = C.pathSummary(s, 'cloud');
-  assert.equal(cloud.live, true); assert.equal(cloud.started, true); assert.equal(cloud.passed, 1); assert.equal(cloud.total, 3);
+  assert.equal(cloud.live, true); assert.equal(cloud.started, true); assert.equal(cloud.passed, 1); assert.equal(cloud.total, 6);
   const analyst = C.pathSummary(s, 'analyst');
   assert.equal(analyst.live, true); assert.equal(analyst.started, false);
   // every path on the chooser now has missions, so check the "coming soon" rule with a temporary empty path
@@ -604,7 +613,8 @@ t('the summary lists each path, its rank and skills, and the cases, and says it 
   const s = C.blank();
   goldAll(s, [...ids('beginner'), ...ids('intermediate'), ...ids('advanced')]);
   play(s, 'soc-exam', 2);
-  for (const id of ids('cloud')) play(s, id, 3);
+  for (const id of cloudAll()) play(s, id, 3);
+  play(s, 'cloud-exam', 3);
   const text = C.summaryText(s, new Date('2026-10-15T10:00:00Z'));
   assert.match(text, /Date: 2026-10-15/);
   assert.match(text, /Rank: SOC Analyst/);

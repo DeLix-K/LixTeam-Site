@@ -21,6 +21,7 @@ import { VULN } from './sims-vuln.js';
 import { NETWORK } from './sims-network.js';
 import { PENTEST } from './sims-pentest.js';
 import { ENGINEER } from './sims-engineer.js';
+import { CLOUD } from './sims-cloud.js';
 
 const CORE = [
   // ─────────────────────────────────────────────────────────────
@@ -262,4 +263,4 @@ const CORE = [
 ];
 
 // Everything the simulation draws from.
-export const SIMS = [...CORE, ...SENIOR, ...LEAD, ...MANAGER, ...VULN, ...NETWORK, ...PENTEST, ...ENGINEER];
+export const SIMS = [...CORE, ...SENIOR, ...LEAD, ...MANAGER, ...VULN, ...NETWORK, ...PENTEST, ...ENGINEER, ...CLOUD];
