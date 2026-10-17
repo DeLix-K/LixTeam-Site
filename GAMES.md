@@ -17,10 +17,11 @@ tests/games/                engine and content tests (npm run test:games)
 
 ## What the player sees
 
-A six-rank ladder: Recruit, Junior Analyst, SOC Analyst, Senior Analyst, Incident Response Lead, SOC Manager.
-Rank is **earned, not accumulated**: each promotion needs XP, missions passed, skill mastery and a promotion
+The player first chooses a **career path**. Each path is its own ladder with its own ranks, XP, skills and promotion exams, and a player can try any of them at any time. The six on the chooser are Cyber Security Analyst, Security Engineer, Cloud Security, Network Security, Vulnerability Management and Ethical Hacking/PenTest. Paths with no missions yet are shown as "coming soon".
+
+The analyst path has six ranks: Recruit, Junior Analyst, SOC Analyst, Senior Analyst, Incident Response Lead and SOC Manager. On every path, rank is **earned, not accumulated**: each promotion needs XP, missions passed, skill mastery and a promotion
 exam. XP only rewards improving a medal, so easy missions cannot be ground. Skill mastery is shown separately
-(a radar and bars). There is also an optional Cloud specialist track with a title, a featured case each week,
+(a radar and bars). There is also a featured case each week,
 a case history with case reports, a challenge code to compare a result with a friend, a downloadable summary,
 and a progress code to move between devices by hand.
 
@@ -41,11 +42,13 @@ Ranks and scores are game progression. They are not qualifications and not valid
 
    Then add the new file's export to that mode's aggregator (`cases.js`, `incidents.js`, `sims.js`, `scenarios.js`).
 
-2. **Add a mission** in `core/missions.js`: `id`, `title`, `tier`, `kind`, `mode`, `ref` (the case id),
+2. **Add a mission** in `core/missions.js`. A mission belongs to the path of its tier (`tier.path`, default analyst): `id`, `title`, `tier`, `kind`, `mode`, `ref` (the case id),
    `competencies` (weights that add up to 1), `par`, and `unlock`. Exams add `exam: true`, `promotes`, `passTier`.
    Ranks and their requirements are in the same file. Specialist titles are in `SPECIALISMS`.
 
-3. **Run `npm run test:games`.** The tests fail if a mission points at a case that does not exist, if a case
+3. **Adding a whole path** means: add its competencies and tiers (with `path: 'id'`), a ranks array, and fill in its entry in `PATHS` (`tiers`, `competencies`, `ranks`, `roadmap`). A path with missions appears on the chooser automatically. A `rank` requirement or a mission's `unlock.rank` is read inside its own path, and XP and mastery are counted per path.
+
+4. **Run `npm run test:games`.** The tests fail if a mission points at a case that does not exist, if a case
    is malformed, if a perfect run is not top-rated, if guessing everything is not punished, or if the rank
    ladder can no longer be completed with silver medals alone.
 
@@ -73,7 +76,7 @@ Puppeteer and are not in this repo yet.
 | Larger incident simulation, promotion assessments | Done (four exams) |
 | Skill-based recommendation | Done (one recommended next case; cloud skill never overrides core skills) |
 | Pause and resume | Done for the simulations (saved after each stage). Other modes are short and restart |
-| Career paths beyond SOC | Cloud done. DFIR, GRC and threat intelligence are on the roadmap |
+| Separate career paths (analyst, security engineer, cloud, network, vulnerability management, ethical hacking) | Chooser and per-path ladders built. Live: Analyst, Cloud, Vulnerability Management. Security Engineer, Network and PenTest are "coming soon". DFIR, GRC and threat intelligence are planned |
 | New case every week | **Not met.** One existing case is featured each week. Real weekly drops need new writing |
 | Friendly competition | Challenge codes only. Team leagues and public rankings need a server and accounts |
 | Progress across devices | Manual progress code only. Accounts and sync are not built |

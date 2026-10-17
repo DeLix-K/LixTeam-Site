@@ -8,6 +8,7 @@
 
 import { EXTRA } from './incidents-extra.js';
 import { LEAD } from './incidents-lead.js';
+import { VULN } from './incidents-vuln.js';
 
 const CORE = [
   // ─────────────────────────────────────────────────────────────
@@ -404,4 +405,4 @@ const CORE = [
 ];
 
 // Everything the game draws from.
-export const INCIDENTS = [...CORE, ...EXTRA, ...LEAD];
+export const INCIDENTS = [...CORE, ...EXTRA, ...LEAD, ...VULN];

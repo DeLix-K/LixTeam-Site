@@ -72,9 +72,9 @@ t('mission data is well formed, with the right numbers per tier', () => {
     if (m.exam) assert.ok(m.promotes && m.passTier >= 2);
   }
   assert.deepEqual([ids('beginner').length, ids('intermediate').length, ids('advanced').length, ids('senior').length, ids('lead').length, ids('manager').length, ids('cloud').length], [4, 7, 4, 3, 4, 2, 3]);
-  assert.equal(M.MISSIONS.filter((m) => m.exam).length, 4);
+  assert.equal(M.MISSIONS.filter((m) => m.exam).length, 5);
   assert.equal(M.RANKS.length, 6);
-  assert.equal(M.COMPETENCIES.length, 10);
+  assert.equal(M.COMPETENCIES.length, 13);
   for (const c of M.COMPETENCIES) assert.ok(M.MISSIONS.filter((m) => m.competencies[c.id]).length >= 2, c.id + ' needs at least two missions');
 });
 t('a new player is a Recruit with only the beginner missions open on the analyst path', () => {
@@ -475,7 +475,7 @@ t('recommendations stay on the chosen path', () => {
   C.setPath(s, 'analyst');
   assert.equal(C.pathOfMission(C.recommend(s).mission), 'analyst');
   assert.equal(C.recommend(s, { pathId: 'cloud' }).mission.id, 'c01-bucket');
-  assert.equal(C.recommend(C.blank(), { pathId: 'vuln' }), null, 'a path with no missions has nothing to recommend');
+  assert.equal(C.recommend(C.blank(), { pathId: 'network' }), null, 'a path with no missions has nothing to recommend');
 });
 t('the featured case only comes from the chosen path and paths already started', () => {
   const s = C.blank();
@@ -764,6 +764,65 @@ t('the short-session suggestion works on the weakest skill, and prefers the shor
   const q = C.recommend(s, { maxMinutes: 12 });
   assert.ok(q.reason.includes('weakest area'));
   assert.ok(q.mission.minutes <= 12);
+});
+
+
+// ═══════════════ the Vulnerability Management path ═══════════════
+const vmIds = (tier) => M.MISSIONS.filter((m) => m.tier === tier && !m.exam).map((m) => m.id);
+t('the vulnerability path: three foundations open at the start, practitioner missions need two of them', () => {
+  const s = C.blank();
+  const open = C.unlockedIds(s).filter((id) => C.pathOfMission(M.missionById(id)) === 'vuln').sort();
+  assert.deepEqual(open, vmIds('vm-found').sort());
+  for (const id of vmIds('vm-prac')) assert.equal(C.missionStatus(s, id).unlocked, false, id);
+  play(s, vmIds('vm-found')[0], 3);
+  for (const id of vmIds('vm-prac')) assert.equal(C.missionStatus(s, id).unlocked, false, id + ' still needs a second pass');
+  const r = play(s, vmIds('vm-found')[1], 2);
+  assert.deepEqual(r.newlyUnlocked.map((m) => m.id).sort(), vmIds('vm-prac').sort());
+});
+t('the vulnerability ladder: Junior after two foundations, Analyst needs everything plus the exam, and a bronze exam is not a pass', () => {
+  const s = C.blank();
+  assert.equal(C.rankOf(s, 'vuln').rank.id, 'recruit');
+  play(s, vmIds('vm-found')[0], 2); play(s, vmIds('vm-found')[1], 2);
+  assert.equal(C.rankOf(s, 'vuln').rank.id, 'analyst', JSON.stringify(C.rankOf(s, 'vuln').checklist));
+  play(s, vmIds('vm-found')[2], 2);
+  for (const id of vmIds('vm-prac')) play(s, id, 2);
+  assert.equal(C.rankOf(s, 'vuln').rank.id, 'analyst', 'the exam is still outstanding');
+  assert.equal(C.missionStatus(s, 'vm-exam').unlocked, true, JSON.stringify(C.missionStatus(s, 'vm-exam').missing));
+  play(s, 'vm-exam', 1);
+  assert.equal(C.rankOf(s, 'vuln').rank.id, 'analyst', 'bronze is not a pass');
+  const r = play(s, 'vm-exam', 2);
+  assert.equal(r.promoted.id, 'vma');
+  assert.equal(C.rankOf(s, 'vuln').isTop, true);
+  assert.equal(C.rankOf(s, 'analyst').rank.id, 'recruit', 'the analyst ladder is untouched');
+});
+t('the vulnerability exam needs real mastery in scanning and prioritisation', () => {
+  const s = C.blank();
+  for (const id of [...vmIds('vm-found'), ...vmIds('vm-prac')]) play(s, id, 1, 0.3);
+  assert.equal(C.missionStatus(s, 'vm-exam').unlocked, false);
+  for (const id of [...vmIds('vm-found'), ...vmIds('vm-prac')]) play(s, id, 3);
+  assert.equal(C.missionStatus(s, 'vm-exam').unlocked, true);
+});
+t('vulnerability skills show on the vulnerability path only, and the path has its own recommendation', () => {
+  const s = C.blank();
+  assert.deepEqual(C.visibleCompetencies(s, 'vuln').map((c) => c.id), ['vulnscan', 'vulnrisk', 'remediate', 'response', 'reporting']);
+  assert.ok(!C.visibleCompetencies(s, 'analyst').some((c) => c.id === 'vulnrisk'));
+  assert.equal(C.pathOfMission(C.recommend(s, { pathId: 'vuln' }).mission), 'vuln');
+  const q = C.recommend(s, { pathId: 'vuln', maxMinutes: 12 });
+  assert.ok(q && q.mission.minutes <= 12 && C.pathOfMission(q.mission) === 'vuln');
+});
+t('every mission in every path points at a case that exists in its mode (content integrity)', () => {
+  for (const m of M.MISSIONS) {
+    if (m.kind === 'triage') continue;
+    const pool = contentIds[m.mode];
+    assert.ok(pool, m.id + ' unknown mode ' + m.mode);
+    assert.ok(pool.includes(m.ref), m.id + ' -> ' + m.mode + '/' + m.ref);
+  }
+});
+t('the six paths on the chooser: live ones have missions and a way up; the rest are marked coming soon', () => {
+  const s = C.blank();
+  const live = M.PATHS.filter((p) => C.pathSummary(s, p.id).live).map((p) => p.id);
+  assert.deepEqual(live, ['analyst', 'cloud', 'vuln']);
+  for (const id of live) assert.ok(M.PATHS.find((p) => p.id === id).ranks.length >= 3, id + ' has a ladder');
 });
 
 console.log(n, 'passed');

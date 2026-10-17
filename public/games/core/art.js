@@ -132,7 +132,7 @@ export function modeIcon(modeId, size = 24) {
 }
 
 // ── Skill radar ─────────────────────────────────────────────────
-const SHORT = { triage: 'Triage', phishing: 'Phishing', identity: 'Identity', endpoint: 'Endpoint', correlation: 'Correlation', hunting: 'Hunting', response: 'Response', reporting: 'Reporting' };
+const SHORT = { triage: 'Triage', phishing: 'Phishing', identity: 'Identity', endpoint: 'Endpoint', correlation: 'Correlation', hunting: 'Hunting', response: 'Response', reporting: 'Reporting', cloud: 'Cloud', leadership: 'Leadership', vulnscan: 'Scanning', vulnrisk: 'Prioritising', remediate: 'Remediation' };
 
 // items: [{ id, name, score (0..100) }]
 export function skillRadar(items) {

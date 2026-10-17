@@ -16,6 +16,7 @@ const RATINGS = [
 
 import { EXTRA } from './cases-extra.js';
 import { LEAD } from './cases-lead.js';
+import { VULN } from './cases-vuln.js';
 
 const CORE = [
   // ─────────────────────────────────────────────────────────────
@@ -150,4 +151,4 @@ const CORE = [
 ];
 
 // Everything the game draws from.
-export const CASES = [...CORE, ...EXTRA, ...LEAD];
+export const CASES = [...CORE, ...EXTRA, ...LEAD, ...VULN];

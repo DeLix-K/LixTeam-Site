@@ -243,4 +243,45 @@ t('exposed-console: cannot declare while the console is open or the miner is run
   assert.ok(!E.availableActions(byId[EC], g).some((a) => a.id === 'declare'));
 });
 
+
+// ── known-exploited (vulnerability management) ──
+console.log('--- known-exploited strategies');
+const KE = 'known-exploited';
+const keIdeal = run(KE, ['advisory', 'logs', 'mitigate', 'remove', 'patch', 'reset-creds', 'kill-sessions', 'hunt', 'mgr', 'declare']);
+t('known-exploited: the ideal response is Textbook, and ends declared', () => { assert.equal(keIdeal.gr.rating.name, 'Textbook'); assert.equal(keIdeal.g.outcome, 'declared'); assert.ok(keIdeal.g.threat <= 20); });
+t('known-exploited: patching is not enough: patch only, with no check and no clean-up, is a poor result', () => {
+  const r = run(KE, ['advisory', 'patch', 'rescan', 'mgr', 'kill-sessions'], { quiet: true });
+  assert.ok(['Costly', 'Breach'].includes(r.gr.rating.name), r.gr.rating.name);
+  assert.ok(r.gr.breakdown.some((b) => /foothold were left|left in place/.test(b.label)));
+  assert.ok(r.gr.points < keIdeal.gr.points - 40);
+});
+t('known-exploited: you cannot declare while the gateway is exposed or the rogue account remains', () => {
+  const g = E.newGame(byId[KE]);
+  assert.ok(!E.availableActions(byId[KE], g).some((a) => a.id === 'declare'));
+  for (const a of ['advisory', 'patch']) E.perform(byId[KE], g, a);
+  assert.ok(!E.availableActions(byId[KE], g).some((a) => a.id === 'declare'), 'patched but the rogue account is still there');
+});
+t('known-exploited: you cannot remove the foothold, search for spread or patch before reading the evidence', () => {
+  const g = E.newGame(byId[KE]);
+  const ids = E.availableActions(byId[KE], g).map((a) => a.id);
+  for (const locked of ['remove', 'hunt', 'patch', 'mitigate', 'declare']) assert.ok(!ids.includes(locked), locked + ' should be locked at the start');
+});
+t('known-exploited: leaving the gateway exposed lets a second group in; leaving the credentials lets the attacker spread', () => {
+  const open = run(KE, ['advisory', 'logs', 'remove', 'reset-creds', 'hunt', 'mgr', 'kill-sessions'], { quiet: true });
+  assert.equal(open.g.flags.exposed, true);
+  assert.ok(open.g.threat >= 24, 'second group exploited it: ' + open.g.threat);
+  const creds = run(KE, ['advisory', 'logs', 'mitigate', 'remove', 'patch', 'kill-sessions', 'mgr', 'rescan'], { quiet: true });
+  assert.ok(creds.gr.breakdown.some((b) => /Credentials the gateway held were left working/.test(b.label)));
+});
+t('known-exploited: switching off the VPN for everyone is an overreaction that fixes nothing', () => {
+  const r = run(KE, ['vpn-off', 'mgr', 'rescan'], { quiet: true });
+  assert.ok(r.g.disruption >= 30);
+  assert.ok(r.gr.points < keIdeal.gr.points - 70);
+});
+t('known-exploited: skipping the search for spread costs points', () => {
+  const r = run(KE, ['advisory', 'logs', 'mitigate', 'remove', 'patch', 'reset-creds', 'declare'], { quiet: true });
+  assert.ok(r.gr.breakdown.some((b) => /Did not check for follow-on/.test(b.label)));
+  assert.ok(r.gr.points < keIdeal.gr.points);
+});
+
 console.log(n, 'passed');

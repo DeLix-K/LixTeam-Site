@@ -18,6 +18,9 @@ export const COMPETENCIES = [
   { id: 'reporting', name: 'Reporting and communication', blurb: 'Telling people what happened, accurately and usefully.' },
   { id: 'leadership', name: 'Leadership and risk', blurb: 'Putting people and money where the risk is, and being straight with the board.', visibleFrom: 'lead' },
   { id: 'cloud', name: 'Cloud security', blurb: 'Keys, roles, storage and consoles in the cloud.' },
+  { id: 'vulnscan', name: 'Scanning and validation', blurb: 'Reading scanner output, telling real findings from noise, and knowing what a scan does not cover.' },
+  { id: 'vulnrisk', name: 'Risk-based prioritisation', blurb: 'Ranking by exploitation, exposure and impact, not by score alone.' },
+  { id: 'remediate', name: 'Remediation and patching', blurb: 'Getting the right fixes done safely, and checking that they worked.' },
 ];
 
 export const TIERS = [
@@ -29,6 +32,8 @@ export const TIERS = [
   { id: 'manager', name: 'Manager', xpMultiplier: 3.5, note: 'Needs the Incident Response Lead rank.' },
   // Every tier belongs to one career path (see PATHS). A tier with no `path` is on the analyst path.
   { id: 'cloud', name: 'Cloud security', xpMultiplier: 2, path: 'cloud' },
+  { id: 'vm-found', name: 'Foundations', xpMultiplier: 1, path: 'vuln' },
+  { id: 'vm-prac', name: 'Practitioner', xpMultiplier: 1.5, path: 'vuln', note: 'Needs two Foundations missions passed.' },
 ];
 
 // XP for a mission by medal (before the tier multiplier). Medal 0 = no pass.
@@ -254,6 +259,43 @@ export const MISSIONS = [
     competencies: { cloud: 0.6, response: 0.4 },
     unlock: { passedTier: { cloud: 1 } },
   },
+  // ── Vulnerability Management path
+  {
+    id: 'vm01-scan', title: 'Monday\'s scan', tier: 'vm-found', kind: 'simulation', mode: 'simulation', ref: 'scan-triage', minutes: 16, par: 0, access: 'free',
+    blurb: '2,400 findings and one week. Rank by risk, check the top finding is real, and report honestly.',
+    competencies: { vulnrisk: 0.5, vulnscan: 0.3, reporting: 0.2 },
+    unlock: {},
+  },
+  {
+    id: 'vm02-recurring', title: 'The finding that keeps coming back', tier: 'vm-found', kind: 'detective', mode: 'cyber-detective', ref: 'recurring-vuln', minutes: 12, par: 250, access: 'free',
+    blurb: 'A critical finding has been closed four times and keeps returning on new servers. Find out why.',
+    competencies: { vulnscan: 0.4, remediate: 0.4, reporting: 0.2 },
+    unlock: {},
+  },
+  {
+    id: 'vm03-patch', title: 'Patch Tuesday', tier: 'vm-found', kind: 'simulation', mode: 'simulation', ref: 'patch-tuesday', minutes: 20, par: 0, access: 'plus',
+    blurb: 'Spread limited patching capacity where it cuts the most risk, and handle a patch that breaks payroll.',
+    competencies: { remediate: 0.5, vulnrisk: 0.3, reporting: 0.2 },
+    unlock: {},
+  },
+  {
+    id: 'vm04-exploited', title: 'Exploited before the patch', tier: 'vm-prac', kind: 'incident', mode: 'incident-commander', ref: 'known-exploited', minutes: 10, par: 130, access: 'plus',
+    blurb: 'A flaw in your VPN gateway is being exploited. Patching is only the start.',
+    competencies: { vulnrisk: 0.3, remediate: 0.4, response: 0.3 },
+    unlock: { passedTier: { 'vm-found': 2 } },
+  },
+  {
+    id: 'vm05-unscanned', title: 'The server nobody scanned', tier: 'vm-prac', kind: 'breach', mode: 'breach-room', ref: 'unscanned-server', minutes: 12, par: 250, access: 'plus',
+    blurb: 'Ransomware used a flaw that was fixed everywhere except one forgotten server.',
+    competencies: { vulnscan: 0.5, remediate: 0.3, reporting: 0.2 },
+    unlock: { passedTier: { 'vm-found': 2 } },
+  },
+  {
+    id: 'vm06-exception', title: 'The exception request', tier: 'vm-prac', kind: 'simulation', mode: 'simulation', ref: 'risk-exception', minutes: 20, par: 0, access: 'plus',
+    blurb: 'A department wants to keep running a critical flaw. Decide what to approve, and on what terms.',
+    competencies: { vulnrisk: 0.5, reporting: 0.3, remediate: 0.2 },
+    unlock: { passedTier: { 'vm-found': 2 } },
+  },
   // ── Promotion exams
   {
     id: 'soc-exam', title: 'Promotion exam: SOC Analyst', tier: 'advanced', kind: 'simulation', mode: 'simulation', ref: 'soc-exam', minutes: 20, par: 0, access: 'plus',
@@ -283,6 +325,13 @@ export const MISSIONS = [
     competencies: { leadership: 0.4, reporting: 0.2, response: 0.2, triage: 0.1, correlation: 0.1 },
     unlock: { rank: 'lead', passedTier: { manager: 2 }, mastery: { leadership: 65 }, masteryScope: ['beginner', 'intermediate', 'advanced', 'senior', 'lead', 'manager'] },
   },
+  {
+    id: 'vm-exam', title: 'Promotion exam: Vulnerability Management Analyst', tier: 'vm-prac', kind: 'simulation', mode: 'simulation', ref: 'vm-exam', minutes: 26, par: 0, access: 'plus',
+    exam: true, promotes: 'vma', passTier: 2,
+    blurb: 'A critical flaw, thin capacity and a sceptical director. Silver or better to pass.',
+    competencies: { vulnscan: 0.2, vulnrisk: 0.3, remediate: 0.3, reporting: 0.2 },
+    unlock: { passedTier: { 'vm-found': 3, 'vm-prac': 2 }, mastery: { vulnscan: 55, vulnrisk: 55 }, masteryScope: ['vm-found', 'vm-prac'] },
+  },
 ];
 
 // ── Career paths ────────────────────────────────────────────────
@@ -290,6 +339,15 @@ export const MISSIONS = [
 // start and can try the others at any time. A rank's `requires` and a mission's `unlock` are read
 // inside their own path, so 'rank: "senior"' means the senior rank of that path.
 // `live: false` paths are on the chooser as "coming soon" until they have missions.
+
+const VULN_RANKS = [
+  { id: 'recruit', name: 'Recruit', blurb: 'You are learning how weaknesses are found, ranked and fixed.', requires: {} },
+  { id: 'analyst', name: 'Junior Vulnerability Analyst', blurb: 'You can read a scan, tell a real finding from noise and start ranking by risk.', requires: { xp: 60, passedTier: { 'vm-found': 2 } } },
+  {
+    id: 'vma', name: 'Vulnerability Management Analyst', blurb: 'You rank by risk, run a patching cycle sensibly and report honestly on what is and is not fixed.',
+    requires: { xp: 250, passedTier: { 'vm-found': 3, 'vm-prac': 2 }, mastery: { vulnscan: 55, vulnrisk: 55 }, masteryScope: ['vm-found', 'vm-prac'], exam: 'vm-exam' },
+  },
+];
 
 const CLOUD_RANKS = [
   { id: 'recruit', name: 'Recruit', blurb: 'You are learning how cloud accounts get exposed.', requires: {} },
@@ -342,13 +400,17 @@ export const PATHS = [
     roadmap: [],
   },
   {
-    id: 'vuln', name: 'Vulnerability Management', short: 'Vulnerabilities', colour: '#fbbf24', live: false,
+    id: 'vuln', name: 'Vulnerability Management', short: 'Vulnerabilities', colour: '#fbbf24', live: true,
     blurb: 'Find weaknesses and fix the right ones first: scanning, risk-based prioritisation, patching and reporting.',
     headline: ['Fix what ', 'matters.'],
-    lead: 'Cut through thousands of findings to the few that matter, and get them fixed.',
-    ranks: [{ id: 'recruit', name: 'Recruit', blurb: 'Coming soon.', requires: {} }],
-    competencies: [],
-    roadmap: [],
+    lead: 'Cut through thousands of findings to the few that matter, and get them fixed. Rank is earned through mastery and a practical exam.',
+    ranks: VULN_RANKS,
+    tiers: ['vm-found', 'vm-prac'],
+    competencies: ['vulnscan', 'vulnrisk', 'remediate', 'response', 'reporting'],
+    roadmap: [
+      { id: 'vm-senior', title: 'Senior Vulnerability Analyst and Vulnerability Management Lead ranks', note: 'Programme design, metrics that leadership can trust, and managing exceptions at scale.' },
+      { id: 'vm-more', title: 'More missions', note: 'Asset discovery, cloud and container scanning, patch automation and board reporting.' },
+    ],
   },
   {
     id: 'pentest', name: 'Ethical Hacking and PenTest', short: 'PenTest', colour: '#f87171', live: false,
