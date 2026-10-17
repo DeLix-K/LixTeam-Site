@@ -18,6 +18,9 @@ export const COMPETENCIES = [
   { id: 'reporting', name: 'Reporting and communication', blurb: 'Telling people what happened, accurately and usefully.' },
   { id: 'leadership', name: 'Leadership and risk', blurb: 'Putting people and money where the risk is, and being straight with the board.', visibleFrom: 'lead' },
   { id: 'cloud', name: 'Cloud security', blurb: 'Keys, roles, storage and consoles in the cloud.' },
+  { id: 'hardening', name: 'Secure configuration and hardening', blurb: 'Setting systems up to an agreed baseline, and making sure they stay that way.' },
+  { id: 'secretsiam', name: 'Identity, secrets and access', blurb: 'Keeping passwords, keys and permissions under control, and giving each thing only what it needs.' },
+  { id: 'pipeline', name: 'Secure build and delivery', blurb: 'Protecting the pipelines and dependencies that build and ship software.' },
   { id: 'scope', name: 'Scoping and rules of engagement', blurb: 'Knowing what you are authorised to test, what you are not, and how to stop safely.' },
   { id: 'recon', name: 'Reconnaissance and attack surface', blurb: 'Reading what an organisation exposes and deciding where to look first.' },
   { id: 'findings', name: 'Findings and reporting', blurb: 'Rating findings by real risk, evidencing them safely and reporting honestly.' },
@@ -38,6 +41,8 @@ export const TIERS = [
   { id: 'manager', name: 'Manager', xpMultiplier: 3.5, note: 'Needs the Incident Response Lead rank.' },
   // Every tier belongs to one career path (see PATHS). A tier with no `path` is on the analyst path.
   { id: 'cloud', name: 'Cloud security', xpMultiplier: 2, path: 'cloud' },
+  { id: 'se-found', name: 'Foundations', xpMultiplier: 1, path: 'engineer' },
+  { id: 'se-prac', name: 'Practitioner', xpMultiplier: 1.5, path: 'engineer', note: 'Needs two Foundations missions passed.' },
   { id: 'pt-found', name: 'Foundations', xpMultiplier: 1, path: 'pentest' },
   { id: 'pt-prac', name: 'Practitioner', xpMultiplier: 1.5, path: 'pentest', note: 'Needs two Foundations missions passed.' },
   { id: 'net-found', name: 'Foundations', xpMultiplier: 1, path: 'network' },
@@ -269,6 +274,43 @@ export const MISSIONS = [
     competencies: { cloud: 0.6, response: 0.4 },
     unlock: { passedTier: { cloud: 1 } },
   },
+  // ── Security Engineer path
+  {
+    id: 'se01-baseline', title: 'The server nobody hardened', tier: 'se-found', kind: 'simulation', mode: 'simulation', ref: 'hardening-baseline', minutes: 18, par: 0, access: 'free',
+    blurb: 'A new server is about to go live with default settings. Decide what to harden first and how to roll it out safely.',
+    competencies: { hardening: 0.7, reporting: 0.3 },
+    unlock: {},
+  },
+  {
+    id: 'se02-drift', title: 'The secure build that stopped being secure', tier: 'se-found', kind: 'detective', mode: 'cyber-detective', ref: 'config-drift', minutes: 12, par: 250, access: 'free',
+    blurb: 'Every server was built hardened and the dashboard says they all comply. An audit disagrees.',
+    competencies: { hardening: 0.6, pipeline: 0.2, reporting: 0.2 },
+    unlock: {},
+  },
+  {
+    id: 'se03-secrets', title: 'Secrets everywhere', tier: 'se-found', kind: 'simulation', mode: 'simulation', ref: 'secrets-sprawl', minutes: 20, par: 0, access: 'plus',
+    blurb: 'Passwords and keys are scattered through code, logs and wikis. Find them, spend your effort well and rotate without an outage.',
+    competencies: { secretsiam: 0.7, pipeline: 0.3 },
+    unlock: {},
+  },
+  {
+    id: 'se04-ci', title: 'The build that shipped a visitor', tier: 'se-prac', kind: 'incident', mode: 'incident-commander', ref: 'ci-compromise', minutes: 10, par: 130, access: 'plus',
+    blurb: 'Your deployment pipeline has been modified, and customers may be running software with a backdoor in it.',
+    competencies: { pipeline: 0.4, response: 0.4, secretsiam: 0.2 },
+    unlock: { passedTier: { 'se-found': 2 } },
+  },
+  {
+    id: 'se05-deps', title: 'The package that was not ours', tier: 'se-prac', kind: 'breach', mode: 'breach-room', ref: 'dependency-chain', minutes: 12, par: 250, access: 'plus',
+    blurb: 'A build pulled in a library with the same name as an internal one, and the pipeline\'s keys were used from outside.',
+    competencies: { pipeline: 0.6, secretsiam: 0.2, reporting: 0.2 },
+    unlock: { passedTier: { 'se-found': 2 } },
+  },
+  {
+    id: 'se06-review', title: 'The architecture review', tier: 'se-prac', kind: 'simulation', mode: 'simulation', ref: 'design-review', minutes: 20, par: 0, access: 'plus',
+    blurb: 'A new internal app wants to launch on Friday. Review its design, rank the risks and decide what must be fixed first.',
+    competencies: { secretsiam: 0.4, hardening: 0.3, reporting: 0.3 },
+    unlock: { passedTier: { 'se-found': 2 } },
+  },
   // ── Ethical Hacking and PenTest path (judgement, not exploitation)
   {
     id: 'pt01-scope', title: 'The scope letter', tier: 'pt-found', kind: 'simulation', mode: 'simulation', ref: 'scope-letter', minutes: 18, par: 0, access: 'free',
@@ -430,6 +472,13 @@ export const MISSIONS = [
     competencies: { scope: 0.3, recon: 0.1, findings: 0.4, reporting: 0.2 },
     unlock: { passedTier: { 'pt-found': 3, 'pt-prac': 2 }, mastery: { scope: 55, findings: 55 }, masteryScope: ['pt-found', 'pt-prac'] },
   },
+  {
+    id: 'se-exam', title: 'Promotion exam: Security Engineer', tier: 'se-prac', kind: 'simulation', mode: 'simulation', ref: 'se-exam', minutes: 26, par: 0, access: 'plus',
+    exam: true, promotes: 'se', passTier: 2,
+    blurb: 'A cloud migration, a deadline and a shortcut that is not safe. Silver or better to pass.',
+    competencies: { hardening: 0.2, secretsiam: 0.3, pipeline: 0.3, reporting: 0.2 },
+    unlock: { passedTier: { 'se-found': 3, 'se-prac': 2 }, mastery: { hardening: 55, secretsiam: 55 }, masteryScope: ['se-found', 'se-prac'] },
+  },
 ];
 
 // ── Career paths ────────────────────────────────────────────────
@@ -437,6 +486,15 @@ export const MISSIONS = [
 // start and can try the others at any time. A rank's `requires` and a mission's `unlock` are read
 // inside their own path, so 'rank: "senior"' means the senior rank of that path.
 // `live: false` paths are on the chooser as "coming soon" until they have missions.
+
+const ENGINEER_RANKS = [
+  { id: 'recruit', name: 'Recruit', blurb: 'You are learning how to build security in rather than bolt it on.', requires: {} },
+  { id: 'junior', name: 'Junior Security Engineer', blurb: 'You can harden a system to a baseline, find secrets in the wrong places and spot configuration drift.', requires: { xp: 60, passedTier: { 'se-found': 2 } } },
+  {
+    id: 'se', name: 'Security Engineer', blurb: 'You design controls into systems and pipelines, roll them out safely and prove they stay in place.',
+    requires: { xp: 250, passedTier: { 'se-found': 3, 'se-prac': 2 }, mastery: { hardening: 55, secretsiam: 55 }, masteryScope: ['se-found', 'se-prac'], exam: 'se-exam' },
+  },
+];
 
 const PENTEST_RANKS = [
   { id: 'recruit', name: 'Recruit', blurb: 'You are learning how an authorised test works, and why the rules come first.', requires: {} },
@@ -485,13 +543,17 @@ export const PATHS = [
     roadmap: [{ id: 'weekly', title: 'New cases on a regular schedule', note: 'New incidents added to the path over time. Until then, one existing case is featured each week.' }],
   },
   {
-    id: 'engineer', name: 'Security Engineer', short: 'Engineer', colour: '#38bdf8', live: false,
+    id: 'engineer', name: 'Security Engineer', short: 'Engineer', colour: '#38bdf8', live: true,
     blurb: 'Build and harden systems: secure configuration, identity and secrets, and the pipelines that ship code.',
     headline: ['Build it ', 'secure.'],
-    lead: 'Make sound design and configuration decisions, and prove them under realistic pressure.',
-    ranks: [{ id: 'recruit', name: 'Recruit', blurb: 'Coming soon.', requires: {} }],
-    competencies: [],
-    roadmap: [],
+    lead: 'Make sound design and configuration decisions, and prove they hold. Rank is earned through mastery and a practical exam.',
+    ranks: ENGINEER_RANKS,
+    tiers: ['se-found', 'se-prac'],
+    competencies: ['hardening', 'secretsiam', 'pipeline', 'response', 'reporting'],
+    roadmap: [
+      { id: 'se-senior', title: 'Senior Security Engineer and Security Architect ranks', note: 'Threat modelling, architecture at scale, detection engineering and platform security.' },
+      { id: 'se-more', title: 'More missions', note: 'Container and cloud platform security, infrastructure as code, and logging and detection design.' },
+    ],
   },
   {
     id: 'cloud', name: 'Cloud Security', short: 'Cloud', colour: '#a78bfa', live: true,

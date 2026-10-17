@@ -11,6 +11,7 @@ import { LEAD } from './incidents-lead.js';
 import { VULN } from './incidents-vuln.js';
 import { NETWORK } from './incidents-network.js';
 import { PENTEST } from './incidents-pentest.js';
+import { ENGINEER } from './incidents-engineer.js';
 
 const CORE = [
   // ─────────────────────────────────────────────────────────────
@@ -407,4 +408,4 @@ const CORE = [
 ];
 
 // Everything the game draws from.
-export const INCIDENTS = [...CORE, ...EXTRA, ...LEAD, ...VULN, ...NETWORK, ...PENTEST];
+export const INCIDENTS = [...CORE, ...EXTRA, ...LEAD, ...VULN, ...NETWORK, ...PENTEST, ...ENGINEER];

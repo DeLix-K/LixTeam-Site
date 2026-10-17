@@ -72,9 +72,9 @@ t('mission data is well formed, with the right numbers per tier', () => {
     if (m.exam) assert.ok(m.promotes && m.passTier >= 2);
   }
   assert.deepEqual([ids('beginner').length, ids('intermediate').length, ids('advanced').length, ids('senior').length, ids('lead').length, ids('manager').length, ids('cloud').length], [4, 7, 4, 3, 4, 2, 3]);
-  assert.equal(M.MISSIONS.filter((m) => m.exam).length, 7);
+  assert.equal(M.MISSIONS.filter((m) => m.exam).length, 8);
   assert.equal(M.RANKS.length, 6);
-  assert.equal(M.COMPETENCIES.length, 19);
+  assert.equal(M.COMPETENCIES.length, 22);
   for (const c of M.COMPETENCIES) assert.ok(M.MISSIONS.filter((m) => m.competencies[c.id]).length >= 2, c.id + ' needs at least two missions');
 });
 t('a new player is a Recruit with only the beginner missions open on the analyst path', () => {
@@ -475,7 +475,7 @@ t('recommendations stay on the chosen path', () => {
   C.setPath(s, 'analyst');
   assert.equal(C.pathOfMission(C.recommend(s).mission), 'analyst');
   assert.equal(C.recommend(s, { pathId: 'cloud' }).mission.id, 'c01-bucket');
-  assert.equal(C.recommend(C.blank(), { pathId: 'engineer' }), null, 'a path with no missions has nothing to recommend');
+  assert.equal(C.recommend(C.blank(), { pathId: 'not-a-path' }), null, 'a path with no missions has nothing to recommend');
 });
 t('the featured case only comes from the chosen path and paths already started', () => {
   const s = C.blank();
@@ -493,7 +493,10 @@ t('the chooser summary: live paths report progress, paths without missions are "
   assert.equal(cloud.live, true); assert.equal(cloud.started, true); assert.equal(cloud.passed, 1); assert.equal(cloud.total, 3);
   const analyst = C.pathSummary(s, 'analyst');
   assert.equal(analyst.live, true); assert.equal(analyst.started, false);
-  const net = C.pathSummary(s, 'engineer');
+  // every path on the chooser now has missions, so check the "coming soon" rule with a temporary empty path
+  M.PATHS.push({ id: 'fake', name: 'Fake', short: 'Fake', colour: '#ffffff', blurb: 'x', headline: ['A ', 'b.'], lead: 'x', ranks: [{ id: 'recruit', name: 'Recruit', blurb: 'x', requires: {} }], competencies: [], roadmap: [] });
+  const net = C.pathSummary(s, 'fake');
+  M.PATHS.pop();
   assert.equal(net.live, false); assert.equal(net.started, false); assert.equal(net.rank.id, 'recruit');
 });
 t('a career saved before paths existed becomes an analyst career, and a bad path is dropped', () => {
@@ -818,10 +821,10 @@ t('every mission in every path points at a case that exists in its mode (content
     assert.ok(pool.includes(m.ref), m.id + ' -> ' + m.mode + '/' + m.ref);
   }
 });
-t('the six paths on the chooser: live ones have missions and a way up; the rest are marked coming soon', () => {
+t('all six paths on the chooser are live: each has missions and a ladder of at least three ranks', () => {
   const s = C.blank();
   const live = M.PATHS.filter((p) => C.pathSummary(s, p.id).live).map((p) => p.id);
-  assert.deepEqual(live, ['analyst', 'cloud', 'network', 'vuln', 'pentest']);
+  assert.deepEqual(live, ['analyst', 'engineer', 'cloud', 'network', 'vuln', 'pentest']);
   for (const id of live) assert.ok(M.PATHS.find((p) => p.id === id).ranks.length >= 3, id + ' has a ladder');
 });
 
@@ -894,6 +897,56 @@ t('the pentest path teaches judgement, not exploitation: no mission or case text
   const bad = /(msfconsole|sqlmap|nmaps+-|mimikatz|<script>|unions+select|' or '1'='1|curls+-|powershells+-enc|reverse shell|payload:)/i;
   const text = JSON.stringify(M.MISSIONS.filter((m) => C.pathOfMission(m) === 'pentest'));
   assert.ok(!bad.test(text));
+});
+
+
+// ═══════════════ the Security Engineer path ═══════════════
+const seIds = (tier) => M.MISSIONS.filter((m) => m.tier === tier && !m.exam).map((m) => m.id);
+t('the engineer path: three foundations open at the start, practitioner missions need two of them', () => {
+  const s = C.blank();
+  const open = C.unlockedIds(s).filter((id) => C.pathOfMission(M.missionById(id)) === 'engineer').sort();
+  assert.deepEqual(open, seIds('se-found').sort());
+  for (const id of seIds('se-prac')) assert.equal(C.missionStatus(s, id).unlocked, false, id);
+  play(s, seIds('se-found')[0], 3);
+  assert.deepEqual(play(s, seIds('se-found')[1], 2).newlyUnlocked.map((m) => m.id).sort(), seIds('se-prac').sort());
+});
+t('the engineer ladder: Junior after two foundations, Security Engineer needs everything plus the exam; bronze is not a pass', () => {
+  const s = C.blank();
+  play(s, seIds('se-found')[0], 2); play(s, seIds('se-found')[1], 2);
+  assert.equal(C.rankOf(s, 'engineer').rank.id, 'junior', JSON.stringify(C.rankOf(s, 'engineer').checklist));
+  play(s, seIds('se-found')[2], 2);
+  for (const id of seIds('se-prac')) play(s, id, 2);
+  assert.equal(C.rankOf(s, 'engineer').rank.id, 'junior');
+  assert.equal(C.missionStatus(s, 'se-exam').unlocked, true, JSON.stringify(C.missionStatus(s, 'se-exam').missing));
+  play(s, 'se-exam', 1);
+  assert.equal(C.rankOf(s, 'engineer').rank.id, 'junior', 'bronze is not a pass');
+  assert.equal(play(s, 'se-exam', 2).promoted.id, 'se');
+  assert.equal(C.rankOf(s, 'engineer').isTop, true);
+  assert.equal(C.rankOf(s, 'pentest').rank.id, 'recruit', 'other paths are untouched');
+});
+t('engineer skills show on the engineer path only', () => {
+  const s = C.blank();
+  assert.deepEqual(C.visibleCompetencies(s, 'engineer').map((c) => c.id), ['hardening', 'secretsiam', 'pipeline', 'response', 'reporting']);
+  assert.ok(!C.visibleCompetencies(s, 'analyst').some((c) => c.id === 'hardening'));
+  assert.equal(C.pathOfMission(C.recommend(s, { pathId: 'engineer' }).mission), 'engineer');
+});
+t('a hundred random careers across all six paths never corrupt the ranks, XP or exports', () => {
+  let seed = 12345;
+  const rnd = () => ((seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296);
+  for (let run = 0; run < 100; run++) {
+    const s = C.blank();
+    for (let k = 0; k < 40; k++) {
+      const open = C.unlockedIds(s);
+      const id = open[Math.floor(rnd() * open.length)];
+      play(s, id, Math.floor(rnd() * 4), rnd());
+    }
+    const total = M.PATHS.reduce((n, p) => n + C.xpOf(s, p.id), 0);
+    assert.equal(total, s.xp, 'per-path XP adds up to the total');
+    for (const p of M.PATHS) { const r = C.rankOf(s, p.id); assert.ok(r.index >= 0 && r.index < p.ranks.length); assert.ok(r.progress >= 0 && r.progress <= 1); }
+    assert.equal(C.importCode(C.exportCode(s)).ok, true);
+    assert.equal(C.load().xp, s.xp);
+  }
+  C.reset();
 });
 
 console.log(n, 'passed');

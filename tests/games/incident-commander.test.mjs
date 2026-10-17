@@ -348,4 +348,34 @@ t('tester-found-breach: waiting before telling the client lets the other attacke
   assert.ok(slow.gr.points < tbIdeal.gr.points);
 });
 
+
+// ── ci-compromise (security engineering) ──
+console.log('--- ci-compromise strategies');
+const CI = 'ci-compromise';
+const ciIdeal = run(CI, ['history', 'remove-step', 'revoke', 'freeze', 'artifacts', 'rollback', 'secrets', 'rotate', 'notify', 'declare']);
+t('ci-compromise: the ideal response is Textbook and ends declared', () => { assert.equal(ciIdeal.gr.rating.name, 'Textbook'); assert.equal(ciIdeal.g.outcome, 'declared'); });
+t('ci-compromise: fixing the pipeline but leaving the bad releases and the secrets is not enough', () => {
+  const r = run(CI, ['history', 'remove-step', 'revoke', 'freeze', 'mgr'], { quiet: true });
+  assert.equal(r.g.flags.prodTainted, true);
+  assert.ok(r.gr.points < ciIdeal.gr.points - 40, String(r.gr.points));
+});
+t('ci-compromise: you cannot withdraw releases, remove the step or rotate secrets before you have the evidence', () => {
+  const g = E.newGame(byId[CI]);
+  const ids = E.availableActions(byId[CI], g).map((a) => a.id);
+  for (const locked of ['artifacts', 'revoke', 'remove-step', 'rollback', 'rotate', 'notify', 'declare']) assert.ok(!ids.includes(locked), locked + ' should be locked at the start');
+});
+t('ci-compromise: not freezing lets the backdoor ship again; leaving the token lets the attacker push a rogue release', () => {
+  const nofreeze = run(CI, ['history', 'artifacts', 'rollback', 'secrets', 'rotate'], { quiet: true });
+  assert.ok(nofreeze.g.threat >= 30, 'threat ' + nofreeze.g.threat);
+  const token = run(CI, ['history', 'remove-step', 'freeze', 'artifacts', 'rollback', 'secrets', 'rotate', 'notify'], { quiet: true });
+  assert.equal(token.g.flags.tokenActive, true);
+  assert.ok(token.gr.breakdown.some((b) => /token was left working/.test(b.label)));
+});
+t('ci-compromise: wiping the whole build system is an overreaction that withdraws nothing', () => {
+  const r = run(CI, ['wipe', 'mgr', 'rescan'], { quiet: true });
+  assert.ok(r.g.disruption >= 40);
+  assert.equal(r.g.flags.prodTainted, true);
+  assert.ok(r.gr.points < ciIdeal.gr.points - 90);
+});
+
 console.log(n, 'passed');
