@@ -72,9 +72,9 @@ t('mission data is well formed, with the right numbers per tier', () => {
     if (m.exam) assert.ok(m.promotes && m.passTier >= 2);
   }
   assert.deepEqual([ids('beginner').length, ids('intermediate').length, ids('advanced').length, ids('senior').length, ids('lead').length, ids('manager').length, ids('cloud').length], [4, 7, 4, 3, 4, 2, 3]);
-  assert.equal(M.MISSIONS.filter((m) => m.exam).length, 5);
+  assert.equal(M.MISSIONS.filter((m) => m.exam).length, 6);
   assert.equal(M.RANKS.length, 6);
-  assert.equal(M.COMPETENCIES.length, 13);
+  assert.equal(M.COMPETENCIES.length, 16);
   for (const c of M.COMPETENCIES) assert.ok(M.MISSIONS.filter((m) => m.competencies[c.id]).length >= 2, c.id + ' needs at least two missions');
 });
 t('a new player is a Recruit with only the beginner missions open on the analyst path', () => {
@@ -475,7 +475,7 @@ t('recommendations stay on the chosen path', () => {
   C.setPath(s, 'analyst');
   assert.equal(C.pathOfMission(C.recommend(s).mission), 'analyst');
   assert.equal(C.recommend(s, { pathId: 'cloud' }).mission.id, 'c01-bucket');
-  assert.equal(C.recommend(C.blank(), { pathId: 'network' }), null, 'a path with no missions has nothing to recommend');
+  assert.equal(C.recommend(C.blank(), { pathId: 'pentest' }), null, 'a path with no missions has nothing to recommend');
 });
 t('the featured case only comes from the chosen path and paths already started', () => {
   const s = C.blank();
@@ -493,7 +493,7 @@ t('the chooser summary: live paths report progress, paths without missions are "
   assert.equal(cloud.live, true); assert.equal(cloud.started, true); assert.equal(cloud.passed, 1); assert.equal(cloud.total, 3);
   const analyst = C.pathSummary(s, 'analyst');
   assert.equal(analyst.live, true); assert.equal(analyst.started, false);
-  const net = C.pathSummary(s, 'network');
+  const net = C.pathSummary(s, 'pentest');
   assert.equal(net.live, false); assert.equal(net.started, false); assert.equal(net.rank.id, 'recruit');
 });
 t('a career saved before paths existed becomes an analyst career, and a bad path is dropped', () => {
@@ -821,8 +821,41 @@ t('every mission in every path points at a case that exists in its mode (content
 t('the six paths on the chooser: live ones have missions and a way up; the rest are marked coming soon', () => {
   const s = C.blank();
   const live = M.PATHS.filter((p) => C.pathSummary(s, p.id).live).map((p) => p.id);
-  assert.deepEqual(live, ['analyst', 'cloud', 'vuln']);
+  assert.deepEqual(live, ['analyst', 'cloud', 'network', 'vuln']);
   for (const id of live) assert.ok(M.PATHS.find((p) => p.id === id).ranks.length >= 3, id + ' has a ladder');
+});
+
+
+// ═══════════════ the Network Security path ═══════════════
+const nwIds = (tier) => M.MISSIONS.filter((m) => m.tier === tier && !m.exam).map((m) => m.id);
+t('the network path: three foundations open at the start, practitioner missions need two of them', () => {
+  const s = C.blank();
+  const open = C.unlockedIds(s).filter((id) => C.pathOfMission(M.missionById(id)) === 'network').sort();
+  assert.deepEqual(open, nwIds('net-found').sort());
+  for (const id of nwIds('net-prac')) assert.equal(C.missionStatus(s, id).unlocked, false, id);
+  play(s, nwIds('net-found')[0], 3);
+  const r = play(s, nwIds('net-found')[1], 2);
+  assert.deepEqual(r.newlyUnlocked.map((m) => m.id).sort(), nwIds('net-prac').sort());
+});
+t('the network ladder: Associate after two foundations, Engineer needs everything plus the exam; bronze is not a pass', () => {
+  const s = C.blank();
+  play(s, nwIds('net-found')[0], 2); play(s, nwIds('net-found')[1], 2);
+  assert.equal(C.rankOf(s, 'network').rank.id, 'associate', JSON.stringify(C.rankOf(s, 'network').checklist));
+  play(s, nwIds('net-found')[2], 2);
+  for (const id of nwIds('net-prac')) play(s, id, 2);
+  assert.equal(C.rankOf(s, 'network').rank.id, 'associate');
+  assert.equal(C.missionStatus(s, 'net-exam').unlocked, true, JSON.stringify(C.missionStatus(s, 'net-exam').missing));
+  play(s, 'net-exam', 1);
+  assert.equal(C.rankOf(s, 'network').rank.id, 'associate', 'bronze is not a pass');
+  assert.equal(play(s, 'net-exam', 2).promoted.id, 'nse');
+  assert.equal(C.rankOf(s, 'network').isTop, true);
+  assert.equal(C.rankOf(s, 'vuln').rank.id, 'recruit', 'other paths are untouched');
+});
+t('network skills show on the network path only', () => {
+  const s = C.blank();
+  assert.deepEqual(C.visibleCompetencies(s, 'network').map((c) => c.id), ['netdesign', 'fwrules', 'nettraffic', 'response', 'reporting']);
+  assert.ok(!C.visibleCompetencies(s, 'vuln').some((c) => c.id === 'netdesign'));
+  assert.equal(C.pathOfMission(C.recommend(s, { pathId: 'network' }).mission), 'network');
 });
 
 console.log(n, 'passed');

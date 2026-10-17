@@ -18,6 +18,9 @@ export const COMPETENCIES = [
   { id: 'reporting', name: 'Reporting and communication', blurb: 'Telling people what happened, accurately and usefully.' },
   { id: 'leadership', name: 'Leadership and risk', blurb: 'Putting people and money where the risk is, and being straight with the board.', visibleFrom: 'lead' },
   { id: 'cloud', name: 'Cloud security', blurb: 'Keys, roles, storage and consoles in the cloud.' },
+  { id: 'netdesign', name: 'Network design and segmentation', blurb: 'Deciding which zones exist, and who should be able to reach what.' },
+  { id: 'fwrules', name: 'Firewall rules and access control', blurb: 'Reading, writing and reviewing the rules that allow and deny traffic.' },
+  { id: 'nettraffic', name: 'Traffic analysis and monitoring', blurb: 'Reading flows, DNS and logs to spot scanning, beacons and data leaving.' },
   { id: 'vulnscan', name: 'Scanning and validation', blurb: 'Reading scanner output, telling real findings from noise, and knowing what a scan does not cover.' },
   { id: 'vulnrisk', name: 'Risk-based prioritisation', blurb: 'Ranking by exploitation, exposure and impact, not by score alone.' },
   { id: 'remediate', name: 'Remediation and patching', blurb: 'Getting the right fixes done safely, and checking that they worked.' },
@@ -32,6 +35,8 @@ export const TIERS = [
   { id: 'manager', name: 'Manager', xpMultiplier: 3.5, note: 'Needs the Incident Response Lead rank.' },
   // Every tier belongs to one career path (see PATHS). A tier with no `path` is on the analyst path.
   { id: 'cloud', name: 'Cloud security', xpMultiplier: 2, path: 'cloud' },
+  { id: 'net-found', name: 'Foundations', xpMultiplier: 1, path: 'network' },
+  { id: 'net-prac', name: 'Practitioner', xpMultiplier: 1.5, path: 'network', note: 'Needs two Foundations missions passed.' },
   { id: 'vm-found', name: 'Foundations', xpMultiplier: 1, path: 'vuln' },
   { id: 'vm-prac', name: 'Practitioner', xpMultiplier: 1.5, path: 'vuln', note: 'Needs two Foundations missions passed.' },
 ];
@@ -259,6 +264,43 @@ export const MISSIONS = [
     competencies: { cloud: 0.6, response: 0.4 },
     unlock: { passedTier: { cloud: 1 } },
   },
+  // ── Network Security path
+  {
+    id: 'nw01-flat', title: 'The flat network', tier: 'net-found', kind: 'simulation', mode: 'simulation', ref: 'flat-network', minutes: 18, par: 0, access: 'free',
+    blurb: 'Everything can talk to everything. Decide what to separate first and plan a change the plant can live with.',
+    competencies: { netdesign: 0.6, fwrules: 0.2, reporting: 0.2 },
+    unlock: {},
+  },
+  {
+    id: 'nw02-rules', title: 'The rule nobody understands', tier: 'net-found', kind: 'detective', mode: 'cyber-detective', ref: 'firewall-audit', minutes: 12, par: 250, access: 'free',
+    blurb: 'A routine firewall audit finds something that has been there for years.',
+    competencies: { fwrules: 0.6, netdesign: 0.2, reporting: 0.2 },
+    unlock: {},
+  },
+  {
+    id: 'nw03-dns', title: 'The quiet lookups', tier: 'net-found', kind: 'breach', mode: 'breach-room', ref: 'dns-beacon', minutes: 12, par: 250, access: 'plus',
+    blurb: 'Nothing was blocked and nothing alarmed, but 6 GB left the building through DNS.',
+    competencies: { nettraffic: 0.7, reporting: 0.3 },
+    unlock: {},
+  },
+  {
+    id: 'nw04-rdp', title: 'The open door on port 3389', tier: 'net-prac', kind: 'incident', mode: 'incident-commander', ref: 'exposed-remote', minutes: 10, par: 140, access: 'plus',
+    blurb: 'Thousands of failed remote desktop sign-ins, and one that worked. Close the door, then find out who walked through it.',
+    competencies: { fwrules: 0.3, response: 0.4, nettraffic: 0.3 },
+    unlock: { passedTier: { 'net-found': 2 } },
+  },
+  {
+    id: 'nw05-rogue', title: 'The device that should not be there', tier: 'net-prac', kind: 'detective', mode: 'cyber-detective', ref: 'rogue-device', minutes: 12, par: 250, access: 'plus',
+    blurb: 'An unknown device has appeared on the finance network. What is it, and what has it done?',
+    competencies: { nettraffic: 0.4, netdesign: 0.3, response: 0.3 },
+    unlock: { passedTier: { 'net-found': 2 } },
+  },
+  {
+    id: 'nw06-change', title: 'The urgent firewall request', tier: 'net-prac', kind: 'simulation', mode: 'simulation', ref: 'change-window', minutes: 20, par: 0, access: 'plus',
+    blurb: 'Five firewall change requests and one of them is urgent. Rank them, check the facts and decide on what terms.',
+    competencies: { fwrules: 0.5, reporting: 0.3, netdesign: 0.2 },
+    unlock: { passedTier: { 'net-found': 2 } },
+  },
   // ── Vulnerability Management path
   {
     id: 'vm01-scan', title: 'Monday\'s scan', tier: 'vm-found', kind: 'simulation', mode: 'simulation', ref: 'scan-triage', minutes: 16, par: 0, access: 'free',
@@ -332,6 +374,13 @@ export const MISSIONS = [
     competencies: { vulnscan: 0.2, vulnrisk: 0.3, remediate: 0.3, reporting: 0.2 },
     unlock: { passedTier: { 'vm-found': 3, 'vm-prac': 2 }, mastery: { vulnscan: 55, vulnrisk: 55 }, masteryScope: ['vm-found', 'vm-prac'] },
   },
+  {
+    id: 'net-exam', title: 'Promotion exam: Network Security Engineer', tier: 'net-prac', kind: 'simulation', mode: 'simulation', ref: 'net-exam', minutes: 26, par: 0, access: 'plus',
+    exam: true, promotes: 'nse', passTier: 2,
+    blurb: 'A newly acquired company, a flat network, exposed remote access and a board that wants answers. Silver or better to pass.',
+    competencies: { netdesign: 0.3, fwrules: 0.2, nettraffic: 0.2, response: 0.1, reporting: 0.2 },
+    unlock: { passedTier: { 'net-found': 3, 'net-prac': 2 }, mastery: { netdesign: 55, fwrules: 55 }, masteryScope: ['net-found', 'net-prac'] },
+  },
 ];
 
 // ── Career paths ────────────────────────────────────────────────
@@ -339,6 +388,15 @@ export const MISSIONS = [
 // start and can try the others at any time. A rank's `requires` and a mission's `unlock` are read
 // inside their own path, so 'rank: "senior"' means the senior rank of that path.
 // `live: false` paths are on the chooser as "coming soon" until they have missions.
+
+const NETWORK_RANKS = [
+  { id: 'recruit', name: 'Recruit', blurb: 'You are learning how networks are built, defended and watched.', requires: {} },
+  { id: 'associate', name: 'Network Security Associate', blurb: 'You can read a rule base, spot a flat network and recognise odd traffic.', requires: { xp: 60, passedTier: { 'net-found': 2 } } },
+  {
+    id: 'nse', name: 'Network Security Engineer', blurb: 'You design zones, write rules from evidence, and make changes safely and honestly.',
+    requires: { xp: 250, passedTier: { 'net-found': 3, 'net-prac': 2 }, mastery: { netdesign: 55, fwrules: 55 }, masteryScope: ['net-found', 'net-prac'], exam: 'net-exam' },
+  },
+];
 
 const VULN_RANKS = [
   { id: 'recruit', name: 'Recruit', blurb: 'You are learning how weaknesses are found, ranked and fixed.', requires: {} },
@@ -391,13 +449,17 @@ export const PATHS = [
     ],
   },
   {
-    id: 'network', name: 'Network Security', short: 'Network', colour: '#2dd4bf', live: false,
+    id: 'network', name: 'Network Security', short: 'Network', colour: '#2dd4bf', live: true,
     blurb: 'Design and defend networks: segmentation, firewall rules, remote access and spotting what should not be on the wire.',
     headline: ['Defend the ', 'network.'],
-    lead: 'Read the network like an engineer, decide what should talk to what, and find what should not be there.',
-    ranks: [{ id: 'recruit', name: 'Recruit', blurb: 'Coming soon.', requires: {} }],
-    competencies: [],
-    roadmap: [],
+    lead: 'Read the network like an engineer, decide what should talk to what, and find what should not be there. Rank is earned through mastery and a practical exam.',
+    ranks: NETWORK_RANKS,
+    tiers: ['net-found', 'net-prac'],
+    competencies: ['netdesign', 'fwrules', 'nettraffic', 'response', 'reporting'],
+    roadmap: [
+      { id: 'net-senior', title: 'Senior Network Security Engineer and Network Security Architect ranks', note: 'Zero trust, data centre and cloud networking, and large-scale rule management.' },
+      { id: 'net-more', title: 'More missions', note: 'Wireless security, VPN design, intrusion detection and network forensics.' },
+    ],
   },
   {
     id: 'vuln', name: 'Vulnerability Management', short: 'Vulnerabilities', colour: '#fbbf24', live: true,

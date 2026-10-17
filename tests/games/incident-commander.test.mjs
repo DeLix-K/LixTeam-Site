@@ -284,4 +284,39 @@ t('known-exploited: skipping the search for spread costs points', () => {
   assert.ok(r.gr.points < keIdeal.gr.points);
 });
 
+
+// ── exposed-remote (network security) ──
+console.log('--- exposed-remote strategies');
+const ER = 'exposed-remote';
+const erIdeal = run(ER, ['logs', 'session', 'close', 'remove', 'reset', 'hunt', 'mfa', 'disable', 'mgr', 'declare']);
+t('exposed-remote: the ideal response is Textbook and ends declared', () => { assert.equal(erIdeal.gr.rating.name, 'Textbook'); assert.equal(erIdeal.g.outcome, 'declared'); assert.ok(erIdeal.g.threat <= 20); });
+t('exposed-remote: closing the door and disabling the account is not enough: the scheduled task and known passwords remain', () => {
+  const r = run(ER, ['logs', 'close', 'disable', 'mgr', 'ipcheck'], { quiet: true });
+  assert.equal(r.g.flags.persistence, true);
+  assert.ok(r.gr.points < erIdeal.gr.points - 50, String(r.gr.points));
+});
+t('exposed-remote: you cannot read the session, remove the task or search for spread before reading the logs', () => {
+  const g = E.newGame(byId[ER]);
+  const ids = E.availableActions(byId[ER], g).map((a) => a.id);
+  for (const locked of ['session', 'remove', 'hunt', 'disable', 'declare']) assert.ok(!ids.includes(locked), locked + ' should be locked at the start');
+});
+t('exposed-remote: you cannot declare while the service is exposed or the task remains', () => {
+  const g = E.newGame(byId[ER]);
+  for (const a of ['logs', 'session', 'remove']) E.perform(byId[ER], g, a);
+  assert.ok(!E.availableActions(byId[ER], g).some((a) => a.id === 'declare'), 'still exposed');
+});
+t('exposed-remote: leaving it exposed lets more guesses in; leaving the passwords lets the attacker spread', () => {
+  const open = run(ER, ['logs', 'session', 'remove', 'reset', 'hunt', 'mgr', 'disable'], { quiet: true });
+  assert.equal(open.g.flags.exposed, true);
+  assert.ok(open.g.threat >= 24, 'more guessing succeeded: ' + open.g.threat);
+  const spread = run(ER, ['logs', 'session', 'close', 'remove', 'disable', 'mgr', 'ipcheck'], { quiet: true });
+  assert.ok(spread.gr.breakdown.some((b) => /left working/.test(b.label)));
+});
+t('exposed-remote: shutting everything down is an overreaction that does not remove the attacker', () => {
+  const r = run(ER, ['shutdown', 'mgr', 'ipcheck'], { quiet: true });
+  assert.ok(r.g.disruption >= 40);
+  assert.equal(r.g.flags.persistence, true);
+  assert.ok(r.gr.points < erIdeal.gr.points - 80);
+});
+
 console.log(n, 'passed');

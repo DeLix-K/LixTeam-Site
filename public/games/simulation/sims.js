@@ -18,6 +18,7 @@ import { SENIOR } from './sims-senior.js';
 import { LEAD } from './sims-lead.js';
 import { MANAGER } from './sims-manager.js';
 import { VULN } from './sims-vuln.js';
+import { NETWORK } from './sims-network.js';
 
 const CORE = [
   // ─────────────────────────────────────────────────────────────
@@ -259,4 +260,4 @@ const CORE = [
 ];
 
 // Everything the simulation draws from.
-export const SIMS = [...CORE, ...SENIOR, ...LEAD, ...MANAGER, ...VULN];
+export const SIMS = [...CORE, ...SENIOR, ...LEAD, ...MANAGER, ...VULN, ...NETWORK];
