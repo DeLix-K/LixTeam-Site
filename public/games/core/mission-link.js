@@ -73,7 +73,7 @@ export function render(container, res) {
     const up = el('div', 'rankup');
     const txt = el('div');
     txt.append(el('small', '', 'Rank up'), el('strong', '', `Promoted to ${res.promoted.name}!`));
-    up.append(rankBadge(res.promoted.id, 58), txt);
+    up.append(rankBadge(career.rankBadgeSpec(res.path, res.promoted), 58), txt);
     box.append(up);
   }
   if (res.featuredDone) box.append(el('p', 'mission-unlock', "This week's featured case: done."));

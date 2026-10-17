@@ -173,3 +173,20 @@ label.check a { color: var(--accent); }
 .status.error { color: var(--bad); }
 .quick { margin: 12px 0 0; color: var(--muted); font-size: 14.5px; }
 .quick a { color: var(--accent); font-weight: 700; }
+
+/* ── Path chooser ────────────────────────────────────────────── */
+.paths { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 290px), 1fr)); margin: 8px 0 6px; }
+.path-card { --path: var(--accent); position: relative; display: flex; gap: 14px; align-items: flex-start; text-align: left; width: 100%; padding: 16px 18px; border-radius: 18px; border: 1px solid var(--border); background: linear-gradient(160deg, color-mix(in srgb, var(--path) 8%, var(--surface)), var(--surface) 70%); color: var(--text); font: inherit; cursor: pointer; transition: transform 0.25s var(--ease), border-color 0.25s, box-shadow 0.25s; overflow: hidden; }
+.path-card:hover:not(:disabled) { transform: translateY(-3px); border-color: color-mix(in srgb, var(--path) 60%, transparent); box-shadow: 0 16px 36px -22px var(--path); }
+.path-card.chosen { border-color: var(--path); box-shadow: 0 0 0 1px var(--path), 0 16px 36px -22px var(--path); }
+.path-card.soon { opacity: 0.6; cursor: default; }
+.path-icon { flex: 0 0 auto; width: 46px; height: 46px; border-radius: 13px; display: grid; place-items: center; color: var(--path); background: color-mix(in srgb, var(--path) 14%, transparent); border: 1px solid color-mix(in srgb, var(--path) 35%, transparent); }
+.path-body { display: grid; gap: 4px; min-width: 0; }
+.path-body strong { font-size: 17px; letter-spacing: -0.2px; }
+.path-blurb { color: var(--muted); font-size: 14px; line-height: 1.45; }
+.path-status { margin-top: 4px; color: var(--path); font-family: var(--mono); font-size: 12.5px; font-weight: 700; letter-spacing: 0.4px; }
+.path-card.soon .path-status { color: var(--muted); }
+.path-bar { position: absolute; left: 0; right: 0; bottom: 0; height: 4px; border-radius: 0; }
+.path-bar > div { background: var(--path); border-radius: 0; }
+.paths-more { margin: 14px 0 8px; }
+@media (prefers-reduced-motion: reduce) { .path-card { transition: none; } .path-card:hover:not(:disabled) { transform: none; } }

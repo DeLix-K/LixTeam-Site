@@ -17,8 +17,7 @@ export const COMPETENCIES = [
   { id: 'response', name: 'Incident response', blurb: 'Containing, eradicating and recovering in the right order.' },
   { id: 'reporting', name: 'Reporting and communication', blurb: 'Telling people what happened, accurately and usefully.' },
   { id: 'leadership', name: 'Leadership and risk', blurb: 'Putting people and money where the risk is, and being straight with the board.', visibleFrom: 'lead' },
-  // A specialism, not needed for any rank. Shown once a player reaches SOC Analyst.
-  { id: 'cloud', name: 'Cloud security', blurb: 'Keys, roles, storage and consoles in the cloud.', optional: true },
+  { id: 'cloud', name: 'Cloud security', blurb: 'Keys, roles, storage and consoles in the cloud.' },
 ];
 
 export const TIERS = [
@@ -28,7 +27,8 @@ export const TIERS = [
   { id: 'senior', name: 'Senior', xpMultiplier: 2.5 },
   { id: 'lead', name: 'Lead', xpMultiplier: 3, note: 'Needs the Senior Analyst rank.' },
   { id: 'manager', name: 'Manager', xpMultiplier: 3.5, note: 'Needs the Incident Response Lead rank.' },
-  { id: 'cloud', name: 'Specialist: Cloud', xpMultiplier: 2, note: 'Optional track. Opens at SOC Analyst; finish all three for the Cloud Security Specialist title.' },
+  // Every tier belongs to one career path (see PATHS). A tier with no `path` is on the analyst path.
+  { id: 'cloud', name: 'Cloud security', xpMultiplier: 2, path: 'cloud' },
 ];
 
 // XP for a mission by medal (before the tier multiplier). Medal 0 = no pass.
@@ -240,7 +240,7 @@ export const MISSIONS = [
     id: 'c01-bucket', title: 'The bucket anyone could read', tier: 'cloud', kind: 'detective', mode: 'cyber-detective', ref: 'open-bucket', minutes: 12, par: 250, access: 'plus',
     blurb: 'A scanner says a cloud storage bucket is readable by the whole internet. It was private yesterday.',
     competencies: { cloud: 0.6, reporting: 0.2, correlation: 0.2 },
-    unlock: { rank: 'analyst' },
+    unlock: {},
   },
   {
     id: 'c02-role', title: 'The role anyone could assume', tier: 'cloud', kind: 'breach', mode: 'breach-room', ref: 'role-chain', minutes: 14, par: 250, access: 'plus',
@@ -285,21 +285,87 @@ export const MISSIONS = [
   },
 ];
 
-// Titles earned for finishing a specialist track. They do not affect rank.
-export const SPECIALISMS = [
+// ── Career paths ────────────────────────────────────────────────
+// Each path is its own ladder: its own ranks, XP, skills and missions. A player picks one to
+// start and can try the others at any time. A rank's `requires` and a mission's `unlock` are read
+// inside their own path, so 'rank: "senior"' means the senior rank of that path.
+// `live: false` paths are on the chooser as "coming soon" until they have missions.
+
+const CLOUD_RANKS = [
+  { id: 'recruit', name: 'Recruit', blurb: 'You are learning how cloud accounts get exposed.', requires: {} },
+  { id: 'associate', name: 'Cloud Security Associate', blurb: 'You can read a cloud audit log and spot an exposed resource.', requires: { xp: 100, passedTier: { cloud: 1 } } },
   {
-    id: 'cloud', name: 'Cloud Security Specialist', track: 'cloud',
-    blurb: 'Investigate exposure, keys, roles and consoles in the cloud.',
-    requires: { passedTier: { cloud: 3 }, mastery: { cloud: 60 } },
+    id: 'engineer', name: 'Cloud Security Engineer', blurb: 'You trace how keys, roles and consoles are abused, and close the gap in the right order.',
+    requires: { xp: 200, passedTier: { cloud: 3 }, mastery: { cloud: 60 }, masteryScope: ['cloud'] },
   },
 ];
 
-// Planned, not built. Shown on the roadmap so players can see what is coming.
+export const PATHS = [
+  {
+    id: 'analyst', name: 'Cyber Security Analyst', short: 'Analyst', colour: '#a3e635', live: true,
+    blurb: 'Investigate alerts and incidents, then work up to running a security operations centre.',
+    headline: ['Become the ', 'analyst.'],
+    lead: 'Investigate realistic cases, make decisions and prove your skills. Rank is earned through mastery and a practical exam, not by grinding XP.',
+    ranks: RANKS,
+    competencies: ['triage', 'phishing', 'identity', 'endpoint', 'correlation', 'hunting', 'response', 'reporting', 'leadership'],
+    roadmap: [{ id: 'weekly', title: 'New cases on a regular schedule', note: 'New incidents added to the path over time. Until then, one existing case is featured each week.' }],
+  },
+  {
+    id: 'engineer', name: 'Security Engineer', short: 'Engineer', colour: '#38bdf8', live: false,
+    blurb: 'Build and harden systems: secure configuration, identity and secrets, and the pipelines that ship code.',
+    headline: ['Build it ', 'secure.'],
+    lead: 'Make sound design and configuration decisions, and prove them under realistic pressure.',
+    ranks: [{ id: 'recruit', name: 'Recruit', blurb: 'Coming soon.', requires: {} }],
+    competencies: [],
+    roadmap: [],
+  },
+  {
+    id: 'cloud', name: 'Cloud Security', short: 'Cloud', colour: '#a78bfa', live: true,
+    blurb: 'Keep cloud accounts safe: keys, roles, storage and consoles.',
+    headline: ['Secure the ', 'cloud.'],
+    lead: 'Investigate how cloud accounts are exposed and abused, and close the gap in the right order.',
+    ranks: CLOUD_RANKS,
+    tiers: ['cloud'],
+    competencies: ['cloud', 'identity', 'correlation', 'response', 'reporting'],
+    roadmap: [
+      { id: 'cloud-exam', title: 'Cloud promotion exam and the Senior Cloud Security Engineer rank', note: 'A larger multi-stage case that tests everything on this path.' },
+      { id: 'cloud-more', title: 'More cloud missions', note: 'Containers, logging and detection, and incident response in the cloud.' },
+    ],
+  },
+  {
+    id: 'network', name: 'Network Security', short: 'Network', colour: '#2dd4bf', live: false,
+    blurb: 'Design and defend networks: segmentation, firewall rules, remote access and spotting what should not be on the wire.',
+    headline: ['Defend the ', 'network.'],
+    lead: 'Read the network like an engineer, decide what should talk to what, and find what should not be there.',
+    ranks: [{ id: 'recruit', name: 'Recruit', blurb: 'Coming soon.', requires: {} }],
+    competencies: [],
+    roadmap: [],
+  },
+  {
+    id: 'vuln', name: 'Vulnerability Management', short: 'Vulnerabilities', colour: '#fbbf24', live: false,
+    blurb: 'Find weaknesses and fix the right ones first: scanning, risk-based prioritisation, patching and reporting.',
+    headline: ['Fix what ', 'matters.'],
+    lead: 'Cut through thousands of findings to the few that matter, and get them fixed.',
+    ranks: [{ id: 'recruit', name: 'Recruit', blurb: 'Coming soon.', requires: {} }],
+    competencies: [],
+    roadmap: [],
+  },
+  {
+    id: 'pentest', name: 'Ethical Hacking and PenTest', short: 'PenTest', colour: '#f87171', live: false,
+    blurb: 'Think like an attacker, within the rules: scoping, reconnaissance, judgement calls and clear reporting.',
+    headline: ['Hack ', 'ethically.'],
+    lead: 'Decision-based practice in method and judgement: what is in scope, what to do when you find something serious, and how to report it. It does not teach working exploits.',
+    ranks: [{ id: 'recruit', name: 'Recruit', blurb: 'Coming soon.', requires: {} }],
+    competencies: [],
+    roadmap: [],
+  },
+];
+
+// More paths planned beyond the six on the chooser.
 export const ROADMAP = [
-  { id: 'dfir', title: 'Digital forensics and incident response track', note: 'Reconstruct what happened from disk, memory and logs, and determine scope.' },
-  { id: 'grc', title: 'GRC and risk analyst track', note: 'Assess risk, weigh evidence and explain findings to management.' },
-  { id: 'ti', title: 'Threat intelligence track', note: 'Connect indicators, assess context and brief decision-makers.' },
-  { id: 'weekly', title: 'New cases on a regular schedule', note: 'New incidents added to the campaign over time. Until then, one existing case is featured each week.' },
+  { id: 'dfir', title: 'Digital forensics and incident response', note: 'Reconstruct what happened from disk, memory and logs, and determine scope.' },
+  { id: 'grc', title: 'GRC and risk', note: 'Assess risk, weigh evidence and explain findings to management.' },
+  { id: 'ti', title: 'Threat intelligence', note: 'Connect indicators, assess context and brief decision-makers.' },
 ];
 
 export function missionById(id) {

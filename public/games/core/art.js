@@ -34,17 +34,22 @@ function star(cx, cy, outer, inner) {
 
 // A shield with one chevron per step up the ladder; the lead gets a star.
 // `locked` greys it out for ranks not reached yet.
-export function rankBadge(rankId, size = 64, { locked = false, label } = {}) {
-  const colour = locked ? '#525252' : RANK_COLOUR[rankId] || '#94a3b8';
+// `rank` is an analyst rank id ('junior'), or { colour, level, glyph } for the other paths, where
+// level 0 is the ring, 1-3 are chevrons and the glyph can be 'star' or 'crown' near the top.
+export function rankBadge(rank, size = 64, { locked = false, label } = {}) {
+  const spec = typeof rank === 'string' ? { id: rank } : rank || {};
+  const rankId = spec.id;
+  const colour = locked ? '#525252' : spec.colour || RANK_COLOUR[rankId] || '#94a3b8';
+  const glyph = rankId === 'lead' || spec.glyph === 'star' ? 'star' : rankId === 'manager' || spec.glyph === 'crown' ? 'crown' : 'chevrons';
   const shield = 'M32 3 L58 12 V36 C58 53 46 65 32 70 C18 65 6 53 6 36 V12 Z';
   const g = s('g');
   g.append(s('path', { d: shield, fill: '#0f0f0f', stroke: colour, 'stroke-width': 3, 'stroke-linejoin': 'round' }));
   g.append(s('path', { d: shield, fill: colour, 'fill-opacity': locked ? 0.05 : 0.16 }));
   g.append(s('path', { d: 'M32 10 L52 17 V35 C52 48 43 58 32 62 C21 58 12 48 12 35 V17 Z', fill: 'none', stroke: colour, 'stroke-opacity': 0.35, 'stroke-width': 1.5 }));
-  const n = CHEVRONS[rankId] ?? 0;
-  if (rankId === 'lead') {
+  const n = rankId ? CHEVRONS[rankId] ?? 0 : Math.max(0, Math.min(3, spec.level || 0));
+  if (glyph === 'star') {
     g.append(s('polygon', { points: star(32, 36, 15, 6.5), fill: colour, stroke: colour, 'stroke-width': 2, 'stroke-linejoin': 'round' }));
-  } else if (rankId === 'manager') {
+  } else if (glyph === 'crown') {
     // a crown: the top of the ladder
     g.append(s('polygon', { points: '19,46 21,27 28,35 32,24 36,35 43,27 45,46', fill: colour, 'fill-opacity': 0.25, stroke: colour, 'stroke-width': 3, 'stroke-linejoin': 'round' }));
     g.append(s('line', { x1: 19, y1: 51, x2: 45, y2: 51, stroke: colour, 'stroke-width': 4, 'stroke-linecap': 'round' }));
@@ -60,6 +65,21 @@ export function rankBadge(rankId, size = 64, { locked = false, label } = {}) {
   }
   const svg = s('svg', { viewBox: '0 0 64 73', width: size, height: Math.round((size * 73) / 64), class: `rank-badge${locked ? ' locked' : ''}`, role: label ? 'img' : null, 'aria-label': label || null, 'aria-hidden': label ? null : 'true', focusable: 'false' }, g);
   return svg;
+}
+
+// ── Career path icons (24 x 24, stroke only) ────────────────────
+const PATH_ICONS = {
+  analyst: () => [s('circle', { cx: 10, cy: 10, r: 6 }), s('line', { x1: 15, y1: 15, x2: 21, y2: 21 })],
+  engineer: () => [s('circle', { cx: 12, cy: 12, r: 3 }), ...[0, 45, 90, 135].map((deg) => s('line', { x1: 12, y1: 3, x2: 12, y2: 6, transform: `rotate(${deg} 12 12)` })), ...[0, 45, 90, 135].map((deg) => s('line', { x1: 12, y1: 18, x2: 12, y2: 21, transform: `rotate(${deg} 12 12)` })), s('circle', { cx: 12, cy: 12, r: 7 })],
+  cloud: () => [s('path', { d: 'M7 18h10a4 4 0 0 0 .5-7.97A5.5 5.5 0 0 0 7 9.5 4.5 4.5 0 0 0 7 18z' })],
+  network: () => [s('circle', { cx: 12, cy: 12, r: 2.5 }), s('circle', { cx: 4.5, cy: 5, r: 2 }), s('circle', { cx: 19.5, cy: 5, r: 2 }), s('circle', { cx: 4.5, cy: 19, r: 2 }), s('circle', { cx: 19.5, cy: 19, r: 2 }), s('line', { x1: 6, y1: 6.2, x2: 10, y2: 10.2 }), s('line', { x1: 18, y1: 6.2, x2: 14, y2: 10.2 }), s('line', { x1: 6, y1: 17.8, x2: 10, y2: 13.8 }), s('line', { x1: 18, y1: 17.8, x2: 14, y2: 13.8 })],
+  vuln: () => [s('path', { d: 'M12 3l10 18H2z' }), s('line', { x1: 12, y1: 9.5, x2: 12, y2: 14.5 }), s('circle', { cx: 12, cy: 17.3, r: 0.6 })],
+  pentest: () => [s('circle', { cx: 12, cy: 12, r: 8 }), s('circle', { cx: 12, cy: 12, r: 2.5 }), s('line', { x1: 12, y1: 1.5, x2: 12, y2: 5 }), s('line', { x1: 12, y1: 19, x2: 12, y2: 22.5 }), s('line', { x1: 1.5, y1: 12, x2: 5, y2: 12 }), s('line', { x1: 19, y1: 12, x2: 22.5, y2: 12 })],
+};
+export function pathIcon(pathId, size = 24) {
+  const draw = PATH_ICONS[pathId];
+  const g = s('g', { fill: 'none', stroke: 'currentColor', 'stroke-width': 2, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, ...(draw ? draw() : []));
+  return s('svg', { viewBox: '0 0 24 24', width: size, height: size, 'aria-hidden': 'true', focusable: 'false', class: 'mode-icon' }, g);
 }
 
 // ── Medals ──────────────────────────────────────────────────────

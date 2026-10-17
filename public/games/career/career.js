@@ -1,6 +1,6 @@
 import * as career from '../core/career.js';
-import { COMPETENCIES, MISSIONS, TIERS, MEDALS, ROADMAP, RANKS } from '../core/missions.js';
-import { rankBadge, medalIcon, skillRadar } from '../core/art.js';
+import { MISSIONS, TIERS, MEDALS, ROADMAP, PATHS } from '../core/missions.js';
+import { rankBadge, medalIcon, skillRadar, pathIcon } from '../core/art.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -20,28 +20,72 @@ function h(tag, props = {}, ...kids) {
 const missionUrl = (m) => `/games/${m.mode}/?mission=${m.id}`;
 const pct = (x) => `${Math.round(x * 100)}%`;
 
+// The six paths. Choosing one is saved; paths without missions yet are marked "coming soon".
+function renderPaths(s) {
+  const grid = $('path-grid');
+  grid.replaceChildren();
+  for (const path of PATHS) {
+    const sum = career.pathSummary(s, path.id);
+    const chosen = s.path === path.id;
+    const status = sum.started ? `${sum.rank.name} · ${sum.passed} of ${sum.total} missions passed` : sum.live ? 'Start this path' : 'Coming soon';
+    const card = h(
+      'button',
+      { class: `path-card${chosen ? ' chosen' : ''}${sum.live ? '' : ' soon'}`, type: 'button', 'aria-pressed': chosen ? 'true' : 'false', disabled: !sum.live, 'data-path': path.id },
+      h('span', { class: 'path-icon' }, pathIcon(path.id, 26)),
+      h('span', { class: 'path-body' }, h('strong', { text: path.name }), h('span', { class: 'path-blurb', text: path.blurb }), h('span', { class: 'path-status', text: status })),
+      sum.started ? h('span', { class: 'bar path-bar', 'aria-hidden': 'true' }, Object.assign(h('div'), { style: `width:${Math.round(sum.progress * 100)}%` })) : null
+    );
+    card.style.setProperty('--path', path.colour);
+    if (sum.live) {
+      card.addEventListener('click', () => {
+        const now = career.load();
+        career.setPath(now, path.id);
+        career.save();
+        render();
+        $('path-view').scrollIntoView({ block: 'start' });
+      });
+    }
+    grid.append(card);
+  }
+  $('more-paths').replaceChildren(...ROADMAP.map((x) => h('li', {}, h('strong', { text: x.title }), x.note)));
+}
+
 function render() {
   const s = career.load();
-  const r = career.rankOf(s);
+  renderPaths(s);
+  const chosen = !!s.path;
+  const pid = career.pathOf(s);
+  const path = PATHS.find((x) => x.id === pid);
+
+  // Heading follows the chosen path
+  $('c-eyebrow').textContent = chosen ? `${path.name} path` : 'Cyber security career';
+  $('c-h').replaceChildren(document.createTextNode(chosen ? path.headline[0] : 'Choose your '), h('span', { class: 'accent-text', text: chosen ? path.headline[1] : 'path.' }));
+  $('c-lead').textContent = chosen ? path.lead : 'Pick an area. Each path is its own ladder with its own ranks, skills and promotion exams. You can try any of them whenever you like, and your progress on each is kept separately.';
+  $('path-view').hidden = !chosen;
+  $('more-box').hidden = chosen;
+  renderPortfolio(s);
+  $('code-box').value = career.exportCode(s);
+  if (!chosen) return;
+
+  const r = career.rankOf(s, pid);
 
   // Rank and what the next promotion needs
   $('rank-name').textContent = r.rank.name;
-  $('rank-badge').replaceChildren(rankBadge(r.rank.id, 96, { label: `Rank: ${r.rank.name}` }));
+  $('rank-badge').replaceChildren(rankBadge(career.rankBadgeSpec(pid, r.rank), 96, { label: `Rank: ${r.rank.name}` }));
   const pct100 = Math.round(r.progress * 100);
   $('rank-progress').hidden = r.isTop;
   $('rank-bar').setAttribute('aria-valuenow', String(pct100));
   $('rank-bar').firstChild.style.width = `${pct100}%`;
   $('rank-pct').textContent = r.isTop ? '' : `${pct100}% of the way to ${r.next.name}`;
-  const at = RANKS.findIndex((x) => x.id === r.rank.id);
   $('rank-path').replaceChildren(
-    ...RANKS.map((x, i) =>
-      h('li', { class: i < at ? 'passed' : i === at ? 'current' : 'ahead', 'aria-current': i === at ? 'step' : null }, rankBadge(x.id, 40, { locked: i > at }), h('span', { text: x.name }))
+    ...path.ranks.map((x, i) =>
+      h('li', { class: i < r.index ? 'passed' : i === r.index ? 'current' : 'ahead', 'aria-current': i === r.index ? 'step' : null }, rankBadge(career.rankBadgeSpec(pid, x), 40, { locked: i > r.index }), h('span', { text: x.name }))
     )
   );
   $('rank-blurb').textContent = r.rank.blurb;
-  $('xp-num').textContent = String(s.xp);
+  $('xp-num').textContent = String(career.xpOf(s, pid));
   if (r.isTop) {
-    $('next-title').textContent = 'You have reached the top rank in this campaign.';
+    $('next-title').textContent = 'You have reached the top rank on this path.';
     $('checks').replaceChildren();
   } else {
     $('next-title').textContent = `To become ${r.next.name}:`;
@@ -91,26 +135,21 @@ function render() {
     $('feat-count').textContent = n ? `Featured cases finished: ${n}` : 'Finish it with any medal to count it.';
   }
 
-  // Specialist titles
-  const earned = career.specialisms(s).filter((x) => x.earned);
-  $('titles').hidden = !earned.length;
-  $('titles').replaceChildren(...earned.map((x) => h('li', { text: x.name })));
-
-  // Skills
-  const comps = career.visibleCompetencies(s);
-  $('radar').replaceChildren(skillRadar(comps.map((c) => ({ id: c.id, name: c.name, score: career.mastery(s, c.id).score }))));
+  // Skills on this path
+  const comps = career.visibleCompetencies(s, pid);
+  $('radar').replaceChildren(skillRadar(comps.map((c) => ({ id: c.id, name: c.name, score: career.mastery(s, c.id, undefined, pid).score }))));
   $('skills').replaceChildren(
     ...comps.map((c) => {
-      const m = career.mastery(s, c.id);
+      const m = career.mastery(s, c.id, undefined, pid);
       const bar = h('div', { class: 'bar', role: 'progressbar', 'aria-label': `${c.name} mastery`, 'aria-valuemin': '0', 'aria-valuemax': '100', 'aria-valuenow': String(m.score) }, Object.assign(h('div'), { style: `width:${m.score}%` }));
       return h('div', { class: 'skill' }, h('div', { class: 'skill-top' }, h('span', { text: c.name }), h('span', { text: m.attempted ? `${m.score}/100 · ${m.attempted} of ${m.count} missions` : `Not started · 0 of ${m.count} missions` })), h('small', { text: c.blurb }), bar);
     })
   );
 
-  // Campaign map
+  // Campaign map: the tiers of this path
   const camp = $('campaign');
   camp.replaceChildren();
-  for (const tier of TIERS) {
+  for (const tier of TIERS.filter((t) => (t.path || 'analyst') === pid)) {
     const list = MISSIONS.filter((m) => m.tier === tier.id && !m.exam);
     const exams = MISSIONS.filter((m) => m.tier === tier.id && m.exam);
     if (!list.length && !exams.length) continue;
@@ -123,11 +162,9 @@ function render() {
     camp.append(wrap);
   }
 
-  // Roadmap
-  $('roadmap').replaceChildren(...ROADMAP.map((x) => h('li', {}, h('strong', { text: x.title }), x.note)));
-
-  renderPortfolio(s);
-  $('code-box').value = career.exportCode(s);
+  // Roadmap for this path
+  $('roadmap-box').hidden = !path.roadmap.length;
+  $('roadmap').replaceChildren(...path.roadmap.map((x) => h('li', {}, h('strong', { text: x.title }), x.note)));
 }
 
 function missionCard(s, m) {

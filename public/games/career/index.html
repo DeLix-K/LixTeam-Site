@@ -19,11 +19,19 @@
 
   <main id="app" class="wide">
     <section class="screen" aria-labelledby="c-h">
-      <p class="eyebrow">SOC analyst career</p>
-      <h1 id="c-h">Become the <span class="accent-text">analyst.</span></h1>
-      <p class="lead">Investigate realistic cases, make decisions and prove your skills. Rank is earned through mastery and a practical exam, not by grinding XP.</p>
+      <p class="eyebrow" id="c-eyebrow">Cyber security career</p>
+      <h1 id="c-h">Choose your <span class="accent-text">path.</span></h1>
+      <p class="lead" id="c-lead">Pick an area. Each path is its own ladder with its own ranks, skills and promotion exams.</p>
       <p class="disclaimer">Ranks and scores are game progression. They are not qualifications, not validated assessments, and not a guarantee of job readiness.</p>
 
+      <!-- Choose a path -->
+      <div class="paths" id="path-grid" role="group" aria-label="Career paths"></div>
+      <div id="more-box">
+        <p class="section-sub paths-more">More paths planned:</p>
+        <ul class="roadmap" id="more-paths"></ul>
+      </div>
+
+      <div id="path-view" hidden>
       <!-- Rank -->
       <div class="panel rank" id="rank-panel">
         <div class="rank-top">
@@ -40,7 +48,6 @@
           <span id="rank-pct"></span>
         </div>
         <ol class="path" id="rank-path" aria-label="The rank ladder"></ol>
-        <ul class="titles" id="titles" aria-label="Specialist titles earned" hidden></ul>
         <div class="next" id="next-box">
           <h3 id="next-title"></h3>
           <ul class="checks" id="checks"></ul>
@@ -80,9 +87,12 @@
       <div id="campaign"></div>
 
       <!-- Roadmap -->
-      <h2 class="sec">Coming next</h2>
-      <p class="section-sub">Planned, not built yet.</p>
-      <ul class="roadmap" id="roadmap"></ul>
+      <div id="roadmap-box">
+        <h2 class="sec">Coming next on this path</h2>
+        <p class="section-sub">Planned, not built yet.</p>
+        <ul class="roadmap" id="roadmap"></ul>
+      </div>
+      </div>
 
       <!-- Portfolio -->
       <h2 class="sec">Case history and portfolio</h2>

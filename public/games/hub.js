@@ -1,5 +1,6 @@
 import * as profile from './core/profile.js';
 import * as career from './core/career.js';
+import { PATHS } from './core/missions.js';
 import { rankBadge, modeIcon, MODE_COLOUR } from './core/art.js';
 
 const $ = (id) => document.getElementById(id);
@@ -28,21 +29,21 @@ const MODES = [
 
 function renderCareer() {
   const s = career.load();
-  const r = career.rankOf(s);
+  const chosen = !!s.path;
+  const pid = career.pathOf(s);
+  const path = PATHS.find((x) => x.id === pid);
+  const r = career.rankOf(s, pid);
   const started = s.attempts.length > 0;
-  $('career-rank').textContent = r.rank.name;
-  $('career-line').textContent = started
-    ? r.isTop
-      ? 'You have reached the top rank in this campaign.'
-      : `${s.xp} XP. Next: ${r.next.name}.`
-    : 'Start as a Recruit and work up to SOC Manager by solving realistic cases.';
-  $('career-btn').textContent = started ? 'Continue your career' : 'Start your career';
-  $('career-badge').replaceChildren(rankBadge(r.rank.id, 76));
-  // How far through the checklist for the next promotion
-  const items = r.isTop ? [] : r.checklist;
-  const frac = r.isTop ? 1 : items.length ? items.reduce((a, c) => a + (c.done ? 1 : Math.min(1, c.progress || 0)), 0) / items.length : 0;
-  $('career-bar').style.width = `${Math.round(frac * 100)}%`;
-  $('career-progress').hidden = !started;
+  $('career-rank').textContent = chosen ? r.rank.name : 'Choose your path';
+  $('career-line').textContent = !chosen
+    ? 'Six career paths, each its own ladder: analyst, security engineer, cloud, network, vulnerability management and ethical hacking.'
+    : r.isTop
+      ? `${path.name}: you have reached the top rank.`
+      : `${path.name}. ${career.xpOf(s, pid)} XP. Next: ${r.next.name}.`;
+  $('career-btn').textContent = !chosen ? 'Choose your path' : started ? 'Continue your career' : 'Start your career';
+  $('career-badge').replaceChildren(rankBadge(career.rankBadgeSpec(pid, r.rank), 76));
+  $('career-bar').style.width = `${Math.round(r.progress * 100)}%`;
+  $('career-progress').hidden = !chosen || !started;
 }
 
 function render() {
