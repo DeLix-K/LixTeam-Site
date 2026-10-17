@@ -319,4 +319,33 @@ t('exposed-remote: shutting everything down is an overreaction that does not rem
   assert.ok(r.gr.points < erIdeal.gr.points - 80);
 });
 
+
+// ── tester-found-breach (ethical hacking) ──
+console.log('--- tester-found-breach strategies');
+const TB = 'tester-found-breach';
+const tbIdeal = run(TB, ['note', 'preserve', 'notify', 'advise', 'declare']);
+t('tester-found-breach: documenting, preserving, telling the client and advising them is Exemplary', () => { assert.equal(tbIdeal.gr.rating.name, 'Exemplary'); assert.equal(tbIdeal.g.outcome, 'declared'); });
+t('tester-found-breach: deleting the stray script yourself, or using the other attacker access, is penalised heavily', () => {
+  const rm = run(TB, ['note', 'remove', 'notify', 'advise', 'declare'], { quiet: true });
+  assert.ok(rm.gr.breakdown.some((b) => /Deleted evidence/.test(b.label)));
+  assert.ok(rm.gr.points < tbIdeal.gr.points - 30);
+  const pr = run(TB, ['note', 'probe', 'notify', 'advise', 'declare'], { quiet: true });
+  assert.ok(pr.gr.breakdown.some((b) => /another attacker's access/.test(b.label)));
+  assert.ok(pr.gr.points < tbIdeal.gr.points - 40);
+});
+t('tester-found-breach: carrying on and leaving it to the final report is a poor result', () => {
+  const r = run(TB, ['carry-on', 'mgr'], { quiet: true });
+  assert.ok(['Out of bounds', 'Careless'].includes(r.gr.rating.name), r.gr.rating.name);
+});
+t('tester-found-breach: you cannot advise before telling the client, preserve before documenting, or hand over before the client is responding', () => {
+  const g = E.newGame(byId[TB]);
+  const ids = E.availableActions(byId[TB], g).map((a) => a.id);
+  for (const locked of ['preserve', 'notify', 'advise', 'declare']) assert.ok(!ids.includes(locked), locked + ' should be locked at the start');
+});
+t('tester-found-breach: waiting before telling the client lets the other attacker copy data', () => {
+  const slow = run(TB, ['note', 'verify', 'preserve', 'pause', 'notify', 'advise', 'mgr', 'declare'], { quiet: true });
+  assert.ok(slow.g.threat >= 40, 'threat ' + slow.g.threat);
+  assert.ok(slow.gr.points < tbIdeal.gr.points);
+});
+
 console.log(n, 'passed');

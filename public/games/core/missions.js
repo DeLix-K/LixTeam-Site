@@ -18,6 +18,9 @@ export const COMPETENCIES = [
   { id: 'reporting', name: 'Reporting and communication', blurb: 'Telling people what happened, accurately and usefully.' },
   { id: 'leadership', name: 'Leadership and risk', blurb: 'Putting people and money where the risk is, and being straight with the board.', visibleFrom: 'lead' },
   { id: 'cloud', name: 'Cloud security', blurb: 'Keys, roles, storage and consoles in the cloud.' },
+  { id: 'scope', name: 'Scoping and rules of engagement', blurb: 'Knowing what you are authorised to test, what you are not, and how to stop safely.' },
+  { id: 'recon', name: 'Reconnaissance and attack surface', blurb: 'Reading what an organisation exposes and deciding where to look first.' },
+  { id: 'findings', name: 'Findings and reporting', blurb: 'Rating findings by real risk, evidencing them safely and reporting honestly.' },
   { id: 'netdesign', name: 'Network design and segmentation', blurb: 'Deciding which zones exist, and who should be able to reach what.' },
   { id: 'fwrules', name: 'Firewall rules and access control', blurb: 'Reading, writing and reviewing the rules that allow and deny traffic.' },
   { id: 'nettraffic', name: 'Traffic analysis and monitoring', blurb: 'Reading flows, DNS and logs to spot scanning, beacons and data leaving.' },
@@ -35,6 +38,8 @@ export const TIERS = [
   { id: 'manager', name: 'Manager', xpMultiplier: 3.5, note: 'Needs the Incident Response Lead rank.' },
   // Every tier belongs to one career path (see PATHS). A tier with no `path` is on the analyst path.
   { id: 'cloud', name: 'Cloud security', xpMultiplier: 2, path: 'cloud' },
+  { id: 'pt-found', name: 'Foundations', xpMultiplier: 1, path: 'pentest' },
+  { id: 'pt-prac', name: 'Practitioner', xpMultiplier: 1.5, path: 'pentest', note: 'Needs two Foundations missions passed.' },
   { id: 'net-found', name: 'Foundations', xpMultiplier: 1, path: 'network' },
   { id: 'net-prac', name: 'Practitioner', xpMultiplier: 1.5, path: 'network', note: 'Needs two Foundations missions passed.' },
   { id: 'vm-found', name: 'Foundations', xpMultiplier: 1, path: 'vuln' },
@@ -264,6 +269,43 @@ export const MISSIONS = [
     competencies: { cloud: 0.6, response: 0.4 },
     unlock: { passedTier: { cloud: 1 } },
   },
+  // ── Ethical Hacking and PenTest path (judgement, not exploitation)
+  {
+    id: 'pt01-scope', title: 'The scope letter', tier: 'pt-found', kind: 'simulation', mode: 'simulation', ref: 'scope-letter', minutes: 18, par: 0, access: 'free',
+    blurb: 'Before you touch anything, work out what you are authorised to do, and hold the line when someone offers you more.',
+    competencies: { scope: 0.6, findings: 0.2, reporting: 0.2 },
+    unlock: {},
+  },
+  {
+    id: 'pt02-surface', title: 'Reading the attack surface', tier: 'pt-found', kind: 'detective', mode: 'cyber-detective', ref: 'attack-surface', minutes: 12, par: 250, access: 'free',
+    blurb: 'Work out what a company exposes and what a real attacker would try first, and what to do with a password you find.',
+    competencies: { recon: 0.6, scope: 0.2, findings: 0.2 },
+    unlock: {},
+  },
+  {
+    id: 'pt03-rate', title: 'The finding rated "critical"', tier: 'pt-found', kind: 'simulation', mode: 'simulation', ref: 'rate-findings', minutes: 20, par: 0, access: 'plus',
+    blurb: 'Rate the findings by real risk, and hold your ground when the client asks you to soften the worst one.',
+    competencies: { findings: 0.6, reporting: 0.4 },
+    unlock: {},
+  },
+  {
+    id: 'pt04-first', title: 'Someone else was here first', tier: 'pt-prac', kind: 'incident', mode: 'incident-commander', ref: 'tester-found-breach', minutes: 10, par: 130, access: 'plus',
+    blurb: 'Halfway through a test you find signs that a real attacker is already inside. What you do next is the test.',
+    competencies: { scope: 0.5, findings: 0.2, reporting: 0.3 },
+    unlock: { passedTier: { 'pt-found': 2 } },
+  },
+  {
+    id: 'pt05-chain', title: 'The red team\'s path', tier: 'pt-prac', kind: 'breach', mode: 'breach-room', ref: 'red-team-chain', minutes: 12, par: 250, access: 'plus',
+    blurb: 'An authorised red team reached the finance share in a day. Rebuild their path from the defender\'s logs.',
+    competencies: { recon: 0.5, findings: 0.3, reporting: 0.2 },
+    unlock: { passedTier: { 'pt-found': 2 } },
+  },
+  {
+    id: 'pt06-safe', title: 'The test that slowed the shop', tier: 'pt-prac', kind: 'simulation', mode: 'simulation', ref: 'safe-testing', minutes: 20, par: 0, access: 'plus',
+    blurb: 'Your testing tool may have slowed a busy shop. Work out whether it was you, and be honest about it.',
+    competencies: { scope: 0.5, findings: 0.3, reporting: 0.2 },
+    unlock: { passedTier: { 'pt-found': 2 } },
+  },
   // ── Network Security path
   {
     id: 'nw01-flat', title: 'The flat network', tier: 'net-found', kind: 'simulation', mode: 'simulation', ref: 'flat-network', minutes: 18, par: 0, access: 'free',
@@ -381,6 +423,13 @@ export const MISSIONS = [
     competencies: { netdesign: 0.3, fwrules: 0.2, nettraffic: 0.2, response: 0.1, reporting: 0.2 },
     unlock: { passedTier: { 'net-found': 3, 'net-prac': 2 }, mastery: { netdesign: 55, fwrules: 55 }, masteryScope: ['net-found', 'net-prac'] },
   },
+  {
+    id: 'pt-exam', title: 'Promotion exam: Penetration Tester', tier: 'pt-prac', kind: 'simulation', mode: 'simulation', ref: 'pt-exam', minutes: 26, par: 0, access: 'plus',
+    exam: true, promotes: 'pt', passTier: 2,
+    blurb: 'A scope that does not quite fit, a worrying finding and a client under pressure. Silver or better to pass.',
+    competencies: { scope: 0.3, recon: 0.1, findings: 0.4, reporting: 0.2 },
+    unlock: { passedTier: { 'pt-found': 3, 'pt-prac': 2 }, mastery: { scope: 55, findings: 55 }, masteryScope: ['pt-found', 'pt-prac'] },
+  },
 ];
 
 // ── Career paths ────────────────────────────────────────────────
@@ -388,6 +437,15 @@ export const MISSIONS = [
 // start and can try the others at any time. A rank's `requires` and a mission's `unlock` are read
 // inside their own path, so 'rank: "senior"' means the senior rank of that path.
 // `live: false` paths are on the chooser as "coming soon" until they have missions.
+
+const PENTEST_RANKS = [
+  { id: 'recruit', name: 'Recruit', blurb: 'You are learning how an authorised test works, and why the rules come first.', requires: {} },
+  { id: 'junior', name: 'Junior Penetration Tester', blurb: 'You know what is in scope, how to read what a company exposes and how to rate a finding.', requires: { xp: 60, passedTier: { 'pt-found': 2 } } },
+  {
+    id: 'pt', name: 'Penetration Tester', blurb: 'You stay inside the rules under pressure, find what matters and report honestly.',
+    requires: { xp: 250, passedTier: { 'pt-found': 3, 'pt-prac': 2 }, mastery: { scope: 55, findings: 55 }, masteryScope: ['pt-found', 'pt-prac'], exam: 'pt-exam' },
+  },
+];
 
 const NETWORK_RANKS = [
   { id: 'recruit', name: 'Recruit', blurb: 'You are learning how networks are built, defended and watched.', requires: {} },
@@ -475,13 +533,17 @@ export const PATHS = [
     ],
   },
   {
-    id: 'pentest', name: 'Ethical Hacking and PenTest', short: 'PenTest', colour: '#f87171', live: false,
+    id: 'pentest', name: 'Ethical Hacking and PenTest', short: 'PenTest', colour: '#f87171', live: true,
     blurb: 'Think like an attacker, within the rules: scoping, reconnaissance, judgement calls and clear reporting.',
     headline: ['Hack ', 'ethically.'],
-    lead: 'Decision-based practice in method and judgement: what is in scope, what to do when you find something serious, and how to report it. It does not teach working exploits.',
-    ranks: [{ id: 'recruit', name: 'Recruit', blurb: 'Coming soon.', requires: {} }],
-    competencies: [],
-    roadmap: [],
+    lead: 'Decision-based practice in method and judgement: what is in scope, what to do when you find something serious, and how to report it honestly. It does not teach working exploits.',
+    ranks: PENTEST_RANKS,
+    tiers: ['pt-found', 'pt-prac'],
+    competencies: ['scope', 'recon', 'findings', 'reporting'],
+    roadmap: [
+      { id: 'pt-senior', title: 'Senior Penetration Tester and Red Team Lead ranks', note: 'Planning and leading engagements, adversary simulation and purple teaming.' },
+      { id: 'pt-more', title: 'More missions', note: 'Web application, wireless and cloud testing judgement, and working with clients on remediation.' },
+    ],
   },
 ];
 

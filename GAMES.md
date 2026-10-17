@@ -76,7 +76,7 @@ Puppeteer and are not in this repo yet.
 | Larger incident simulation, promotion assessments | Done (four exams) |
 | Skill-based recommendation | Done (one recommended next case; cloud skill never overrides core skills) |
 | Pause and resume | Done for the simulations (saved after each stage). Other modes are short and restart |
-| Separate career paths (analyst, security engineer, cloud, network, vulnerability management, ethical hacking) | Chooser and per-path ladders built. Live: Analyst, Cloud, Network Security, Vulnerability Management. Security Engineer and PenTest are "coming soon". DFIR, GRC and threat intelligence are planned |
+| Separate career paths (analyst, security engineer, cloud, network, vulnerability management, ethical hacking) | Chooser and per-path ladders built. Live: Analyst, Cloud, Network Security, Vulnerability Management and Ethical Hacking/PenTest. Only Security Engineer is "coming soon". DFIR, GRC and threat intelligence are planned |
 | New case every week | **Not met.** One existing case is featured each week. Real weekly drops need new writing |
 | Friendly competition | Challenge codes only. Team leagues and public rankings need a server and accounts |
 | Progress across devices | Manual progress code only. Accounts and sync are not built |

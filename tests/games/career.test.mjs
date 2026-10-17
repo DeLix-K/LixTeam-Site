@@ -72,9 +72,9 @@ t('mission data is well formed, with the right numbers per tier', () => {
     if (m.exam) assert.ok(m.promotes && m.passTier >= 2);
   }
   assert.deepEqual([ids('beginner').length, ids('intermediate').length, ids('advanced').length, ids('senior').length, ids('lead').length, ids('manager').length, ids('cloud').length], [4, 7, 4, 3, 4, 2, 3]);
-  assert.equal(M.MISSIONS.filter((m) => m.exam).length, 6);
+  assert.equal(M.MISSIONS.filter((m) => m.exam).length, 7);
   assert.equal(M.RANKS.length, 6);
-  assert.equal(M.COMPETENCIES.length, 16);
+  assert.equal(M.COMPETENCIES.length, 19);
   for (const c of M.COMPETENCIES) assert.ok(M.MISSIONS.filter((m) => m.competencies[c.id]).length >= 2, c.id + ' needs at least two missions');
 });
 t('a new player is a Recruit with only the beginner missions open on the analyst path', () => {
@@ -475,7 +475,7 @@ t('recommendations stay on the chosen path', () => {
   C.setPath(s, 'analyst');
   assert.equal(C.pathOfMission(C.recommend(s).mission), 'analyst');
   assert.equal(C.recommend(s, { pathId: 'cloud' }).mission.id, 'c01-bucket');
-  assert.equal(C.recommend(C.blank(), { pathId: 'pentest' }), null, 'a path with no missions has nothing to recommend');
+  assert.equal(C.recommend(C.blank(), { pathId: 'engineer' }), null, 'a path with no missions has nothing to recommend');
 });
 t('the featured case only comes from the chosen path and paths already started', () => {
   const s = C.blank();
@@ -493,7 +493,7 @@ t('the chooser summary: live paths report progress, paths without missions are "
   assert.equal(cloud.live, true); assert.equal(cloud.started, true); assert.equal(cloud.passed, 1); assert.equal(cloud.total, 3);
   const analyst = C.pathSummary(s, 'analyst');
   assert.equal(analyst.live, true); assert.equal(analyst.started, false);
-  const net = C.pathSummary(s, 'pentest');
+  const net = C.pathSummary(s, 'engineer');
   assert.equal(net.live, false); assert.equal(net.started, false); assert.equal(net.rank.id, 'recruit');
 });
 t('a career saved before paths existed becomes an analyst career, and a bad path is dropped', () => {
@@ -821,7 +821,7 @@ t('every mission in every path points at a case that exists in its mode (content
 t('the six paths on the chooser: live ones have missions and a way up; the rest are marked coming soon', () => {
   const s = C.blank();
   const live = M.PATHS.filter((p) => C.pathSummary(s, p.id).live).map((p) => p.id);
-  assert.deepEqual(live, ['analyst', 'cloud', 'network', 'vuln']);
+  assert.deepEqual(live, ['analyst', 'cloud', 'network', 'vuln', 'pentest']);
   for (const id of live) assert.ok(M.PATHS.find((p) => p.id === id).ranks.length >= 3, id + ' has a ladder');
 });
 
@@ -856,6 +856,44 @@ t('network skills show on the network path only', () => {
   assert.deepEqual(C.visibleCompetencies(s, 'network').map((c) => c.id), ['netdesign', 'fwrules', 'nettraffic', 'response', 'reporting']);
   assert.ok(!C.visibleCompetencies(s, 'vuln').some((c) => c.id === 'netdesign'));
   assert.equal(C.pathOfMission(C.recommend(s, { pathId: 'network' }).mission), 'network');
+});
+
+
+// ═══════════════ the Ethical Hacking and PenTest path ═══════════════
+const ptIds = (tier) => M.MISSIONS.filter((m) => m.tier === tier && !m.exam).map((m) => m.id);
+t('the pentest path: three foundations open at the start, practitioner missions need two of them', () => {
+  const s = C.blank();
+  const open = C.unlockedIds(s).filter((id) => C.pathOfMission(M.missionById(id)) === 'pentest').sort();
+  assert.deepEqual(open, ptIds('pt-found').sort());
+  for (const id of ptIds('pt-prac')) assert.equal(C.missionStatus(s, id).unlocked, false, id);
+  play(s, ptIds('pt-found')[0], 3);
+  assert.deepEqual(play(s, ptIds('pt-found')[1], 2).newlyUnlocked.map((m) => m.id).sort(), ptIds('pt-prac').sort());
+});
+t('the pentest ladder: Junior after two foundations, Penetration Tester needs everything plus the exam; bronze is not a pass', () => {
+  const s = C.blank();
+  play(s, ptIds('pt-found')[0], 2); play(s, ptIds('pt-found')[1], 2);
+  assert.equal(C.rankOf(s, 'pentest').rank.id, 'junior', JSON.stringify(C.rankOf(s, 'pentest').checklist));
+  play(s, ptIds('pt-found')[2], 2);
+  for (const id of ptIds('pt-prac')) play(s, id, 2);
+  assert.equal(C.rankOf(s, 'pentest').rank.id, 'junior');
+  assert.equal(C.missionStatus(s, 'pt-exam').unlocked, true, JSON.stringify(C.missionStatus(s, 'pt-exam').missing));
+  play(s, 'pt-exam', 1);
+  assert.equal(C.rankOf(s, 'pentest').rank.id, 'junior', 'bronze is not a pass');
+  assert.equal(play(s, 'pt-exam', 2).promoted.id, 'pt');
+  assert.equal(C.rankOf(s, 'pentest').isTop, true);
+  assert.equal(C.rankOf(s, 'network').rank.id, 'recruit', 'other paths are untouched');
+});
+t('pentest skills show on the pentest path only', () => {
+  const s = C.blank();
+  assert.deepEqual(C.visibleCompetencies(s, 'pentest').map((c) => c.id), ['scope', 'recon', 'findings', 'reporting']);
+  assert.ok(!C.visibleCompetencies(s, 'analyst').some((c) => c.id === 'scope'));
+  assert.equal(C.pathOfMission(C.recommend(s, { pathId: 'pentest' }).mission), 'pentest');
+});
+t('the pentest path teaches judgement, not exploitation: no mission or case text carries commands, payloads or tool recipes', async () => {
+  // Plain-language check on the data a player reads. It looks for the shapes exploit instructions take.
+  const bad = /(msfconsole|sqlmap|nmaps+-|mimikatz|<script>|unions+select|' or '1'='1|curls+-|powershells+-enc|reverse shell|payload:)/i;
+  const text = JSON.stringify(M.MISSIONS.filter((m) => C.pathOfMission(m) === 'pentest'));
+  assert.ok(!bad.test(text));
 });
 
 console.log(n, 'passed');
