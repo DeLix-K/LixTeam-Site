@@ -44,6 +44,7 @@ export const TIERS = [
   { id: 'cloud-prac', name: 'Practitioner', xpMultiplier: 2.5, path: 'cloud', note: 'Needs two Foundations missions passed.' },
   { id: 'se-found', name: 'Foundations', xpMultiplier: 1, path: 'engineer' },
   { id: 'se-prac', name: 'Practitioner', xpMultiplier: 1.5, path: 'engineer', note: 'Needs two Foundations missions passed.' },
+  { id: 'se-lead', name: 'Senior', xpMultiplier: 2.5, path: 'engineer', note: 'Opens when you reach Security Engineer.' },
   { id: 'pt-found', name: 'Foundations', xpMultiplier: 1, path: 'pentest' },
   { id: 'pt-prac', name: 'Practitioner', xpMultiplier: 1.5, path: 'pentest', note: 'Needs two Foundations missions passed.' },
   { id: 'net-found', name: 'Foundations', xpMultiplier: 1, path: 'network' },
@@ -331,6 +332,25 @@ export const MISSIONS = [
     competencies: { secretsiam: 0.4, hardening: 0.3, reporting: 0.3 },
     unlock: { passedTier: { 'se-found': 2 } },
   },
+  // ── Security Engineer path: senior tier
+  {
+    id: 'se07-threat', title: 'Before it is built', tier: 'se-lead', kind: 'simulation', mode: 'simulation', ref: 'threat-model', minutes: 20, par: 0, access: 'plus',
+    blurb: 'A new payments feature is a week from build. Model the threats, find the design gaps and decide how security should work with the team.',
+    competencies: { hardening: 0.4, secretsiam: 0.3, reporting: 0.3 },
+    unlock: { rank: 'se' },
+  },
+  {
+    id: 'se08-blind', title: 'The alert that never fired', tier: 'se-lead', kind: 'detective', mode: 'cyber-detective', ref: 'blind-rule', minutes: 12, par: 250, access: 'plus',
+    blurb: 'A detection rule shows as healthy and has never raised an alert, and a customer has found Contoso data for sale. Find out why it stayed silent.',
+    competencies: { hardening: 0.4, response: 0.3, reporting: 0.3 },
+    unlock: { rank: 'se' },
+  },
+  {
+    id: 'se09-breakout', title: 'The container that reached the host', tier: 'se-lead', kind: 'incident', mode: 'incident-commander', ref: 'cluster-breakout', minutes: 10, par: 130, access: 'plus',
+    blurb: 'A service on the shared container platform is running a program nobody deployed. Contain it, keep the evidence and keep thirty teams running.',
+    competencies: { pipeline: 0.4, response: 0.4, hardening: 0.2 },
+    unlock: { rank: 'se' },
+  },
   // ── Ethical Hacking and PenTest path (judgement, not exploitation)
   {
     id: 'pt01-scope', title: 'The scope letter', tier: 'pt-found', kind: 'simulation', mode: 'simulation', ref: 'scope-letter', minutes: 18, par: 0, access: 'free',
@@ -500,6 +520,13 @@ export const MISSIONS = [
     unlock: { passedTier: { 'se-found': 3, 'se-prac': 2 }, mastery: { hardening: 55, secretsiam: 55 }, masteryScope: ['se-found', 'se-prac'] },
   },
   {
+    id: 'se-senior-exam', title: 'Promotion exam: Senior Security Engineer', tier: 'se-lead', kind: 'simulation', mode: 'simulation', ref: 'se-senior-exam', minutes: 28, par: 0, access: 'plus',
+    exam: true, promotes: 'senior', passTier: 2,
+    blurb: 'A shared container platform, a launch date and a request to skip two controls. Silver or better to pass.',
+    competencies: { hardening: 0.3, pipeline: 0.2, response: 0.2, reporting: 0.3 },
+    unlock: { rank: 'se', passedTier: { 'se-lead': 3 }, mastery: { hardening: 60, pipeline: 50 }, masteryScope: ['se-found', 'se-prac', 'se-lead'] },
+  },
+  {
     id: 'cloud-exam', title: 'Promotion exam: Cloud Security Engineer', tier: 'cloud-prac', kind: 'simulation', mode: 'simulation', ref: 'cloud-exam', minutes: 26, par: 0, access: 'plus',
     exam: true, promotes: 'engineer', passTier: 2,
     blurb: 'An acquired start-up\'s cloud account, a deadline and a request to cut corners. Silver or better to pass.',
@@ -520,6 +547,10 @@ const ENGINEER_RANKS = [
   {
     id: 'se', name: 'Security Engineer', blurb: 'You design controls into systems and pipelines, roll them out safely and prove they stay in place.',
     requires: { xp: 250, passedTier: { 'se-found': 3, 'se-prac': 2 }, mastery: { hardening: 55, secretsiam: 55 }, masteryScope: ['se-found', 'se-prac'], exam: 'se-exam' },
+  },
+  {
+    id: 'senior', name: 'Senior Security Engineer', blurb: 'You model threats before anything is built, spend limited effort where it removes the most risk, and hold a line under deadline pressure.',
+    requires: { xp: 600, passedTier: { 'se-lead': 3 }, mastery: { hardening: 60, pipeline: 50 }, masteryScope: ['se-found', 'se-prac', 'se-lead'], exam: 'se-senior-exam' },
   },
 ];
 
@@ -575,10 +606,10 @@ export const PATHS = [
     headline: ['Build it ', 'secure.'],
     lead: 'Make sound design and configuration decisions, and prove they hold. Rank is earned through mastery and a practical exam.',
     ranks: ENGINEER_RANKS,
-    tiers: ['se-found', 'se-prac'],
+    tiers: ['se-found', 'se-prac', 'se-lead'],
     competencies: ['hardening', 'secretsiam', 'pipeline', 'response', 'reporting'],
     roadmap: [
-      { id: 'se-senior', title: 'Senior Security Engineer and Security Architect ranks', note: 'Threat modelling, architecture at scale, detection engineering and platform security.' },
+      { id: 'se-architect', title: 'Security Architect rank', note: 'Architecture at scale, multi-team platform security and security strategy.' },
       { id: 'se-more', title: 'More missions', note: 'Container and cloud platform security, infrastructure as code, and logging and detection design.' },
     ],
   },

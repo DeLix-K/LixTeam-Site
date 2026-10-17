@@ -410,4 +410,41 @@ t('bucket-wipe: restoring while a key is still live gets the data deleted again'
   assert.ok(r.gr.breakdown.some((b) => /deleted again/.test(b.label)) || r.g.flags.deletedAgain, JSON.stringify(r.gr.breakdown));
 });
 
+// ── cluster-breakout (senior security engineering) ──
+console.log('--- cluster-breakout strategies');
+const CB = 'cluster-breakout';
+const cbIdeal = run(CB, ['audit', 'inspect', 'snapshot', 'isolate', 'revoke', 'remove-job', 'rebuild', 'mgr', 'declare']);
+t('cluster-breakout: the ideal response is Textbook and ends declared', () => { assert.equal(cbIdeal.gr.rating.name, 'Textbook'); assert.equal(cbIdeal.g.outcome, 'declared'); });
+t('cluster-breakout: checking the image as well is still Textbook (a useful step is not punished)', () => {
+  const r = run(CB, ['audit', 'inspect', 'image', 'snapshot', 'isolate', 'revoke', 'remove-job', 'rebuild', 'mgr', 'declare'], { quiet: true });
+  assert.equal(r.gr.rating.name, 'Textbook');
+});
+t('cluster-breakout: not rebuilding the host drops below Textbook', () => {
+  const r = run(CB, ['audit', 'inspect', 'snapshot', 'isolate', 'revoke', 'remove-job', 'mgr', 'declare'], { quiet: true });
+  assert.notEqual(r.gr.rating.name, 'Textbook');
+});
+t('cluster-breakout: you cannot isolate, revoke, remove the job or declare before you have the evidence', () => {
+  const g = E.newGame(byId[CB]);
+  const ids = E.availableActions(byId[CB], g).map((a) => a.id);
+  for (const locked of ['isolate', 'revoke', 'remove-job', 'snapshot', 'rebuild', 'declare']) assert.ok(!ids.includes(locked), locked + ' should be locked at the start');
+});
+t('cluster-breakout: deleting the workload before capturing it loses the evidence', () => {
+  const r = run(CB, ['audit', 'kill-pod', 'mgr'], { quiet: true });
+  assert.equal(r.g.flags.evidenceLost, true);
+  assert.equal(r.gr.rating.name, 'Breach');
+});
+t('cluster-breakout: leaving the token lets the attacker spread to another team', () => {
+  const r = run(CB, ['audit', 'inspect', 'snapshot', 'remove-job', 'rebuild', 'mgr', 'fullscan'], { quiet: true });
+  assert.equal(r.g.flags.spread, true);
+  assert.ok(r.gr.breakdown.some((b) => /another team/.test(b.label)));
+});
+t('cluster-breakout: redeploying the tampered image and shutting down the platform are poor responses', () => {
+  const re = run(CB, ['audit', 'inspect', 'snapshot', 'isolate', 'revoke', 'remove-job', 'redeploy', 'mgr', 'declare'], { quiet: true });
+  assert.notEqual(re.gr.rating.name, 'Textbook');
+  assert.ok(re.gr.points < cbIdeal.gr.points - 40, String(re.gr.points));
+  const sd = run(CB, ['shutdown', 'mgr'], { quiet: true });
+  assert.equal(sd.gr.rating.name, 'Breach');
+  assert.ok(sd.g.disruption >= 40);
+});
+
 console.log(n, 'passed');

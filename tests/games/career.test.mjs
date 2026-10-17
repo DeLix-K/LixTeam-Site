@@ -45,7 +45,7 @@ t('content integrity: no two missions use the same case, and each mission has a 
   for (const m of M.MISSIONS) if (m.kind !== 'simulation') assert.ok(m.par > 0, m.id + ' needs a par'); else assert.equal(m.par, 0);
 });
 t('content integrity: requirements only reference real tiers, competencies, exams and ranks', () => {
-  const tiers = new Set(M.TIERS.map((x) => x.id)); const comps = new Set(M.COMPETENCIES.map((x) => x.id)); const ranks = new Set(M.RANKS.map((x) => x.id));
+  const tiers = new Set(M.TIERS.map((x) => x.id)); const comps = new Set(M.COMPETENCIES.map((x) => x.id)); const ranks = new Set(M.PATHS.flatMap((p) => p.ranks.map((x) => x.id)));
   const check = (req, where) => {
     for (const k of Object.keys(req.passedTier || {})) assert.ok(tiers.has(k), `${where}: tier ${k}`);
     for (const k of Object.keys(req.mastery || {})) assert.ok(comps.has(k), `${where}: competency ${k}`);
@@ -72,7 +72,7 @@ t('mission data is well formed, with the right numbers per tier', () => {
     if (m.exam) assert.ok(m.promotes && m.passTier >= 2);
   }
   assert.deepEqual([ids('beginner').length, ids('intermediate').length, ids('advanced').length, ids('senior').length, ids('lead').length, ids('manager').length, ids('cloud').length], [4, 7, 4, 3, 4, 2, 3]);
-  assert.equal(M.MISSIONS.filter((m) => m.exam).length, 9);
+  assert.equal(M.MISSIONS.filter((m) => m.exam).length, 10);
   assert.equal(M.RANKS.length, 6);
   assert.equal(M.COMPETENCIES.length, 22);
   for (const c of M.COMPETENCIES) assert.ok(M.MISSIONS.filter((m) => m.competencies[c.id]).length >= 2, c.id + ' needs at least two missions');
@@ -931,8 +931,29 @@ t('the engineer ladder: Junior after two foundations, Security Engineer needs ev
   play(s, 'se-exam', 1);
   assert.equal(C.rankOf(s, 'engineer').rank.id, 'junior', 'bronze is not a pass');
   assert.equal(play(s, 'se-exam', 2).promoted.id, 'se');
-  assert.equal(C.rankOf(s, 'engineer').isTop, true);
+  assert.equal(C.rankOf(s, 'engineer').isTop, false, 'Senior is above Security Engineer');
   assert.equal(C.rankOf(s, 'pentest').rank.id, 'recruit', 'other paths are untouched');
+});
+t('the senior engineer tier: opens at Security Engineer, needs three passes, mastery and the exam', () => {
+  const lead = () => M.MISSIONS.filter((m) => m.tier === 'se-lead' && !m.exam).map((m) => m.id);
+  assert.equal(lead().length, 3);
+  const s = C.blank();
+  for (const id of [...lead(), 'se-senior-exam']) assert.equal(C.missionStatus(s, id).unlocked, false, id + ' is locked before Security Engineer');
+  for (const id of seIds('se-found')) play(s, id, 3);
+  for (const id of seIds('se-prac')) play(s, id, 3);
+  play(s, 'se-exam', 3);
+  assert.equal(C.rankOf(s, 'engineer').rank.id, 'se');
+  for (const id of lead()) assert.equal(C.missionStatus(s, id).unlocked, true, id);
+  assert.equal(C.missionStatus(s, 'se-senior-exam').unlocked, false, 'the exam needs the senior missions first');
+  for (const id of lead()) play(s, id, 3);
+  assert.equal(C.missionStatus(s, 'se-senior-exam').unlocked, true, JSON.stringify(C.missionStatus(s, 'se-senior-exam').missing));
+  assert.equal(C.rankOf(s, 'engineer').rank.id, 'se');
+  play(s, 'se-senior-exam', 1);
+  assert.equal(C.rankOf(s, 'engineer').rank.id, 'se', 'bronze is not a pass');
+  const r = play(s, 'se-senior-exam', 2);
+  assert.equal(r.promoted.id, 'senior', JSON.stringify(C.rankOf(s, 'engineer').checklist));
+  assert.equal(C.rankOf(s, 'engineer').isTop, true);
+  assert.equal(C.rankOf(s, 'cloud').rank.id, 'recruit', 'other paths are untouched');
 });
 t('engineer skills show on the engineer path only', () => {
   const s = C.blank();
