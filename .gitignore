@@ -5,3 +5,6 @@ dist/
 .env
 .env.*
 .DS_Store
+
+# generated review pack (rebuild with: node tools/build-review-pack.mjs)
+docs/review-pack/
