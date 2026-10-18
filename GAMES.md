@@ -82,4 +82,4 @@ Puppeteer and are not in this repo yet.
 | Progress across devices | Manual progress code only. Accounts and sync are not built |
 | Free and paid tiers, payments | Not built. A waitlist tests demand first (see `public/games/career/waitlist.js`) |
 | Employer or team features | Not built |
-| Name check | "Cyber Quest" is widely used for security training. Keep the name provisional |
+| Name | Renamed to RootLine. "Cyber Range" and "Cyber Quest" are both widely used for security training. A web search found no clash for RootLine, but a formal trademark search (UK IPO, plus EU/US if selling abroad), a domain check and an app-store check are still to do. The saved-progress key `lixteam.cyberRange.v1` keeps its old name on purpose so nobody loses progress |

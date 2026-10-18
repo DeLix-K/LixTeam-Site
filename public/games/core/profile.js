@@ -3,6 +3,7 @@
 // If storage is blocked (private mode), everything still works for the
 // session; progress just is not remembered.
 
+// The key keeps its original name (from before the game was called RootLine) so nobody loses saved progress.
 const KEY = 'lixteam.cyberRange.v1';
 
 export const SKILLS = [
