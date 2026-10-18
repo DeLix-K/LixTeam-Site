@@ -20,6 +20,7 @@ import { VULN } from './cases-vuln.js';
 import { NETWORK } from './cases-network.js';
 import { PENTEST } from './cases-pentest.js';
 import { ENGINEER } from './cases-engineer.js';
+import { CLOUD_LEAD } from './cases-cloud-lead.js';
 
 const CORE = [
   // ─────────────────────────────────────────────────────────────
@@ -154,4 +155,4 @@ const CORE = [
 ];
 
 // Everything the game draws from.
-export const CASES = [...CORE, ...EXTRA, ...LEAD, ...VULN, ...NETWORK, ...PENTEST, ...ENGINEER];
+export const CASES = [...CORE, ...EXTRA, ...LEAD, ...VULN, ...NETWORK, ...PENTEST, ...ENGINEER, ...CLOUD_LEAD];

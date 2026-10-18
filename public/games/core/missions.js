@@ -42,6 +42,7 @@ export const TIERS = [
   // Every tier belongs to one career path (see PATHS). A tier with no `path` is on the analyst path.
   { id: 'cloud', name: 'Foundations', xpMultiplier: 2, path: 'cloud' },
   { id: 'cloud-prac', name: 'Practitioner', xpMultiplier: 2.5, path: 'cloud', note: 'Needs two Foundations missions passed.' },
+  { id: 'cloud-lead', name: 'Senior', xpMultiplier: 3, path: 'cloud', note: 'Opens when you reach Cloud Security Engineer.' },
   { id: 'se-found', name: 'Foundations', xpMultiplier: 1, path: 'engineer' },
   { id: 'se-prac', name: 'Practitioner', xpMultiplier: 1.5, path: 'engineer', note: 'Needs two Foundations missions passed.' },
   { id: 'se-lead', name: 'Senior', xpMultiplier: 2.5, path: 'engineer', note: 'Opens when you reach Security Engineer.' },
@@ -332,6 +333,25 @@ export const MISSIONS = [
     competencies: { secretsiam: 0.4, hardening: 0.3, reporting: 0.3 },
     unlock: { passedTier: { 'se-found': 2 } },
   },
+  // ── Cloud Security path: senior tier
+  {
+    id: 'c07-landing', title: 'Forty accounts, no plan', tier: 'cloud-lead', kind: 'simulation', mode: 'simulation', ref: 'landing-zone', minutes: 22, par: 0, access: 'plus',
+    blurb: 'Forty cloud accounts, each set up by whoever needed one. Decide what to fix first and roll out guardrails without stopping the teams.',
+    competencies: { cloud: 0.4, identity: 0.3, reporting: 0.3 },
+    unlock: { rank: 'engineer' },
+  },
+  {
+    id: 'c08-pivot', title: 'One account to the next', tier: 'cloud-lead', kind: 'breach', mode: 'breach-room', ref: 'cross-account-pivot', minutes: 14, par: 250, access: 'plus',
+    blurb: "A developer's test account was compromised on Monday. By Wednesday, production audit logs had been deleted. Rebuild how the attacker moved between accounts.",
+    competencies: { cloud: 0.4, correlation: 0.4, identity: 0.2 },
+    unlock: { rank: 'engineer' },
+  },
+  {
+    id: 'c09-leak', title: 'The key in the public repository', tier: 'cloud-lead', kind: 'incident', mode: 'incident-commander', ref: 'leaked-admin-key', minutes: 10, par: 125, access: 'plus',
+    blurb: 'An administrator key is in a public repository and someone has already used it. Stop them, find what they changed and protect what they read.',
+    competencies: { identity: 0.4, response: 0.4, cloud: 0.2 },
+    unlock: { rank: 'engineer' },
+  },
   // ── Security Engineer path: senior tier
   {
     id: 'se07-threat', title: 'Before it is built', tier: 'se-lead', kind: 'simulation', mode: 'simulation', ref: 'threat-model', minutes: 20, par: 0, access: 'plus',
@@ -527,6 +547,13 @@ export const MISSIONS = [
     unlock: { rank: 'se', passedTier: { 'se-lead': 3 }, mastery: { hardening: 60, pipeline: 50 }, masteryScope: ['se-found', 'se-prac', 'se-lead'] },
   },
   {
+    id: 'cloud-senior-exam', title: 'Promotion exam: Senior Cloud Security Engineer', tier: 'cloud-lead', kind: 'simulation', mode: 'simulation', ref: 'cloud-senior-exam', minutes: 28, par: 0, access: 'plus',
+    exam: true, promotes: 'senior', passTier: 2,
+    blurb: 'A cost-saving programme, a request to remove logging and an account nobody can explain. Silver or better to pass.',
+    competencies: { cloud: 0.3, identity: 0.3, response: 0.2, reporting: 0.2 },
+    unlock: { rank: 'engineer', passedTier: { 'cloud-lead': 3 }, mastery: { cloud: 60, identity: 55 }, masteryScope: ['cloud', 'cloud-prac', 'cloud-lead'] },
+  },
+  {
     id: 'cloud-exam', title: 'Promotion exam: Cloud Security Engineer', tier: 'cloud-prac', kind: 'simulation', mode: 'simulation', ref: 'cloud-exam', minutes: 26, par: 0, access: 'plus',
     exam: true, promotes: 'engineer', passTier: 2,
     blurb: 'An acquired start-up\'s cloud account, a deadline and a request to cut corners. Silver or better to pass.',
@@ -588,6 +615,10 @@ const CLOUD_RANKS = [
     id: 'engineer', name: 'Cloud Security Engineer', blurb: 'You trace how keys, roles and consoles are abused, and close the gap in the right order.',
     requires: { xp: 400, passedTier: { cloud: 3, 'cloud-prac': 2 }, mastery: { cloud: 60, identity: 55 }, masteryScope: ['cloud', 'cloud-prac'], exam: 'cloud-exam' },
   },
+  {
+    id: 'senior', name: 'Senior Cloud Security Engineer', blurb: 'You design for many accounts at once, roll guardrails out safely, and hold the line on logging and separation when someone wants to save money or time.',
+    requires: { xp: 1000, passedTier: { 'cloud-lead': 3 }, mastery: { cloud: 60, identity: 55 }, masteryScope: ['cloud', 'cloud-prac', 'cloud-lead'], exam: 'cloud-senior-exam' },
+  },
 ];
 
 export const PATHS = [
@@ -619,10 +650,10 @@ export const PATHS = [
     headline: ['Secure the ', 'cloud.'],
     lead: 'Investigate how cloud accounts are exposed and abused, and close the gap in the right order.',
     ranks: CLOUD_RANKS,
-    tiers: ['cloud', 'cloud-prac'],
+    tiers: ['cloud', 'cloud-prac', 'cloud-lead'],
     competencies: ['cloud', 'identity', 'correlation', 'response', 'reporting'],
     roadmap: [
-      { id: 'cloud-senior', title: 'Senior Cloud Security Engineer and Cloud Security Architect ranks', note: 'Multi-account design, policy as code, and cloud detection and response at scale.' },
+      { id: 'cloud-architect', title: 'Cloud Security Architect rank', note: 'Policy as code, and cloud detection and response at scale.' },
       { id: 'cloud-more', title: 'More cloud missions', note: 'Containers and Kubernetes, serverless, data protection and cloud incident response.' },
     ],
   },

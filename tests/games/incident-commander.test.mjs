@@ -447,4 +447,41 @@ t('cluster-breakout: redeploying the tampered image and shutting down the platfo
   assert.ok(sd.g.disruption >= 40);
 });
 
+// ── leaked-admin-key (senior cloud security) ──
+console.log('--- leaked-admin-key strategies');
+const LK = 'leaked-admin-key';
+const lkIdeal = run(LK, ['activity', 'preserve', 'disable-key', 'remove-user', 'rotate-secrets', 'stop-machines', 'mgr', 'declare']);
+t('leaked-admin-key: the ideal response is Textbook and ends declared', () => { assert.equal(lkIdeal.gr.rating.name, 'Textbook'); assert.equal(lkIdeal.g.outcome, 'declared'); });
+t('leaked-admin-key: looking at the repository as well is still Textbook', () => {
+  const r = run(LK, ['activity', 'repo', 'preserve', 'disable-key', 'remove-user', 'rotate-secrets', 'stop-machines', 'private', 'mgr', 'declare'], { quiet: true });
+  assert.equal(r.gr.rating.name, 'Textbook');
+});
+t('leaked-admin-key: skipping the secrets, the evidence or the briefing drops below Textbook', () => {
+  const nosecrets = run(LK, ['activity', 'preserve', 'disable-key', 'remove-user', 'stop-machines', 'mgr', 'declare'], { quiet: true });
+  assert.notEqual(nosecrets.gr.rating.name, 'Textbook');
+  const noevidence = run(LK, ['activity', 'disable-key', 'remove-user', 'rotate-secrets', 'stop-machines', 'mgr', 'declare'], { quiet: true });
+  assert.notEqual(noevidence.gr.rating.name, 'Textbook');
+  assert.equal(noevidence.g.flags.evidenceLost, true);
+  const nobrief = run(LK, ['activity', 'preserve', 'rotate-secrets', 'disable-key', 'remove-user', 'stop-machines', 'declare'], { quiet: true });
+  assert.notEqual(nobrief.gr.rating.name, 'Textbook');
+});
+t('leaked-admin-key: you cannot disable, remove, preserve or declare before reading the audit log', () => {
+  const g = E.newGame(byId[LK]);
+  const ids = E.availableActions(byId[LK], g).map((a) => a.id);
+  for (const locked of ['disable-key', 'remove-user', 'preserve', 'stop-machines', 'rotate-secrets', 'declare']) assert.ok(!ids.includes(locked), locked + ' should be locked at the start');
+});
+t('leaked-admin-key: disabling only the leaked key lets the attacker carry on with their own user', () => {
+  const r = run(LK, ['activity', 'preserve', 'disable-key', 'rotate-secrets', 'stop-machines', 'mgr'], { quiet: true });
+  assert.equal(r.g.flags.persistence, true);
+  assert.ok(r.gr.points < lkIdeal.gr.points - 40, String(r.gr.points));
+});
+t('leaked-admin-key: cleaning the repository history is not a fix, and shutting down the account is an overreaction', () => {
+  const purge = run(LK, ['activity', 'repo', 'purge', 'mgr'], { quiet: true });
+  assert.equal(purge.gr.rating.name, 'Breach');
+  assert.equal(purge.g.flags.historyPurged, true);
+  const sd = run(LK, ['shutdown'], { quiet: true });
+  assert.equal(sd.gr.rating.name, 'Breach');
+  assert.ok(sd.g.disruption >= 40);
+});
+
 console.log(n, 'passed');
