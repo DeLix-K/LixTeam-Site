@@ -25,6 +25,7 @@ import { CLOUD } from './sims-cloud.js';
 import { ENGINEER_LEAD } from './sims-engineer-lead.js';
 import { CLOUD_LEAD } from './sims-cloud-lead.js';
 import { NETWORK_LEAD } from './sims-network-lead.js';
+import { VULN_LEAD } from './sims-vuln-lead.js';
 
 const CORE = [
   // ─────────────────────────────────────────────────────────────
@@ -266,4 +267,4 @@ const CORE = [
 ];
 
 // Everything the simulation draws from.
-export const SIMS = [...CORE, ...SENIOR, ...LEAD, ...MANAGER, ...VULN, ...NETWORK, ...PENTEST, ...ENGINEER, ...CLOUD, ...ENGINEER_LEAD, ...CLOUD_LEAD, ...NETWORK_LEAD];
+export const SIMS = [...CORE, ...SENIOR, ...LEAD, ...MANAGER, ...VULN, ...NETWORK, ...PENTEST, ...ENGINEER, ...CLOUD, ...ENGINEER_LEAD, ...CLOUD_LEAD, ...NETWORK_LEAD, ...VULN_LEAD];

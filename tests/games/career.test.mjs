@@ -72,7 +72,7 @@ t('mission data is well formed, with the right numbers per tier', () => {
     if (m.exam) assert.ok(m.promotes && m.passTier >= 2);
   }
   assert.deepEqual([ids('beginner').length, ids('intermediate').length, ids('advanced').length, ids('senior').length, ids('lead').length, ids('manager').length, ids('cloud').length], [4, 7, 4, 3, 4, 2, 3]);
-  assert.equal(M.MISSIONS.filter((m) => m.exam).length, 12);
+  assert.equal(M.MISSIONS.filter((m) => m.exam).length, 13);
   assert.equal(M.RANKS.length, 6);
   assert.equal(M.COMPETENCIES.length, 22);
   for (const c of M.COMPETENCIES) assert.ok(M.MISSIONS.filter((m) => m.competencies[c.id]).length >= 2, c.id + ' needs at least two missions');
@@ -825,8 +825,27 @@ t('the vulnerability ladder: Junior after two foundations, Analyst needs everyth
   assert.equal(C.rankOf(s, 'vuln').rank.id, 'analyst', 'bronze is not a pass');
   const r = play(s, 'vm-exam', 2);
   assert.equal(r.promoted.id, 'vma');
-  assert.equal(C.rankOf(s, 'vuln').isTop, true);
+  assert.equal(C.rankOf(s, 'vuln').isTop, false, 'Senior is above Vulnerability Management Analyst');
   assert.equal(C.rankOf(s, 'analyst').rank.id, 'recruit', 'the analyst ladder is untouched');
+});
+t('the senior vulnerability tier: opens at Vulnerability Management Analyst, needs three passes, mastery and the exam', () => {
+  const lead = () => M.MISSIONS.filter((m) => m.tier === 'vm-lead' && !m.exam).map((m) => m.id);
+  assert.equal(lead().length, 3);
+  const s = C.blank();
+  for (const id of [...lead(), 'vm-senior-exam']) assert.equal(C.missionStatus(s, id).unlocked, false, id + ' is locked before Vulnerability Management Analyst');
+  for (const id of [...vmIds('vm-found'), ...vmIds('vm-prac')]) play(s, id, 3);
+  play(s, 'vm-exam', 3);
+  assert.equal(C.rankOf(s, 'vuln').rank.id, 'vma');
+  for (const id of lead()) assert.equal(C.missionStatus(s, id).unlocked, true, id);
+  assert.equal(C.missionStatus(s, 'vm-senior-exam').unlocked, false, 'the exam needs the senior missions first');
+  for (const id of lead()) play(s, id, 3);
+  assert.equal(C.missionStatus(s, 'vm-senior-exam').unlocked, true, JSON.stringify(C.missionStatus(s, 'vm-senior-exam').missing));
+  play(s, 'vm-senior-exam', 1);
+  assert.equal(C.rankOf(s, 'vuln').rank.id, 'vma', 'bronze is not a pass');
+  const r = play(s, 'vm-senior-exam', 2);
+  assert.equal(r.promoted.id, 'senior', JSON.stringify(C.rankOf(s, 'vuln').checklist));
+  assert.equal(C.rankOf(s, 'vuln').isTop, true);
+  assert.equal(C.rankOf(s, 'cloud').rank.id, 'recruit', 'other paths are untouched');
 });
 t('the vulnerability exam needs real mastery in scanning and prioritisation', () => {
   const s = C.blank();

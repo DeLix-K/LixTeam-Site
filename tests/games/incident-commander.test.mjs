@@ -519,4 +519,39 @@ t('dns-hijack: taking the whole sign-in service offline is an overreaction', () 
   assert.ok(sd.g.disruption >= 40);
 });
 
+// ── no-patch-yet (senior vulnerability management) ──
+console.log('--- no-patch-yet strategies');
+const NP = 'no-patch-yet';
+const npIdeal = run(NP, ['advisory', 'inventory', 'mitigate', 'hunt', 'isolate', 'rebuild', 'monitor', 'internal', 'mgr', 'declare']);
+t('no-patch-yet: the ideal response is Textbook and ends declared', () => { assert.equal(npIdeal.gr.rating.name, 'Textbook'); assert.equal(npIdeal.g.outcome, 'declared'); });
+t('no-patch-yet: skipping the rebuild or the plan for the inside drops below Textbook', () => {
+  const norebuild = run(NP, ['advisory', 'inventory', 'mitigate', 'hunt', 'isolate', 'monitor', 'internal', 'mgr', 'declare'], { quiet: true });
+  assert.notEqual(norebuild.gr.rating.name, 'Textbook');
+  const nointernal = run(NP, ['advisory', 'inventory', 'mitigate', 'hunt', 'isolate', 'rebuild', 'monitor', 'mgr', 'declare'], { quiet: true });
+  assert.notEqual(nointernal.gr.rating.name, 'Textbook');
+});
+t('no-patch-yet: you cannot mitigate, hunt or declare before you have the advisory and the inventory', () => {
+  const g = E.newGame(byId[NP]);
+  const ids = E.availableActions(byId[NP], g).map((a) => a.id);
+  for (const locked of ['inventory', 'mitigate', 'hunt', 'isolate', 'rebuild', 'declare']) assert.ok(!ids.includes(locked), locked + ' should be locked at the start');
+});
+t('no-patch-yet: protecting the edge late lets a second server be taken', () => {
+  const late = run(NP, ['advisory', 'inventory', 'hunt', 'isolate', 'rebuild', 'monitor', 'mitigate', 'internal', 'mgr', 'declare'], { quiet: true });
+  assert.equal(late.g.flags.secondHit, true);
+  assert.ok(late.gr.points < npIdeal.gr.points - 20, String(late.gr.points));
+});
+t('no-patch-yet: an untested fix on every server breaks production, and waiting leaves the exposure', () => {
+  const unsafe = run(NP, ['advisory', 'inventory', 'unsafe-patch', 'hunt', 'isolate', 'rebuild', 'mgr', 'declare'], { quiet: true });
+  assert.equal(unsafe.g.flags.brokeProduction, true);
+  assert.notEqual(unsafe.gr.rating.name, 'Textbook');
+  assert.ok(unsafe.g.disruption >= 30);
+  const wait = run(NP, ['advisory', 'wait', 'mgr'], { quiet: true });
+  assert.equal(wait.gr.rating.name, 'Breach');
+});
+t('no-patch-yet: switching everything off is an overreaction', () => {
+  const sd = run(NP, ['shutdown'], { quiet: true });
+  assert.equal(sd.gr.rating.name, 'Breach');
+  assert.ok(sd.g.disruption >= 40);
+});
+
 console.log(n, 'passed');

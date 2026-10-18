@@ -53,6 +53,7 @@ export const TIERS = [
   { id: 'net-lead', name: 'Senior', xpMultiplier: 2.5, path: 'network', note: 'Opens when you reach Network Security Engineer.' },
   { id: 'vm-found', name: 'Foundations', xpMultiplier: 1, path: 'vuln' },
   { id: 'vm-prac', name: 'Practitioner', xpMultiplier: 1.5, path: 'vuln', note: 'Needs two Foundations missions passed.' },
+  { id: 'vm-lead', name: 'Senior', xpMultiplier: 2.5, path: 'vuln', note: 'Opens when you reach Vulnerability Management Analyst.' },
 ];
 
 // XP for a mission by medal (before the tier multiplier). Medal 0 = no pass.
@@ -334,6 +335,25 @@ export const MISSIONS = [
     competencies: { secretsiam: 0.4, hardening: 0.3, reporting: 0.3 },
     unlock: { passedTier: { 'se-found': 2 } },
   },
+  // ── Vulnerability Management path: senior tier
+  {
+    id: 'vm07-dashboard', title: 'The dashboard that looks green', tier: 'vm-lead', kind: 'simulation', mode: 'simulation', ref: 'honest-dashboard', minutes: 22, par: 0, access: 'plus',
+    blurb: 'The dashboard says 97% of systems are patched. Check what the number really covers and decide what the board is told.',
+    competencies: { reporting: 0.4, vulnrisk: 0.3, vulnscan: 0.3 },
+    unlock: { rank: 'vma' },
+  },
+  {
+    id: 'vm08-invisible', title: 'The server on no report', tier: 'vm-lead', kind: 'detective', mode: 'cyber-detective', ref: 'invisible-server', minutes: 12, par: 250, access: 'plus',
+    blurb: 'A tester got in through a server that has never appeared in a vulnerability report. Find out how a known flaw sat on the internet for fourteen months.',
+    competencies: { vulnscan: 0.6, remediate: 0.2, reporting: 0.2 },
+    unlock: { rank: 'vma' },
+  },
+  {
+    id: 'vm09-nopatch', title: 'Critical flaw, no patch yet', tier: 'vm-lead', kind: 'incident', mode: 'incident-commander', ref: 'no-patch-yet', minutes: 10, par: 125, access: 'plus',
+    blurb: 'A critical flaw is being exploited and the vendor has no fix. Find where you are exposed, reduce the risk and check whether anyone got there first.',
+    competencies: { response: 0.4, vulnrisk: 0.3, remediate: 0.3 },
+    unlock: { rank: 'vma' },
+  },
   // ── Network Security path: senior tier
   {
     id: 'nw07-zones', title: 'Cutting the network into zones', tier: 'net-lead', kind: 'simulation', mode: 'simulation', ref: 'segmentation-programme', minutes: 22, par: 0, access: 'plus',
@@ -567,6 +587,13 @@ export const MISSIONS = [
     unlock: { rank: 'se', passedTier: { 'se-lead': 3 }, mastery: { hardening: 60, pipeline: 50 }, masteryScope: ['se-found', 'se-prac', 'se-lead'] },
   },
   {
+    id: 'vm-senior-exam', title: 'Promotion exam: Senior Vulnerability Analyst', tier: 'vm-lead', kind: 'simulation', mode: 'simulation', ref: 'vm-senior-exam', minutes: 28, par: 0, access: 'plus',
+    exam: true, promotes: 'senior', passTier: 2,
+    blurb: 'An audit in three weeks, twelve thousand findings and a division that wants a blanket exception. Silver or better to pass.',
+    competencies: { vulnscan: 0.2, vulnrisk: 0.3, remediate: 0.2, reporting: 0.3 },
+    unlock: { rank: 'vma', passedTier: { 'vm-lead': 3 }, mastery: { vulnscan: 60, vulnrisk: 55 }, masteryScope: ['vm-found', 'vm-prac', 'vm-lead'] },
+  },
+  {
     id: 'net-senior-exam', title: 'Promotion exam: Senior Network Security Engineer', tier: 'net-lead', kind: 'simulation', mode: 'simulation', ref: 'net-senior-exam', minutes: 28, par: 0, access: 'plus',
     exam: true, promotes: 'senior', passTier: 2,
     blurb: 'A new site, a supplier who wants a door left open and an executive who backs them. Silver or better to pass.',
@@ -636,6 +663,10 @@ const VULN_RANKS = [
   {
     id: 'vma', name: 'Vulnerability Management Analyst', blurb: 'You rank by risk, run a patching cycle sensibly and report honestly on what is and is not fixed.',
     requires: { xp: 250, passedTier: { 'vm-found': 3, 'vm-prac': 2 }, mastery: { vulnscan: 55, vulnrisk: 55 }, masteryScope: ['vm-found', 'vm-prac'], exam: 'vm-exam' },
+  },
+  {
+    id: 'senior', name: 'Senior Vulnerability Analyst', blurb: 'You run a programme rather than a scan, measure it honestly, and hold the line on the numbers when leadership wants a cleaner headline than the facts support.',
+    requires: { xp: 650, passedTier: { 'vm-lead': 3 }, mastery: { vulnscan: 60, vulnrisk: 55 }, masteryScope: ['vm-found', 'vm-prac', 'vm-lead'], exam: 'vm-senior-exam' },
   },
 ];
 
@@ -707,10 +738,10 @@ export const PATHS = [
     headline: ['Fix what ', 'matters.'],
     lead: 'Cut through thousands of findings to the few that matter, and get them fixed. Rank is earned through mastery and a practical exam.',
     ranks: VULN_RANKS,
-    tiers: ['vm-found', 'vm-prac'],
+    tiers: ['vm-found', 'vm-prac', 'vm-lead'],
     competencies: ['vulnscan', 'vulnrisk', 'remediate', 'response', 'reporting'],
     roadmap: [
-      { id: 'vm-senior', title: 'Senior Vulnerability Analyst and Vulnerability Management Lead ranks', note: 'Programme design, metrics that leadership can trust, and managing exceptions at scale.' },
+      { id: 'vm-lead-rank', title: 'Vulnerability Management Lead rank', note: 'Running a whole programme: strategy, budget and reporting to the board.' },
       { id: 'vm-more', title: 'More missions', note: 'Asset discovery, cloud and container scanning, patch automation and board reporting.' },
     ],
   },

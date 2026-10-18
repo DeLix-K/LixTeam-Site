@@ -16,6 +16,7 @@ import { CLOUD } from './incidents-cloud.js';
 import { ENGINEER_LEAD } from './incidents-engineer-lead.js';
 import { CLOUD_LEAD } from './incidents-cloud-lead.js';
 import { NETWORK_LEAD } from './incidents-network-lead.js';
+import { VULN_LEAD } from './incidents-vuln-lead.js';
 
 const CORE = [
   // ─────────────────────────────────────────────────────────────
@@ -412,4 +413,4 @@ const CORE = [
 ];
 
 // Everything the game draws from.
-export const INCIDENTS = [...CORE, ...EXTRA, ...LEAD, ...VULN, ...NETWORK, ...PENTEST, ...ENGINEER, ...CLOUD, ...ENGINEER_LEAD, ...CLOUD_LEAD, ...NETWORK_LEAD];
+export const INCIDENTS = [...CORE, ...EXTRA, ...LEAD, ...VULN, ...NETWORK, ...PENTEST, ...ENGINEER, ...CLOUD, ...ENGINEER_LEAD, ...CLOUD_LEAD, ...NETWORK_LEAD, ...VULN_LEAD];
