@@ -554,4 +554,44 @@ t('no-patch-yet: switching everything off is an overreaction', () => {
   assert.ok(sd.g.disruption >= 40);
 });
 
+// ── test-outage (senior penetration testing: conduct, not technique) ──
+console.log('--- test-outage strategies');
+const TO = 'test-outage';
+const toIdeal = run(TO, ['stop', 'call', 'mylog', 'keep', 'help', 'note', 'declare']);
+t('test-outage: the ideal response is Textbook and ends declared', () => { assert.equal(toIdeal.gr.rating.name, 'Textbook'); assert.equal(toIdeal.g.outcome, 'declared'); });
+t('test-outage: skipping the records, the help or the written note drops below Textbook', () => {
+  for (const seq of [['stop', 'call', 'mylog', 'help', 'note', 'declare'], ['stop', 'call', 'mylog', 'keep', 'note', 'declare'], ['stop', 'call', 'mylog', 'keep', 'help', 'declare']]) {
+    assert.notEqual(run(TO, seq, { quiet: true }).gr.rating.name, 'Textbook', seq.join());
+  }
+});
+t('test-outage: you cannot give your timings, keep records or send the note before you know what ran', () => {
+  const g = E.newGame(byId[TO]);
+  const ids = E.availableActions(byId[TO], g).map((a) => a.id);
+  for (const locked of ['keep', 'help', 'note']) assert.ok(!ids.includes(locked), locked + ' should be locked at the start');
+});
+t('test-outage: hiding your traces or blaming an outside attacker is a breach of trust', () => {
+  const hide = run(TO, ['stop', 'call', 'mylog', 'hide', 'note', 'declare'], { quiet: true });
+  assert.equal(hide.g.flags.hidden, true);
+  assert.equal(hide.gr.rating.name, 'Breach of trust');
+  const blame = run(TO, ['stop', 'call', 'blame', 'mylog', 'declare'], { quiet: true });
+  assert.equal(blame.gr.rating.name, 'Breach of trust');
+});
+t('test-outage: fixing the servers yourself, or stalling to investigate, is worse than stopping and telling', () => {
+  const fix = run(TO, ['stop', 'call', 'mylog', 'fix-yourself', 'keep', 'help', 'note', 'declare'], { quiet: true });
+  assert.equal(fix.g.flags.unauthorised, true);
+  assert.ok(fix.gr.points < toIdeal.gr.points - 20, String(fix.gr.points));
+  const dig = run(TO, ['dig', 'stop', 'call', 'mylog', 'keep', 'help', 'note', 'declare'], { quiet: true });
+  assert.ok(dig.gr.points < toIdeal.gr.points - 15, String(dig.gr.points));
+});
+t('test-outage: leaving your test running while the shop is down is a breach of trust', () => {
+  const r = run(TO, ['mylog', 'rules', 'dig', 'keep'], { quiet: true });
+  assert.equal(r.g.flags.testRunning, true);
+  assert.equal(r.gr.rating.name, 'Breach of trust');
+});
+t('test-outage: walking away from the engagement mid-incident is an overreaction', () => {
+  const sd = run(TO, ['shutdown'], { quiet: true });
+  assert.equal(sd.gr.rating.name, 'Breach of trust');
+  assert.ok(sd.g.disruption >= 40);
+});
+
 console.log(n, 'passed');

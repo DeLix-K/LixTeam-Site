@@ -72,7 +72,7 @@ t('mission data is well formed, with the right numbers per tier', () => {
     if (m.exam) assert.ok(m.promotes && m.passTier >= 2);
   }
   assert.deepEqual([ids('beginner').length, ids('intermediate').length, ids('advanced').length, ids('senior').length, ids('lead').length, ids('manager').length, ids('cloud').length], [4, 7, 4, 3, 4, 2, 3]);
-  assert.equal(M.MISSIONS.filter((m) => m.exam).length, 13);
+  assert.equal(M.MISSIONS.filter((m) => m.exam).length, 14);
   assert.equal(M.RANKS.length, 6);
   assert.equal(M.COMPETENCIES.length, 22);
   for (const c of M.COMPETENCIES) assert.ok(M.MISSIONS.filter((m) => m.competencies[c.id]).length >= 2, c.id + ' needs at least two missions');
@@ -951,8 +951,27 @@ t('the pentest ladder: Junior after two foundations, Penetration Tester needs ev
   play(s, 'pt-exam', 1);
   assert.equal(C.rankOf(s, 'pentest').rank.id, 'junior', 'bronze is not a pass');
   assert.equal(play(s, 'pt-exam', 2).promoted.id, 'pt');
-  assert.equal(C.rankOf(s, 'pentest').isTop, true);
+  assert.equal(C.rankOf(s, 'pentest').isTop, false, 'Senior is above Penetration Tester');
   assert.equal(C.rankOf(s, 'network').rank.id, 'recruit', 'other paths are untouched');
+});
+t('the senior pentest tier: opens at Penetration Tester, needs three passes, mastery and the exam', () => {
+  const lead = () => M.MISSIONS.filter((m) => m.tier === 'pt-lead' && !m.exam).map((m) => m.id);
+  assert.equal(lead().length, 3);
+  const s = C.blank();
+  for (const id of [...lead(), 'pt-senior-exam']) assert.equal(C.missionStatus(s, id).unlocked, false, id + ' is locked before Penetration Tester');
+  for (const id of [...ptIds('pt-found'), ...ptIds('pt-prac')]) play(s, id, 3);
+  play(s, 'pt-exam', 3);
+  assert.equal(C.rankOf(s, 'pentest').rank.id, 'pt');
+  for (const id of lead()) assert.equal(C.missionStatus(s, id).unlocked, true, id);
+  assert.equal(C.missionStatus(s, 'pt-senior-exam').unlocked, false, 'the exam needs the senior missions first');
+  for (const id of lead()) play(s, id, 3);
+  assert.equal(C.missionStatus(s, 'pt-senior-exam').unlocked, true, JSON.stringify(C.missionStatus(s, 'pt-senior-exam').missing));
+  play(s, 'pt-senior-exam', 1);
+  assert.equal(C.rankOf(s, 'pentest').rank.id, 'pt', 'bronze is not a pass');
+  const r = play(s, 'pt-senior-exam', 2);
+  assert.equal(r.promoted.id, 'senior', JSON.stringify(C.rankOf(s, 'pentest').checklist));
+  assert.equal(C.rankOf(s, 'pentest').isTop, true);
+  assert.equal(C.rankOf(s, 'cloud').rank.id, 'recruit', 'other paths are untouched');
 });
 t('pentest skills show on the pentest path only', () => {
   const s = C.blank();

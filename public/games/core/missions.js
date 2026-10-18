@@ -48,6 +48,7 @@ export const TIERS = [
   { id: 'se-lead', name: 'Senior', xpMultiplier: 2.5, path: 'engineer', note: 'Opens when you reach Security Engineer.' },
   { id: 'pt-found', name: 'Foundations', xpMultiplier: 1, path: 'pentest' },
   { id: 'pt-prac', name: 'Practitioner', xpMultiplier: 1.5, path: 'pentest', note: 'Needs two Foundations missions passed.' },
+  { id: 'pt-lead', name: 'Senior', xpMultiplier: 2.5, path: 'pentest', note: 'Opens when you reach Penetration Tester.' },
   { id: 'net-found', name: 'Foundations', xpMultiplier: 1, path: 'network' },
   { id: 'net-prac', name: 'Practitioner', xpMultiplier: 1.5, path: 'network', note: 'Needs two Foundations missions passed.' },
   { id: 'net-lead', name: 'Senior', xpMultiplier: 2.5, path: 'network', note: 'Opens when you reach Network Security Engineer.' },
@@ -335,6 +336,25 @@ export const MISSIONS = [
     competencies: { secretsiam: 0.4, hardening: 0.3, reporting: 0.3 },
     unlock: { passedTier: { 'se-found': 2 } },
   },
+  // ── Ethical Hacking and PenTest path: senior tier (judgement, not exploitation)
+  {
+    id: 'pt07-plan', title: 'Planning the engagement', tier: 'pt-lead', kind: 'simulation', mode: 'simulation', ref: 'engagement-plan', minutes: 22, par: 0, access: 'plus',
+    blurb: 'A client wants a three-week red team test. Work out which rules matter most, find the gaps in the agreement and decide who must be told.',
+    competencies: { scope: 0.5, findings: 0.2, reporting: 0.3 },
+    unlock: { rank: 'pt' },
+  },
+  {
+    id: 'pt08-cover', title: 'Hiding behind the test', tier: 'pt-lead', kind: 'detective', mode: 'cyber-detective', ref: 'cover-of-the-test', minutes: 12, par: 250, access: 'plus',
+    blurb: 'The client closed every alert during the test as "pentest". After it, a customer\'s data is for sale. Find out how a real intruder was missed.',
+    competencies: { recon: 0.3, findings: 0.4, reporting: 0.3 },
+    unlock: { rank: 'pt' },
+  },
+  {
+    id: 'pt09-outage', title: 'The test that took the shop down', tier: 'pt-lead', kind: 'incident', mode: 'incident-commander', ref: 'test-outage', minutes: 10, par: 120, access: 'plus',
+    blurb: 'Your testing coincides with the client\'s shop going down on a busy Saturday. Decide what to stop, who to call and what to say.',
+    competencies: { scope: 0.5, findings: 0.2, reporting: 0.3 },
+    unlock: { rank: 'pt' },
+  },
   // ── Vulnerability Management path: senior tier
   {
     id: 'vm07-dashboard', title: 'The dashboard that looks green', tier: 'vm-lead', kind: 'simulation', mode: 'simulation', ref: 'honest-dashboard', minutes: 22, par: 0, access: 'plus',
@@ -587,6 +607,13 @@ export const MISSIONS = [
     unlock: { rank: 'se', passedTier: { 'se-lead': 3 }, mastery: { hardening: 60, pipeline: 50 }, masteryScope: ['se-found', 'se-prac', 'se-lead'] },
   },
   {
+    id: 'pt-senior-exam', title: 'Promotion exam: Senior Penetration Tester', tier: 'pt-lead', kind: 'simulation', mode: 'simulation', ref: 'pt-senior-exam', minutes: 28, par: 0, access: 'plus',
+    exam: true, promotes: 'senior', passTier: 2,
+    blurb: 'Midway through a red team engagement: an out-of-scope discovery, a request to wait and an unhappy executive. Silver or better to pass.',
+    competencies: { scope: 0.3, recon: 0.1, findings: 0.4, reporting: 0.2 },
+    unlock: { rank: 'pt', passedTier: { 'pt-lead': 3 }, mastery: { scope: 60, findings: 55 }, masteryScope: ['pt-found', 'pt-prac', 'pt-lead'] },
+  },
+  {
     id: 'vm-senior-exam', title: 'Promotion exam: Senior Vulnerability Analyst', tier: 'vm-lead', kind: 'simulation', mode: 'simulation', ref: 'vm-senior-exam', minutes: 28, par: 0, access: 'plus',
     exam: true, promotes: 'senior', passTier: 2,
     blurb: 'An audit in three weeks, twelve thousand findings and a division that wants a blanket exception. Silver or better to pass.',
@@ -641,6 +668,10 @@ const PENTEST_RANKS = [
   {
     id: 'pt', name: 'Penetration Tester', blurb: 'You stay inside the rules under pressure, find what matters and report honestly.',
     requires: { xp: 250, passedTier: { 'pt-found': 3, 'pt-prac': 2 }, mastery: { scope: 55, findings: 55 }, masteryScope: ['pt-found', 'pt-prac'], exam: 'pt-exam' },
+  },
+  {
+    id: 'senior', name: 'Senior Penetration Tester', blurb: 'You plan and lead an engagement, agree rules that protect everyone, know who must be told, and report honestly when someone wants the result to look different.',
+    requires: { xp: 650, passedTier: { 'pt-lead': 3 }, mastery: { scope: 60, findings: 55 }, masteryScope: ['pt-found', 'pt-prac', 'pt-lead'], exam: 'pt-senior-exam' },
   },
 ];
 
@@ -751,10 +782,10 @@ export const PATHS = [
     headline: ['Hack ', 'ethically.'],
     lead: 'Decision-based practice in method and judgement: what is in scope, what to do when you find something serious, and how to report it honestly. It does not teach working exploits.',
     ranks: PENTEST_RANKS,
-    tiers: ['pt-found', 'pt-prac'],
+    tiers: ['pt-found', 'pt-prac', 'pt-lead'],
     competencies: ['scope', 'recon', 'findings', 'reporting'],
     roadmap: [
-      { id: 'pt-senior', title: 'Senior Penetration Tester and Red Team Lead ranks', note: 'Planning and leading engagements, adversary simulation and purple teaming.' },
+      { id: 'pt-redteam-lead', title: 'Red Team Lead rank', note: 'Adversary simulation, purple teaming and running a team of testers.' },
       { id: 'pt-more', title: 'More missions', note: 'Web application, wireless and cloud testing judgement, and working with clients on remediation.' },
     ],
   },
