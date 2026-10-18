@@ -684,4 +684,99 @@ t('lost-test-laptop: waiting for the laptop to turn up, or walking away, is wors
   assert.notEqual(walk.gr.rating.name, 'Textbook');
 });
 
+// ── leaver-copy (incident response and forensics) ──
+console.log('--- leaver-copy strategies');
+const LC = 'leaver-copy';
+const lcIdeal = run(LC, ['export', 'access', 'legal', 'image', 'hold', 'monitor', 'dpo', 'mgr', 'declare']);
+t('leaver-copy: the ideal response is Textbook and ends declared', () => { assert.equal(lcIdeal.gr.rating.name, 'Textbook'); assert.equal(lcIdeal.g.outcome, 'declared'); });
+t('leaver-copy: skipping the DPO or the briefing drops below Textbook', () => {
+  const nodpo = run(LC, ['export', 'access', 'legal', 'image', 'hold', 'monitor', 'mgr', 'declare'], { quiet: true });
+  assert.notEqual(nodpo.gr.rating.name, 'Textbook');
+  assert.ok(nodpo.gr.breakdown.some((b) => /DPO not told/.test(b.label)));
+});
+t('leaver-copy: you cannot image the laptop, hold the logs or hand over before Legal and the evidence', () => {
+  const g = E.newGame(byId[LC]);
+  const ids = E.availableActions(byId[LC], g).map((a) => a.id);
+  for (const locked of ['image', 'hold', 'monitor', 'access', 'dpo', 'declare']) assert.ok(!ids.includes(locked), locked + ' should be locked at the start');
+});
+t('leaver-copy: imaging late lets IT reissue the laptop, and accusing him early spoils the case', () => {
+  const late = run(LC, ['export', 'access', 'legal', 'hold', 'monitor', 'dpo', 'mgr', 'image', 'declare'], { quiet: true });
+  assert.equal(late.g.flags.reissued, true);
+  assert.notEqual(late.gr.rating.name, 'Textbook');
+  const early = run(LC, ['export', 'confront', 'legal', 'image', 'hold', 'monitor', 'dpo'], { quiet: true });
+  assert.equal(early.g.flags.accusedEarly, true);
+  assert.ok(early.gr.points < lcIdeal.gr.points - 40, String(early.gr.points));
+});
+t('leaver-copy: reissuing the laptop or removing him at once are poor responses', () => {
+  const re = run(LC, ['export', 'legal', 'reissue-now', 'hold', 'monitor', 'dpo'], { quiet: true });
+  assert.notEqual(re.gr.rating.name, 'Textbook');
+  assert.ok(re.gr.points < lcIdeal.gr.points - 50, String(re.gr.points));
+  const sd = run(LC, ['export', 'legal', 'image', 'hold', 'shutdown', 'dpo'], { quiet: true });
+  assert.ok(sd.g.disruption >= 35);
+  assert.notEqual(sd.gr.rating.name, 'Textbook');
+});
+
+// ── regulator-enquiry (governance, risk and compliance) ──
+console.log('--- regulator-enquiry strategies');
+const RE = 'regulator-enquiry';
+const reIdeal = run(RE, ['read', 'gaps', 'legal', 'hold', 'owner', 'board', 'truth', 'declare']);
+t('regulator-enquiry: the ideal response is Textbook and ends declared', () => { assert.equal(reIdeal.gr.rating.name, 'Textbook'); assert.equal(reIdeal.g.outcome, 'declared'); });
+t('regulator-enquiry: skipping the owners or the leadership briefing drops below Textbook', () => {
+  const noowner = run(RE, ['read', 'gaps', 'legal', 'hold', 'board', 'truth', 'declare'], { quiet: true });
+  assert.notEqual(noowner.gr.rating.name, 'Textbook');
+  const noboard = run(RE, ['read', 'gaps', 'legal', 'hold', 'owner', 'truth', 'declare'], { quiet: true });
+  assert.notEqual(noboard.gr.rating.name, 'Textbook');
+});
+t('regulator-enquiry: you cannot hold the records or draft the answer before Legal and the gaps', () => {
+  const g = E.newGame(byId[RE]);
+  const ids = E.availableActions(byId[RE], g).map((a) => a.id);
+  for (const locked of ['gaps', 'hold', 'truth', 'owner', 'board', 'declare']) assert.ok(!ids.includes(locked), locked + ' should be locked at the start');
+});
+t('regulator-enquiry: backdating a document is an integrity breach', () => {
+  const r = run(RE, ['read', 'gaps', 'legal', 'hold', 'owner', 'board', 'backdate', 'truth', 'declare'], { quiet: true });
+  assert.equal(r.g.flags.backdated, true);
+  assert.equal(r.gr.rating.name, 'Integrity breach');
+});
+t('regulator-enquiry: leaving the records unprotected lets a manager tidy them', () => {
+  const r = run(RE, ['read', 'gaps', 'legal', 'owner', 'board'], { quiet: true });
+  assert.equal(r.g.flags.backdated, true);
+  assert.equal(r.gr.rating.name, 'Integrity breach');
+});
+t('regulator-enquiry: halting all other compliance work is an overreaction', () => {
+  const r = run(RE, ['read', 'gaps', 'legal', 'hold', 'shutdown', 'truth', 'declare'], { quiet: true });
+  assert.ok(r.g.disruption >= 35);
+  assert.notEqual(r.gr.rating.name, 'Textbook');
+});
+
+// ── partner-warning (threat intelligence) ──
+console.log('--- partner-warning strategies');
+const PW = 'partner-warning';
+const pwIdeal = run(PW, ['assess', 'search', 'scope', 'block', 'isolate', 'warn', 'share', 'brief', 'declare']);
+t('partner-warning: the ideal response is Textbook and ends declared', () => { assert.equal(pwIdeal.gr.rating.name, 'Textbook'); assert.equal(pwIdeal.g.outcome, 'declared'); });
+t('partner-warning: skipping the warning to finance or the sector group drops below Textbook or lowers the score', () => {
+  const nowarn = run(PW, ['assess', 'search', 'scope', 'block', 'isolate', 'share', 'brief', 'declare'], { quiet: true });
+  assert.notEqual(nowarn.gr.rating.name, 'Textbook');
+  const nobrief = run(PW, ['assess', 'search', 'scope', 'block', 'isolate', 'warn', 'share', 'declare'], { quiet: true });
+  assert.notEqual(nobrief.gr.rating.name, 'Textbook');
+});
+t('partner-warning: you cannot search, isolate or brief before you have judged the source', () => {
+  const g = E.newGame(byId[PW]);
+  const ids = E.availableActions(byId[PW], g).map((a) => a.id);
+  for (const locked of ['search', 'scope', 'block', 'isolate', 'warn', 'brief', 'declare']) assert.ok(!ids.includes(locked), locked + ' should be locked at the start');
+});
+t('partner-warning: blocking before you know the scope leaves the laptop online long enough for it to spread', () => {
+  const r = run(PW, ['assess', 'block', 'warn', 'search', 'scope', 'isolate', 'share', 'brief', 'declare'], { quiet: true });
+  assert.ok(r.g.threat >= 35, 'threat ' + r.g.threat);
+  assert.ok(r.gr.points < pwIdeal.gr.points - 20, String(r.gr.points));
+});
+t('partner-warning: naming a group, blocking all attachments or waiting are poor responses', () => {
+  const pub = run(PW, ['assess', 'search', 'scope', 'publish', 'block', 'isolate', 'warn', 'brief', 'declare'], { quiet: true });
+  assert.equal(pub.g.flags.public, true);
+  assert.ok(pub.gr.points < pwIdeal.gr.points - 50, String(pub.gr.points));
+  const all = run(PW, ['assess', 'search', 'scope', 'blockall', 'isolate', 'warn', 'brief'], { quiet: true });
+  assert.ok(all.g.disruption >= 35);
+  const wait = run(PW, ['wait', 'assess', 'search', 'scope', 'block', 'isolate', 'warn', 'brief', 'declare'], { quiet: true });
+  assert.ok(wait.gr.points < pwIdeal.gr.points - 40, String(wait.gr.points));
+});
+
 console.log(n, 'passed');

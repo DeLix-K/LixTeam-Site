@@ -17,7 +17,7 @@ tests/games/                engine and content tests (npm run test:games)
 
 ## What the player sees
 
-The player first chooses a **career path**. Each path is its own ladder with its own ranks, XP, skills and promotion exams, and a player can try any of them at any time. The six on the chooser are Cyber Security Analyst, Security Engineer, Cloud Security, Network Security, Vulnerability Management and Ethical Hacking/PenTest. A path with no missions yet is shown as "coming soon".
+The player first chooses a **career path**. Each path is its own ladder with its own ranks, XP, skills and promotion exams, and a player can try any of them at any time. The nine on the chooser are Cyber Security Analyst, Security Engineer, Cloud Security, Network Security, Vulnerability Management, Ethical Hacking/PenTest, Incident Response and Forensics, Governance/Risk/Compliance and Threat Intelligence. A path with no missions yet is shown as "coming soon".
 
 The analyst path has six ranks: Recruit, Junior Analyst, SOC Analyst, Senior Analyst, Incident Response Lead and SOC Manager. On every path, rank is **earned, not accumulated**: each promotion needs XP, missions passed, skill mastery and a promotion
 exam. XP only rewards improving a medal, so easy missions cannot be ground. Skill mastery is shown separately
@@ -76,7 +76,7 @@ Puppeteer and are not in this repo yet.
 | Larger incident simulation, promotion assessments | Done (four exams) |
 | Skill-based recommendation | Done (one recommended next case; cloud skill never overrides core skills) |
 | Pause and resume | Done for the simulations (saved after each stage). Other modes are short and restart |
-| Separate career paths (analyst, security engineer, cloud, network, vulnerability management, ethical hacking) | Chooser and per-path ladders built. All six are live (Analyst, Security Engineer, Cloud, Network Security, Vulnerability Management, Ethical Hacking/PenTest). Every non-analyst path now has four rank steps after Recruit: a Senior tier of three missions and an exam, then an Architect or Lead tier of two missions and an exam (the PenTest senior tier is about engagement planning and conduct, not technique); the analyst path has six. Further rank steps, plus DFIR, GRC and threat intelligence, are planned |
+| Separate career paths (analyst, security engineer, cloud, network, vulnerability management, ethical hacking) | Chooser and per-path ladders built. All six are live (Analyst, Security Engineer, Cloud, Network Security, Vulnerability Management, Ethical Hacking/PenTest). The three newest paths (Incident Response and Forensics, GRC, Threat Intelligence) launch with two rank steps after Recruit: Foundations (3 missions), Practitioner (3 missions) and a promotion exam; senior tiers for them are next. Every older non-analyst path has four rank steps after Recruit: a Senior tier of three missions and an exam, then an Architect or Lead tier of two missions and an exam (the PenTest senior tier is about engagement planning and conduct, not technique); the analyst path has six. Further rank steps, plus DFIR, GRC and threat intelligence, are planned |
 | New case every week | **Not met.** One existing case is featured each week. Real weekly drops need new writing |
 | Friendly competition | Challenge codes only. Team leagues and public rankings need a server and accounts |
 | Progress across devices | Manual progress code only. Accounts and sync are not built |

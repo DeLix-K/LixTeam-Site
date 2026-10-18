@@ -20,7 +20,7 @@ function h(tag, props = {}, ...kids) {
 const missionUrl = (m) => `/games/${m.mode}/?mission=${m.id}`;
 const pct = (x) => `${Math.round(x * 100)}%`;
 
-// The six paths. Choosing one is saved; paths without missions yet are marked "coming soon".
+// The career paths. Choosing one is saved; paths without missions yet are marked "coming soon".
 function renderPaths(s) {
   const grid = $('path-grid');
   grid.replaceChildren();

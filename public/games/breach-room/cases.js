@@ -23,6 +23,9 @@ import { ENGINEER } from './cases-engineer.js';
 import { CLOUD_LEAD } from './cases-cloud-lead.js';
 import { NETWORK_LEAD } from './cases-network-lead.js';
 import { NETWORK_ARCH } from './cases-network-arch.js';
+import { DFIR } from './cases-dfir.js';
+import { GRC } from './cases-grc.js';
+import { TI } from './cases-ti.js';
 
 const CORE = [
   // ─────────────────────────────────────────────────────────────
@@ -157,4 +160,4 @@ const CORE = [
 ];
 
 // Everything the game draws from.
-export const CASES = [...CORE, ...EXTRA, ...LEAD, ...VULN, ...NETWORK, ...PENTEST, ...ENGINEER, ...CLOUD_LEAD, ...NETWORK_LEAD, ...NETWORK_ARCH];
+export const CASES = [...CORE, ...EXTRA, ...LEAD, ...VULN, ...NETWORK, ...PENTEST, ...ENGINEER, ...CLOUD_LEAD, ...NETWORK_LEAD, ...NETWORK_ARCH, ...DFIR, ...GRC, ...TI];

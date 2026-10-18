@@ -29,6 +29,14 @@ export const COMPETENCIES = [
   { id: 'nettraffic', name: 'Traffic analysis and monitoring', blurb: 'Reading flows, DNS and logs to spot scanning, beacons and data leaving.' },
   { id: 'vulnscan', name: 'Scanning and validation', blurb: 'Reading scanner output, telling real findings from noise, and knowing what a scan does not cover.' },
   { id: 'vulnrisk', name: 'Risk-based prioritisation', blurb: 'Ranking by exploitation, exposure and impact, not by score alone.' },
+  { id: 'evidence', name: "Evidence handling and preservation", blurb: "Keeping evidence intact and usable, and recording who did what and when." },
+  { id: 'timeline', name: "Timelines and root cause", blurb: "Putting events in true order, and finding the conditions that let an incident happen." },
+  { id: 'risk', name: "Risk assessment", blurb: "Judging likelihood and impact, and deciding what to treat, accept or transfer." },
+  { id: 'policy', name: "Policy, controls and evidence", blurb: "Checking whether a control works in practice, and what evidence proves it." },
+  { id: 'privacy', name: "Data protection and breach duties", blurb: "Knowing when people and regulators must be told, and what to say." },
+  { id: 'sources', name: "Sources and reliability", blurb: "Judging where information comes from, how reliable it is and how it could be wrong." },
+  { id: 'analysis', name: "Analysis and confidence", blurb: "Reaching a judgement, saying how sure you are, and resisting conclusions that go beyond the evidence." },
+  { id: 'briefing', name: "Briefing decision-makers", blurb: "Telling the right people what matters, in terms they can act on." },
   { id: 'remediate', name: 'Remediation and patching', blurb: 'Getting the right fixes done safely, and checking that they worked.' },
 ];
 
@@ -52,6 +60,12 @@ export const TIERS = [
   { id: 'pt-prac', name: 'Practitioner', xpMultiplier: 1.5, path: 'pentest', note: 'Needs two Foundations missions passed.' },
   { id: 'pt-lead', name: 'Senior', xpMultiplier: 2.5, path: 'pentest', note: 'Opens when you reach Penetration Tester.' },
   { id: 'pt-arch', name: 'Lead', xpMultiplier: 3, path: 'pentest', note: 'Opens when you reach Senior Penetration Tester.' },
+  { id: 'ti-found', name: 'Foundations', xpMultiplier: 1, path: 'ti' },
+  { id: 'ti-prac', name: 'Practitioner', xpMultiplier: 1.5, path: 'ti', note: "Needs two Foundations missions passed." },
+  { id: 'gr-found', name: 'Foundations', xpMultiplier: 1, path: 'grc' },
+  { id: 'gr-prac', name: 'Practitioner', xpMultiplier: 1.5, path: 'grc', note: "Needs two Foundations missions passed." },
+  { id: 'dr-found', name: 'Foundations', xpMultiplier: 1, path: 'dfir' },
+  { id: 'dr-prac', name: 'Practitioner', xpMultiplier: 1.5, path: 'dfir', note: "Needs two Foundations missions passed." },
   { id: 'net-found', name: 'Foundations', xpMultiplier: 1, path: 'network' },
   { id: 'net-prac', name: 'Practitioner', xpMultiplier: 1.5, path: 'network', note: 'Needs two Foundations missions passed.' },
   { id: 'net-lead', name: 'Senior', xpMultiplier: 2.5, path: 'network', note: 'Opens when you reach Network Security Engineer.' },
@@ -353,6 +367,117 @@ export const MISSIONS = [
     blurb: "A tool used by eleven teams reports that attackers took its customers' access tokens. Find what you have connected, protect the dangerous ones first and keep the company working.",
     competencies: { pipeline: 0.4, response: 0.3, secretsiam: 0.3 },
     unlock: { rank: 'senior' },
+  },
+  // ── Incident Response and Forensics path
+  {
+    id: 'dr01-hour', title: "The first hour", tier: 'dr-found', kind: 'simulation', mode: 'simulation', ref: 'first-hour', minutes: 18, par: 0, access: 'free',
+    blurb: "A finance laptop is misbehaving and the manager wants it back. Decide what to do first and what to write down.",
+    competencies: { evidence: 0.6, response: 0.2, reporting: 0.2 },
+    unlock: {},
+  },
+  {
+    id: 'dr02-skew', title: "Times that do not agree", tier: 'dr-found', kind: 'detective', mode: 'cyber-detective', ref: 'clock-skew', minutes: 12, par: 250, access: 'free',
+    blurb: "Three systems recorded the same attack and disagree about what came first. Put them in the true order.",
+    competencies: { timeline: 0.6, evidence: 0.2, reporting: 0.2 },
+    unlock: {},
+  },
+  {
+    id: 'dr03-custody', title: "Whose hands has it been in?", tier: 'dr-found', kind: 'simulation', mode: 'simulation', ref: 'chain-of-custody', minutes: 20, par: 0, access: 'plus',
+    blurb: "A leaver's laptop may hold stolen data and HR wants to look through it today. Handle it so what you find can be relied on.",
+    competencies: { evidence: 0.7, reporting: 0.3 },
+    unlock: {},
+  },
+  {
+    id: 'dr04-leaver', title: "The leaver and the customer list", tier: 'dr-prac', kind: 'incident', mode: 'incident-commander', ref: 'leaver-copy', minutes: 10, par: 105, access: 'plus',
+    blurb: "A sales manager copied the customer list on his last day. Preserve what you need before anyone is accused.",
+    competencies: { evidence: 0.3, response: 0.4, reporting: 0.3 },
+    unlock: { passedTier: { 'dr-found': 2 } },
+  },
+  {
+    id: 'dr05-traces', title: "What it left behind", tier: 'dr-prac', kind: 'breach', mode: 'breach-room', ref: 'what-it-left-behind', minutes: 14, par: 250, access: 'plus',
+    blurb: "The attacker is gone. Rebuild the attack from the traces on the disk, in memory and in the logs.",
+    competencies: { timeline: 0.5, evidence: 0.3, response: 0.2 },
+    unlock: { passedTier: { 'dr-found': 2 } },
+  },
+  {
+    id: 'dr06-review', title: "Who is to blame?", tier: 'dr-prac', kind: 'simulation', mode: 'simulation', ref: 'learning-review', minutes: 20, par: 0, access: 'plus',
+    blurb: "The incident is over and the director wants a name. Find the real causes and decide what the report should say.",
+    competencies: { timeline: 0.5, reporting: 0.5 },
+    unlock: { passedTier: { 'dr-found': 2 } },
+  },
+  // ── Governance, Risk and Compliance path
+  {
+    id: 'gr01-register', title: "The risk register nobody reads", tier: 'gr-found', kind: 'simulation', mode: 'simulation', ref: 'register-review', minutes: 20, par: 0, access: 'free',
+    blurb: "A risk register full of \"medium\" risks. Rank what really matters and decide what to do about a request to accept a big risk.",
+    competencies: { risk: 0.6, reporting: 0.4 },
+    unlock: {},
+  },
+  {
+    id: 'gr02-policy', title: "What the policy says", tier: 'gr-found', kind: 'detective', mode: 'cyber-detective', ref: 'policy-vs-practice', minutes: 12, par: 250, access: 'free',
+    blurb: "The policy says access is reviewed every quarter. The audit finds it has not been for 14 months. Find out how it happened.",
+    competencies: { policy: 0.6, risk: 0.2, reporting: 0.2 },
+    unlock: {},
+  },
+  {
+    id: 'gr03-clock', title: "The 72-hour clock", tier: 'gr-found', kind: 'simulation', mode: 'simulation', ref: 'breach-notification', minutes: 20, par: 0, access: 'plus',
+    blurb: "A data incident, a nervous chief executive and a deadline. Decide who must be told and when.",
+    competencies: { privacy: 0.7, reporting: 0.3 },
+    unlock: {},
+  },
+  {
+    id: 'gr04-regulator', title: "A letter from the regulator", tier: 'gr-prac', kind: 'incident', mode: 'incident-commander', ref: 'regulator-enquiry', minutes: 10, par: 105, access: 'plus',
+    blurb: "The regulator wants answers in ten days. Preserve the records, answer truthfully and do not tidy up.",
+    competencies: { privacy: 0.4, policy: 0.3, reporting: 0.3 },
+    unlock: { passedTier: { 'gr-found': 2 } },
+  },
+  {
+    id: 'gr05-green', title: "Three controls that were green", tier: 'gr-prac', kind: 'breach', mode: 'breach-room', ref: 'green-controls', minutes: 14, par: 250, access: 'plus',
+    blurb: "Three controls were marked effective, and all three failed in one incident. Rebuild how.",
+    competencies: { policy: 0.5, risk: 0.3, privacy: 0.2 },
+    unlock: { passedTier: { 'gr-found': 2 } },
+  },
+  {
+    id: 'gr06-supplier', title: "The supplier questionnaire", tier: 'gr-prac', kind: 'simulation', mode: 'simulation', ref: 'supplier-diligence', minutes: 20, par: 0, access: 'plus',
+    blurb: "A new supplier answered every question \"yes\". Test the answers and decide whether the business can go live.",
+    competencies: { risk: 0.4, policy: 0.4, reporting: 0.2 },
+    unlock: { passedTier: { 'gr-found': 2 } },
+  },
+  // ── Threat Intelligence path
+  {
+    id: 'ti01-sources', title: "Which report to trust", tier: 'ti-found', kind: 'simulation', mode: 'simulation', ref: 'sorting-reports', minutes: 20, par: 0, access: 'free',
+    blurb: "Four reports about the same threat, from four sources. Decide how far to trust each and what to do about a vendor press release.",
+    competencies: { sources: 0.6, analysis: 0.2, reporting: 0.2 },
+    unlock: {},
+  },
+  {
+    id: 'ti02-stale', title: "The indicator that blocked payroll", tier: 'ti-found', kind: 'detective', mode: 'cyber-detective', ref: 'stale-indicators', minutes: 12, par: 250, access: 'free',
+    blurb: "An address from a threat feed was blocked and payroll stopped. Find out why an old indicator did damage.",
+    competencies: { sources: 0.4, analysis: 0.4, reporting: 0.2 },
+    unlock: {},
+  },
+  {
+    id: 'ti03-brief', title: "One page for the board", tier: 'ti-found', kind: 'simulation', mode: 'simulation', ref: 'rival-breach-brief', minutes: 20, par: 0, access: 'plus',
+    blurb: "The board wants to know who attacked a rival and whether you are next. Say what you know, what you assess and how sure you are.",
+    competencies: { briefing: 0.6, analysis: 0.4 },
+    unlock: {},
+  },
+  {
+    id: 'ti04-warning', title: "The warning from a friend", tier: 'ti-prac', kind: 'incident', mode: 'incident-commander', ref: 'partner-warning', minutes: 10, par: 105, access: 'plus',
+    blurb: "A partner shares an urgent, partial warning about attacks on your sector. Decide how to act on what you cannot yet confirm.",
+    competencies: { sources: 0.3, analysis: 0.3, briefing: 0.4 },
+    unlock: { passedTier: { 'ti-found': 2 } },
+  },
+  {
+    id: 'ti05-cluster', title: "One campaign or three?", tier: 'ti-prac', kind: 'breach', mode: 'breach-room', ref: 'campaign-cluster', minutes: 14, par: 250, access: 'plus',
+    blurb: "Three incidents might be one campaign. Group the evidence honestly and resist naming a culprit.",
+    competencies: { analysis: 0.6, sources: 0.2, briefing: 0.2 },
+    unlock: { passedTier: { 'ti-found': 2 } },
+  },
+  {
+    id: 'ti06-feed', title: "Four thousand indicators", tier: 'ti-prac', kind: 'simulation', mode: 'simulation', ref: 'ioc-triage', minutes: 20, par: 0, access: 'plus',
+    blurb: "A feed delivers 4,000 indicators a day. Decide what to block, what to watch and what to ignore.",
+    competencies: { sources: 0.4, analysis: 0.3, briefing: 0.3 },
+    unlock: { passedTier: { 'ti-found': 2 } },
   },
   // ── Cloud Security path: architect tier
   {
@@ -677,6 +802,27 @@ export const MISSIONS = [
     unlock: { rank: 'se', passedTier: { 'se-lead': 3 }, mastery: { hardening: 60, pipeline: 50 }, masteryScope: ['se-found', 'se-prac', 'se-lead'] },
   },
   {
+    id: 'dr-exam', title: "Promotion exam: Incident Responder", tier: 'dr-prac', kind: 'simulation', mode: 'simulation', ref: 'dr-exam', minutes: 28, par: 0, access: 'plus',
+    exam: true, promotes: 'ir', passTier: 2,
+    blurb: "A suspected insider, a lawyer, a deadline and a request to declare it all clear. Silver or better to pass.",
+    competencies: { evidence: 0.3, timeline: 0.3, response: 0.2, reporting: 0.2 },
+    unlock: { passedTier: { 'dr-found': 3, 'dr-prac': 2 }, mastery: { evidence: 55, timeline: 55 }, masteryScope: ['dr-found', 'dr-prac'] },
+  },
+  {
+    id: 'gr-exam', title: "Promotion exam: GRC Analyst", tier: 'gr-prac', kind: 'simulation', mode: 'simulation', ref: 'gr-exam', minutes: 28, par: 0, access: 'plus',
+    exam: true, promotes: 'grc', passTier: 2,
+    blurb: "An audit, a request to mark weak controls effective and a regulator watching. Silver or better to pass.",
+    competencies: { risk: 0.3, policy: 0.3, privacy: 0.2, reporting: 0.2 },
+    unlock: { passedTier: { 'gr-found': 3, 'gr-prac': 2 }, mastery: { risk: 55, policy: 55 }, masteryScope: ['gr-found', 'gr-prac'] },
+  },
+  {
+    id: 'ti-exam', title: "Promotion exam: Threat Intelligence Analyst", tier: 'ti-prac', kind: 'simulation', mode: 'simulation', ref: 'ti-exam', minutes: 28, par: 0, access: 'plus',
+    exam: true, promotes: 'ti', passTier: 2,
+    blurb: "A sector warning, a partial report and a chief executive who wants a name. Silver or better to pass.",
+    competencies: { sources: 0.3, analysis: 0.3, briefing: 0.2, reporting: 0.2 },
+    unlock: { passedTier: { 'ti-found': 3, 'ti-prac': 2 }, mastery: { sources: 55, analysis: 55 }, masteryScope: ['ti-found', 'ti-prac'] },
+  },
+  {
     id: 'cloud-architect-exam', title: 'Promotion exam: Cloud Security Architect', tier: 'cloud-arch', kind: 'simulation', mode: 'simulation', ref: 'cloud-architect-exam', minutes: 28, par: 0, access: 'plus',
     exam: true, promotes: 'architect', passTier: 2,
     blurb: "A rival's breach, a board that asks whether you are safe and a finance idea that would remove a control. Silver or better to pass.",
@@ -822,6 +968,33 @@ const VULN_RANKS = [
   },
 ];
 
+const DR_RANKS = [
+  { id: 'recruit', name: 'Recruit', blurb: "You are learning how an incident is handled and why evidence matters.", requires: {} },
+  { id: 'junior', name: "Junior Incident Responder", blurb: "You know what to do first, how to keep evidence safe and what to write down.", requires: { xp: 60, passedTier: { 'dr-found': 2 } } },
+  {
+    id: 'ir', name: "Incident Responder", blurb: "You preserve evidence under pressure, build a true timeline and say only what you can show.",
+    requires: { xp: 250, passedTier: { 'dr-found': 3, 'dr-prac': 2 }, mastery: { evidence: 55, timeline: 55 }, masteryScope: ['dr-found', 'dr-prac'], exam: 'dr-exam' },
+  },
+];
+
+const GR_RANKS = [
+  { id: 'recruit', name: 'Recruit', blurb: "You are learning how organisations decide what matters, and prove that they do it.", requires: {} },
+  { id: 'junior', name: "Junior GRC Analyst", blurb: "You can rank a risk, read a policy against practice and spot a duty to tell someone.", requires: { xp: 60, passedTier: { 'gr-found': 2 } } },
+  {
+    id: 'grc', name: "GRC Analyst", blurb: "You weigh risk honestly, test controls against evidence and stand firm when asked to tidy the story.",
+    requires: { xp: 250, passedTier: { 'gr-found': 3, 'gr-prac': 2 }, mastery: { risk: 55, policy: 55 }, masteryScope: ['gr-found', 'gr-prac'], exam: 'gr-exam' },
+  },
+];
+
+const TI_RANKS = [
+  { id: 'recruit', name: 'Recruit', blurb: "You are learning how intelligence is judged, and why saying how sure you are matters.", requires: {} },
+  { id: 'junior', name: "Junior Intelligence Analyst", blurb: "You can grade a source, tell a fact from an assessment and give a simple brief.", requires: { xp: 60, passedTier: { 'ti-found': 2 } } },
+  {
+    id: 'ti', name: "Threat Intelligence Analyst", blurb: "You weigh sources, say how sure you are, and brief decision-makers without overreaching.",
+    requires: { xp: 250, passedTier: { 'ti-found': 3, 'ti-prac': 2 }, mastery: { sources: 55, analysis: 55 }, masteryScope: ['ti-found', 'ti-prac'], exam: 'ti-exam' },
+  },
+];
+
 const CLOUD_RANKS = [
   { id: 'recruit', name: 'Recruit', blurb: 'You are learning how cloud accounts get exposed.', requires: {} },
   { id: 'associate', name: 'Cloud Security Associate', blurb: 'You can read a cloud audit log and spot an exposed resource.', requires: { xp: 100, passedTier: { cloud: 1 } } },
@@ -909,13 +1082,52 @@ export const PATHS = [
       { id: 'pt-more', title: 'More missions', note: 'Web application, wireless and cloud testing judgement, and working with clients on remediation.' },
     ],
   },
+  {
+    id: 'dfir', name: "Incident Response and Forensics", short: "IR & Forensics", colour: '#f472b6', live: true,
+    blurb: "Work out what happened: first response, keeping evidence usable, timelines, and learning from incidents.",
+    headline: ["Find out ","what happened."],
+    lead: "Decision-based practice in handling an incident and its evidence: what to do first, how to keep evidence usable, and how to say only what you can show. It does not teach attack techniques.",
+    ranks: DR_RANKS,
+    tiers: ['dr-found', 'dr-prac'],
+    competencies: ['evidence','timeline','response','reporting'],
+    roadmap: [
+      { id: 'dr-senior', title: "Senior Incident Responder and Incident Response Lead ranks", note: "Leading a major incident, working with Legal and regulators, and running a response team." },
+      { id: 'dr-more', title: "More missions", note: "Memory and cloud forensics judgement, ransomware recovery decisions and incident exercises." },
+    ],
+  },
+  {
+    id: 'grc', name: "Governance, Risk and Compliance", short: "GRC", colour: '#fb923c', live: true,
+    blurb: "Decide what matters and prove it: risk registers, policy against practice, breach duties and supplier checks.",
+    headline: ["Govern the ","risk."],
+    lead: "Weigh risk honestly, check what people actually do against what a policy says, and tell management and regulators the truth. Rank is earned through mastery and a practical exam.",
+    ranks: GR_RANKS,
+    tiers: ['gr-found', 'gr-prac'],
+    competencies: ['risk','policy','privacy','reporting'],
+    roadmap: [
+      { id: 'gr-senior', title: "Senior GRC Analyst and Head of Risk ranks", note: "Running a risk programme, reporting to the board and managing regulators." },
+      { id: 'gr-more', title: "More missions", note: "Third-party risk at scale, frameworks and certification judgement, and privacy impact assessments." },
+    ],
+  },
+  {
+    id: 'ti', name: "Threat Intelligence", short: "Threat intel", colour: '#818cf8', live: true,
+    blurb: "Turn information into judgement: source reliability, indicators that expire, confidence and briefing decision-makers.",
+    headline: ["Turn noise into ","judgement."],
+    lead: "Weigh sources, separate fact from assessment, and brief people who must decide. Rank is earned through mastery and a practical exam.",
+    ranks: TI_RANKS,
+    tiers: ['ti-found', 'ti-prac'],
+    competencies: ['sources','analysis','briefing','reporting'],
+    roadmap: [
+      { id: 'ti-senior', title: "Senior Intelligence Analyst and Intelligence Lead ranks", note: "Running collection, sharing with partners and advising leaders on strategy." },
+      { id: 'ti-more', title: "More missions", note: "Sector sharing groups, estimative language and intelligence-led exercises." },
+    ],
+  },
 ];
 
-// More paths planned beyond the six on the chooser.
+// More paths planned beyond the nine on the chooser.
 export const ROADMAP = [
-  { id: 'dfir', title: 'Digital forensics and incident response', note: 'Reconstruct what happened from disk, memory and logs, and determine scope.' },
-  { id: 'grc', title: 'GRC and risk', note: 'Assess risk, weigh evidence and explain findings to management.' },
-  { id: 'ti', title: 'Threat intelligence', note: 'Connect indicators, assess context and brief decision-makers.' },
+  { id: 'appsec', title: 'Application security', note: 'Review designs and code for weaknesses, and work with developers to fix them.' },
+  { id: 'ot', title: 'Industrial and operational technology security', note: 'Protect the systems that run factories, utilities and buildings, where safety comes first.' },
+  { id: 'iam', title: 'Identity and access management', note: 'Design who can reach what, and keep access accurate as people join, move and leave.' },
 ];
 
 export function missionById(id) {

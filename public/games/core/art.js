@@ -74,6 +74,9 @@ const PATH_ICONS = {
   cloud: () => [s('path', { d: 'M7 18h10a4 4 0 0 0 .5-7.97A5.5 5.5 0 0 0 7 9.5 4.5 4.5 0 0 0 7 18z' })],
   network: () => [s('circle', { cx: 12, cy: 12, r: 2.5 }), s('circle', { cx: 4.5, cy: 5, r: 2 }), s('circle', { cx: 19.5, cy: 5, r: 2 }), s('circle', { cx: 4.5, cy: 19, r: 2 }), s('circle', { cx: 19.5, cy: 19, r: 2 }), s('line', { x1: 6, y1: 6.2, x2: 10, y2: 10.2 }), s('line', { x1: 18, y1: 6.2, x2: 14, y2: 10.2 }), s('line', { x1: 6, y1: 17.8, x2: 10, y2: 13.8 }), s('line', { x1: 18, y1: 17.8, x2: 14, y2: 13.8 })],
   vuln: () => [s('path', { d: 'M12 3l10 18H2z' }), s('line', { x1: 12, y1: 9.5, x2: 12, y2: 14.5 }), s('circle', { cx: 12, cy: 17.3, r: 0.6 })],
+  dfir: () => [s('circle', { cx: 12, cy: 12, r: 9 }), s('polyline', { points: '12,6.5 12,12 16,14.5' })],
+  grc: () => [s('rect', { x: 5, y: 4, width: 14, height: 17, rx: 2 }), s('rect', { x: 9, y: 2, width: 6, height: 4, rx: 1 }), s('polyline', { points: '8.5,12.5 10.5,14.5 15,10' }), s('line', { x1: 8.5, y1: 18, x2: 15.5, y2: 18 })],
+  ti: () => [s('path', { d: 'M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z' }), s('circle', { cx: 12, cy: 12, r: 3 })],
   pentest: () => [s('circle', { cx: 12, cy: 12, r: 8 }), s('circle', { cx: 12, cy: 12, r: 2.5 }), s('line', { x1: 12, y1: 1.5, x2: 12, y2: 5 }), s('line', { x1: 12, y1: 19, x2: 12, y2: 22.5 }), s('line', { x1: 1.5, y1: 12, x2: 5, y2: 12 }), s('line', { x1: 19, y1: 12, x2: 22.5, y2: 12 })],
 };
 export function pathIcon(pathId, size = 24) {
@@ -132,7 +135,7 @@ export function modeIcon(modeId, size = 24) {
 }
 
 // ── Skill radar ─────────────────────────────────────────────────
-const SHORT = { triage: 'Triage', phishing: 'Phishing', identity: 'Identity', endpoint: 'Endpoint', correlation: 'Correlation', hunting: 'Hunting', response: 'Response', reporting: 'Reporting', cloud: 'Cloud', leadership: 'Leadership', vulnscan: 'Scanning', vulnrisk: 'Prioritising', remediate: 'Remediation', hardening: 'Hardening', secretsiam: 'Secrets', pipeline: 'Pipelines', scope: 'Scoping', recon: 'Recon', findings: 'Findings', netdesign: 'Segmentation', fwrules: 'Firewalls', nettraffic: 'Traffic' };
+const SHORT = { triage: 'Triage', phishing: 'Phishing', identity: 'Identity', endpoint: 'Endpoint', correlation: 'Correlation', hunting: 'Hunting', response: 'Response', reporting: 'Reporting', cloud: 'Cloud', leadership: 'Leadership', vulnscan: 'Scanning', vulnrisk: 'Prioritising', remediate: 'Remediation', hardening: 'Hardening', secretsiam: 'Secrets', pipeline: 'Pipelines', scope: 'Scoping', recon: 'Recon', findings: 'Findings', netdesign: 'Segmentation', fwrules: 'Firewalls', nettraffic: 'Traffic', evidence: 'Evidence', timeline: 'Timelines', risk: 'Risk', policy: 'Controls', privacy: 'Privacy', sources: 'Sources', analysis: 'Analysis', briefing: 'Briefing' };
 
 // items: [{ id, name, score (0..100) }]
 export function skillRadar(items) {

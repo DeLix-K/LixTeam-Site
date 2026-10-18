@@ -72,9 +72,9 @@ t('mission data is well formed, with the right numbers per tier', () => {
     if (m.exam) assert.ok(m.promotes && m.passTier >= 2);
   }
   assert.deepEqual([ids('beginner').length, ids('intermediate').length, ids('advanced').length, ids('senior').length, ids('lead').length, ids('manager').length, ids('cloud').length], [4, 7, 4, 3, 4, 2, 3]);
-  assert.equal(M.MISSIONS.filter((m) => m.exam).length, 19);
+  assert.equal(M.MISSIONS.filter((m) => m.exam).length, 22);
   assert.equal(M.RANKS.length, 6);
-  assert.equal(M.COMPETENCIES.length, 22);
+  assert.equal(M.COMPETENCIES.length, 30);
   for (const c of M.COMPETENCIES) assert.ok(M.MISSIONS.filter((m) => m.competencies[c.id]).length >= 2, c.id + ' needs at least two missions');
 });
 t('a new player is a Recruit with only the beginner missions open on the analyst path', () => {
@@ -369,8 +369,8 @@ t('the rank ladder is reachable with silver medals alone (no gold needed)', () =
 });
 
 // ═══════════════ separate career paths ═══════════════
-t('there are six paths on the chooser, in the order players asked for, and the first is the analyst ladder', () => {
-  assert.deepEqual(M.PATHS.map((x) => x.id), ['analyst', 'engineer', 'cloud', 'network', 'vuln', 'pentest']);
+t('there are nine paths on the chooser, in a fixed order, and the first is the analyst ladder', () => {
+  assert.deepEqual(M.PATHS.map((x) => x.id), ['analyst', 'engineer', 'cloud', 'network', 'vuln', 'pentest', 'dfir', 'grc', 'ti']);
   assert.equal(M.PATHS[0].ranks, M.RANKS);
   for (const path of M.PATHS) {
     assert.ok(path.name && path.blurb && path.colour && path.headline.length === 2 && path.lead, path.id);
@@ -871,10 +871,10 @@ t('every mission in every path points at a case that exists in its mode (content
     assert.ok(pool.includes(m.ref), m.id + ' -> ' + m.mode + '/' + m.ref);
   }
 });
-t('all six paths on the chooser are live: each has missions and a ladder of at least three ranks', () => {
+t('all nine paths on the chooser are live: each has missions and a ladder of at least three ranks', () => {
   const s = C.blank();
   const live = M.PATHS.filter((p) => C.pathSummary(s, p.id).live).map((p) => p.id);
-  assert.deepEqual(live, ['analyst', 'engineer', 'cloud', 'network', 'vuln', 'pentest']);
+  assert.deepEqual(live, ['analyst', 'engineer', 'cloud', 'network', 'vuln', 'pentest', 'dfir', 'grc', 'ti']);
   for (const id of live) assert.ok(M.PATHS.find((p) => p.id === id).ranks.length >= 3, id + ' has a ladder');
 });
 
@@ -1083,6 +1083,36 @@ for (const pth of M.PATHS.filter((x) => x.tiers && x.tiers.some((id) => id.endsW
     assert.equal(r.promoted.id, top.id, JSON.stringify(C.rankOf(s, pth.id).checklist));
     assert.equal(C.rankOf(s, pth.id).isTop, true);
     assert.equal(C.rankOf(s, 'analyst').rank.id, 'recruit', 'the analyst ladder is untouched');
+  });
+}
+
+// ── the three newest paths (incident response and forensics, GRC, threat intelligence) ──
+for (const pid of ['dfir', 'grc', 'ti']) {
+  t(`the ${pid} path: foundations open, practitioner needs two passes, Junior after two, the exam promotes at silver (bronze is not a pass)`, () => {
+    const pth = M.PATHS.find((x) => x.id === pid);
+    assert.ok(pth && pth.ranks.length === 3, pid + ' has three ranks');
+    const [found, prac] = pth.tiers;
+    const foundIds = M.MISSIONS.filter((m) => m.tier === found).map((m) => m.id);
+    const pracIds = M.MISSIONS.filter((m) => m.tier === prac && !m.exam).map((m) => m.id);
+    const exam = pth.ranks[2].requires.exam;
+    assert.equal(foundIds.length, 3);
+    assert.equal(pracIds.length, 3);
+    const s = C.blank();
+    for (const id of foundIds) assert.equal(C.missionStatus(s, id).unlocked, true, id + ' is open at the start');
+    for (const id of pracIds) assert.equal(C.missionStatus(s, id).unlocked, false, id + ' is locked at the start');
+    play(s, foundIds[0], 2); play(s, foundIds[1], 2);
+    assert.equal(C.rankOf(s, pid).rank.id, pth.ranks[1].id, JSON.stringify(C.rankOf(s, pid).checklist));
+    for (const id of pracIds) assert.equal(C.missionStatus(s, id).unlocked, true, id + ' opens after two foundations');
+    play(s, foundIds[2], 2);
+    for (const id of pracIds) play(s, id, 2);
+    assert.equal(C.rankOf(s, pid).rank.id, pth.ranks[1].id, 'the exam is still outstanding');
+    assert.equal(C.missionStatus(s, exam).unlocked, true, JSON.stringify(C.missionStatus(s, exam).missing));
+    play(s, exam, 1);
+    assert.equal(C.rankOf(s, pid).rank.id, pth.ranks[1].id, 'bronze is not a pass');
+    assert.equal(play(s, exam, 2).promoted.id, pth.ranks[2].id);
+    assert.equal(C.rankOf(s, pid).isTop, true);
+    assert.equal(C.rankOf(s, 'analyst').rank.id, 'recruit', 'the analyst ladder is untouched');
+    assert.deepEqual(C.visibleCompetencies(s, pid).map((c) => c.id), pth.competencies);
   });
 }
 

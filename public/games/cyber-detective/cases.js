@@ -27,6 +27,9 @@ import { ENGINEER_LEAD } from './cases-engineer-lead.js';
 import { VULN_LEAD } from './cases-vuln-lead.js';
 import { PENTEST_LEAD } from './cases-pentest-lead.js';
 import { VULN_ARCH } from './cases-vuln-arch.js';
+import { DFIR } from './cases-dfir.js';
+import { GRC } from './cases-grc.js';
+import { TI } from './cases-ti.js';
 
 const CORE = [
   // ─────────────────────────────────────────────────────────────
@@ -316,4 +319,4 @@ const CORE = [
 ];
 
 // Everything the game draws from.
-export const CASES = [...CORE, ...EXTRA, ...LEAD, ...VULN, ...NETWORK, ...PENTEST, ...ENGINEER, ...CLOUD, ...ENGINEER_LEAD, ...VULN_LEAD, ...PENTEST_LEAD, ...VULN_ARCH];
+export const CASES = [...CORE, ...EXTRA, ...LEAD, ...VULN, ...NETWORK, ...PENTEST, ...ENGINEER, ...CLOUD, ...ENGINEER_LEAD, ...VULN_LEAD, ...PENTEST_LEAD, ...VULN_ARCH, ...DFIR, ...GRC, ...TI];
