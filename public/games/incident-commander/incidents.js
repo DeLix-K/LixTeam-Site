@@ -18,6 +18,9 @@ import { CLOUD_LEAD } from './incidents-cloud-lead.js';
 import { NETWORK_LEAD } from './incidents-network-lead.js';
 import { VULN_LEAD } from './incidents-vuln-lead.js';
 import { PENTEST_LEAD } from './incidents-pentest-lead.js';
+import { ENGINEER_ARCH } from './incidents-engineer-arch.js';
+import { CLOUD_ARCH } from './incidents-cloud-arch.js';
+import { PENTEST_ARCH } from './incidents-pentest-arch.js';
 
 const CORE = [
   // ─────────────────────────────────────────────────────────────
@@ -414,4 +417,4 @@ const CORE = [
 ];
 
 // Everything the game draws from.
-export const INCIDENTS = [...CORE, ...EXTRA, ...LEAD, ...VULN, ...NETWORK, ...PENTEST, ...ENGINEER, ...CLOUD, ...ENGINEER_LEAD, ...CLOUD_LEAD, ...NETWORK_LEAD, ...VULN_LEAD, ...PENTEST_LEAD];
+export const INCIDENTS = [...CORE, ...EXTRA, ...LEAD, ...VULN, ...NETWORK, ...PENTEST, ...ENGINEER, ...CLOUD, ...ENGINEER_LEAD, ...CLOUD_LEAD, ...NETWORK_LEAD, ...VULN_LEAD, ...PENTEST_LEAD, ...ENGINEER_ARCH, ...CLOUD_ARCH, ...PENTEST_ARCH];

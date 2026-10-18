@@ -43,18 +43,23 @@ export const TIERS = [
   { id: 'cloud', name: 'Foundations', xpMultiplier: 2, path: 'cloud' },
   { id: 'cloud-prac', name: 'Practitioner', xpMultiplier: 2.5, path: 'cloud', note: 'Needs two Foundations missions passed.' },
   { id: 'cloud-lead', name: 'Senior', xpMultiplier: 3, path: 'cloud', note: 'Opens when you reach Cloud Security Engineer.' },
+  { id: 'cloud-arch', name: 'Architect', xpMultiplier: 3.5, path: 'cloud', note: 'Opens when you reach Senior Cloud Security Engineer.' },
   { id: 'se-found', name: 'Foundations', xpMultiplier: 1, path: 'engineer' },
   { id: 'se-prac', name: 'Practitioner', xpMultiplier: 1.5, path: 'engineer', note: 'Needs two Foundations missions passed.' },
   { id: 'se-lead', name: 'Senior', xpMultiplier: 2.5, path: 'engineer', note: 'Opens when you reach Security Engineer.' },
+  { id: 'se-arch', name: 'Architect', xpMultiplier: 3, path: 'engineer', note: 'Opens when you reach Senior Security Engineer.' },
   { id: 'pt-found', name: 'Foundations', xpMultiplier: 1, path: 'pentest' },
   { id: 'pt-prac', name: 'Practitioner', xpMultiplier: 1.5, path: 'pentest', note: 'Needs two Foundations missions passed.' },
   { id: 'pt-lead', name: 'Senior', xpMultiplier: 2.5, path: 'pentest', note: 'Opens when you reach Penetration Tester.' },
+  { id: 'pt-arch', name: 'Lead', xpMultiplier: 3, path: 'pentest', note: 'Opens when you reach Senior Penetration Tester.' },
   { id: 'net-found', name: 'Foundations', xpMultiplier: 1, path: 'network' },
   { id: 'net-prac', name: 'Practitioner', xpMultiplier: 1.5, path: 'network', note: 'Needs two Foundations missions passed.' },
   { id: 'net-lead', name: 'Senior', xpMultiplier: 2.5, path: 'network', note: 'Opens when you reach Network Security Engineer.' },
+  { id: 'net-arch', name: 'Architect', xpMultiplier: 3, path: 'network', note: 'Opens when you reach Senior Network Security Engineer.' },
   { id: 'vm-found', name: 'Foundations', xpMultiplier: 1, path: 'vuln' },
   { id: 'vm-prac', name: 'Practitioner', xpMultiplier: 1.5, path: 'vuln', note: 'Needs two Foundations missions passed.' },
   { id: 'vm-lead', name: 'Senior', xpMultiplier: 2.5, path: 'vuln', note: 'Opens when you reach Vulnerability Management Analyst.' },
+  { id: 'vm-arch', name: 'Lead', xpMultiplier: 3, path: 'vuln', note: 'Opens when you reach Senior Vulnerability Analyst.' },
 ];
 
 // XP for a mission by medal (before the tier multiplier). Medal 0 = no pass.
@@ -336,6 +341,71 @@ export const MISSIONS = [
     competencies: { secretsiam: 0.4, hardening: 0.3, reporting: 0.3 },
     unlock: { passedTier: { 'se-found': 2 } },
   },
+  // ── Security Engineer path: architect tier
+  {
+    id: 'se10-roadmap', title: 'The twelve-month plan', tier: 'se-arch', kind: 'simulation', mode: 'simulation', ref: 'security-roadmap', minutes: 24, par: 0, access: 'plus',
+    blurb: "Fourteen product teams, a fixed budget and a vendor pitching a shiny platform. Work out what really causes your incidents and plan the year around that.",
+    competencies: { hardening: 0.3, secretsiam: 0.3, reporting: 0.4 },
+    unlock: { rank: 'senior' },
+  },
+  {
+    id: 'se11-supplier', title: 'The supplier we all use', tier: 'se-arch', kind: 'incident', mode: 'incident-commander', ref: 'supplier-breach', minutes: 10, par: 105, access: 'plus',
+    blurb: "A tool used by eleven teams reports that attackers took its customers' access tokens. Find what you have connected, protect the dangerous ones first and keep the company working.",
+    competencies: { pipeline: 0.4, response: 0.3, secretsiam: 0.3 },
+    unlock: { rank: 'senior' },
+  },
+  // ── Cloud Security path: architect tier
+  {
+    id: 'c10-guardrails', title: 'Guardrails as code', tier: 'cloud-arch', kind: 'simulation', mode: 'simulation', ref: 'guardrails-as-code', minutes: 24, par: 0, access: 'plus',
+    blurb: "Sixty accounts, a thirty-page standard and 180 exceptions. Decide what to turn into code first and what to do with a permanent exemption request.",
+    competencies: { cloud: 0.4, identity: 0.3, reporting: 0.3 },
+    unlock: { rank: 'senior' },
+  },
+  {
+    id: 'c11-idp', title: 'The keys to every door', tier: 'cloud-arch', kind: 'incident', mode: 'incident-commander', ref: 'idp-takeover', minutes: 10, par: 125, access: 'plus',
+    blurb: "Someone has taken over an administrator of the sign-in system every cloud account trusts. Cut them out without locking everyone out.",
+    competencies: { identity: 0.5, response: 0.3, cloud: 0.2 },
+    unlock: { rank: 'senior' },
+  },
+  // ── Network Security path: architect tier
+  {
+    id: 'nw10-beyondvpn', title: 'Beyond the VPN', tier: 'net-arch', kind: 'simulation', mode: 'simulation', ref: 'zero-trust-journey', minutes: 24, par: 0, access: 'plus',
+    blurb: "Everyone is trusted once they are on the VPN. Decide where to start moving to checking every request, and answer a demand to switch the VPN off in two weeks.",
+    competencies: { netdesign: 0.5, fwrules: 0.2, reporting: 0.3 },
+    unlock: { rank: 'senior' },
+  },
+  {
+    id: 'nw11-exception', title: 'The exception nobody remembered', tier: 'net-arch', kind: 'breach', mode: 'breach-room', ref: 'forgotten-exception', minutes: 14, par: 250, access: 'plus',
+    blurb: "The design says contractors cannot reach finance. Yesterday a contractor account copied finance files. Rebuild how a rule that said no was overridden.",
+    competencies: { nettraffic: 0.4, fwrules: 0.3, response: 0.3 },
+    unlock: { rank: 'senior' },
+  },
+  // ── Vulnerability Management path: lead tier
+  {
+    id: 'vm10-case', title: 'Making the case', tier: 'vm-arch', kind: 'simulation', mode: 'simulation', ref: 'programme-case', minutes: 24, par: 0, access: 'plus',
+    blurb: "The finance director wants a quarter off the programme because the numbers are flat. Show what they really mean and answer the cut.",
+    competencies: { reporting: 0.4, vulnrisk: 0.4, remediate: 0.2 },
+    unlock: { rank: 'senior' },
+  },
+  {
+    id: 'vm11-closed', title: 'Closed, but not fixed', tier: 'vm-arch', kind: 'detective', mode: 'cyber-detective', ref: 'closed-not-fixed', minutes: 12, par: 250, access: 'plus',
+    blurb: "The dashboard says 96% of critical flaws are fixed, and a tester found the same flaw on three servers. Find out how a ticket can close while the flaw stays.",
+    competencies: { vulnscan: 0.4, remediate: 0.4, reporting: 0.2 },
+    unlock: { rank: 'senior' },
+  },
+  // ── Ethical Hacking and PenTest path: lead tier (judgement, not exploitation)
+  {
+    id: 'pt10-purple', title: 'The purple team week', tier: 'pt-arch', kind: 'simulation', mode: 'simulation', ref: 'purple-week', minutes: 24, par: 0, access: 'plus',
+    blurb: "Testers and defenders work together for a week so every test teaches something. Plan it and decide how to report to a board that wants a score.",
+    competencies: { findings: 0.3, recon: 0.3, reporting: 0.4 },
+    unlock: { rank: 'senior' },
+  },
+  {
+    id: 'pt11-laptop', title: 'The laptop on the train', tier: 'pt-arch', kind: 'incident', mode: 'incident-commander', ref: 'lost-test-laptop', minutes: 10, par: 105, access: 'plus',
+    blurb: "A tester has lost a laptop holding client material. Decide what to do in the first hour, who to tell and how to be honest about it.",
+    competencies: { scope: 0.5, findings: 0.2, reporting: 0.3 },
+    unlock: { rank: 'senior' },
+  },
   // ── Ethical Hacking and PenTest path: senior tier (judgement, not exploitation)
   {
     id: 'pt07-plan', title: 'Planning the engagement', tier: 'pt-lead', kind: 'simulation', mode: 'simulation', ref: 'engagement-plan', minutes: 22, par: 0, access: 'plus',
@@ -607,6 +677,41 @@ export const MISSIONS = [
     unlock: { rank: 'se', passedTier: { 'se-lead': 3 }, mastery: { hardening: 60, pipeline: 50 }, masteryScope: ['se-found', 'se-prac', 'se-lead'] },
   },
   {
+    id: 'cloud-architect-exam', title: 'Promotion exam: Cloud Security Architect', tier: 'cloud-arch', kind: 'simulation', mode: 'simulation', ref: 'cloud-architect-exam', minutes: 28, par: 0, access: 'plus',
+    exam: true, promotes: 'architect', passTier: 2,
+    blurb: "A rival's breach, a board that asks whether you are safe and a finance idea that would remove a control. Silver or better to pass.",
+    competencies: { cloud: 0.3, identity: 0.3, response: 0.2, reporting: 0.2 },
+    unlock: { rank: 'senior', passedTier: { 'cloud-arch': 2 }, mastery: { cloud: 60, identity: 55 }, masteryScope: ['cloud', 'cloud-prac', 'cloud-lead', 'cloud-arch'] },
+  },
+  {
+    id: 'net-architect-exam', title: 'Promotion exam: Network Security Architect', tier: 'net-arch', kind: 'simulation', mode: 'simulation', ref: 'net-architect-exam', minutes: 28, par: 0, access: 'plus',
+    exam: true, promotes: 'architect', passTier: 2,
+    blurb: "A hundred and twenty stores, an infected till and a board that wants one flat network to cut costs. Silver or better to pass.",
+    competencies: { netdesign: 0.3, fwrules: 0.2, nettraffic: 0.2, response: 0.1, reporting: 0.2 },
+    unlock: { rank: 'senior', passedTier: { 'net-arch': 2 }, mastery: { netdesign: 60, nettraffic: 55 }, masteryScope: ['net-found', 'net-prac', 'net-lead', 'net-arch'] },
+  },
+  {
+    id: 'vm-lead-exam', title: 'Promotion exam: Vulnerability Management Lead', tier: 'vm-arch', kind: 'simulation', mode: 'simulation', ref: 'vm-lead-exam', minutes: 28, par: 0, access: 'plus',
+    exam: true, promotes: 'lead', passTier: 2,
+    blurb: "A big customer wants proof of patching, the data is messy and a tidier answer is on offer. Silver or better to pass.",
+    competencies: { vulnscan: 0.2, vulnrisk: 0.3, remediate: 0.2, reporting: 0.3 },
+    unlock: { rank: 'senior', passedTier: { 'vm-arch': 2 }, mastery: { vulnscan: 60, vulnrisk: 60 }, masteryScope: ['vm-found', 'vm-prac', 'vm-lead', 'vm-arch'] },
+  },
+  {
+    id: 'pt-lead-exam', title: 'Promotion exam: Red Team Lead', tier: 'pt-arch', kind: 'simulation', mode: 'simulation', ref: 'pt-lead-exam', minutes: 28, par: 0, access: 'plus',
+    exam: true, promotes: 'redlead', passTier: 2,
+    blurb: "A junior tester has gone out of scope, the client is happy and a senior person would like it kept quiet. Silver or better to pass.",
+    competencies: { scope: 0.3, recon: 0.1, findings: 0.4, reporting: 0.2 },
+    unlock: { rank: 'senior', passedTier: { 'pt-arch': 2 }, mastery: { scope: 60, findings: 60 }, masteryScope: ['pt-found', 'pt-prac', 'pt-lead', 'pt-arch'] },
+  },
+  {
+    id: 'se-architect-exam', title: 'Promotion exam: Security Architect', tier: 'se-arch', kind: 'simulation', mode: 'simulation', ref: 'se-architect-exam', minutes: 28, par: 0, access: 'plus',
+    exam: true, promotes: 'architect', passTier: 2,
+    blurb: "An acquisition in eight weeks, a request to trust the other company's network fully and an executive who wants it done now. Silver or better to pass.",
+    competencies: { hardening: 0.3, secretsiam: 0.2, pipeline: 0.2, reporting: 0.3 },
+    unlock: { rank: 'senior', passedTier: { 'se-arch': 2 }, mastery: { hardening: 60, secretsiam: 55 }, masteryScope: ['se-found', 'se-prac', 'se-lead', 'se-arch'] },
+  },
+  {
     id: 'pt-senior-exam', title: 'Promotion exam: Senior Penetration Tester', tier: 'pt-lead', kind: 'simulation', mode: 'simulation', ref: 'pt-senior-exam', minutes: 28, par: 0, access: 'plus',
     exam: true, promotes: 'senior', passTier: 2,
     blurb: 'Midway through a red team engagement: an out-of-scope discovery, a request to wait and an unhappy executive. Silver or better to pass.',
@@ -660,6 +765,10 @@ const ENGINEER_RANKS = [
     id: 'senior', name: 'Senior Security Engineer', blurb: 'You model threats before anything is built, spend limited effort where it removes the most risk, and hold a line under deadline pressure.',
     requires: { xp: 600, passedTier: { 'se-lead': 3 }, mastery: { hardening: 60, pipeline: 50 }, masteryScope: ['se-found', 'se-prac', 'se-lead'], exam: 'se-senior-exam' },
   },
+  {
+    id: 'architect', name: 'Security Architect', blurb: 'You choose what a whole organisation should do about security, spend a limited budget where the evidence says incidents come from, and stage a risky decision rather than simply refusing or accepting it.',
+    requires: { xp: 1100, passedTier: { 'se-arch': 2 }, mastery: { hardening: 60, secretsiam: 55 }, masteryScope: ['se-found', 'se-prac', 'se-lead', 'se-arch'], exam: 'se-architect-exam' },
+  },
 ];
 
 const PENTEST_RANKS = [
@@ -672,6 +781,10 @@ const PENTEST_RANKS = [
   {
     id: 'senior', name: 'Senior Penetration Tester', blurb: 'You plan and lead an engagement, agree rules that protect everyone, know who must be told, and report honestly when someone wants the result to look different.',
     requires: { xp: 650, passedTier: { 'pt-lead': 3 }, mastery: { scope: 60, findings: 55 }, masteryScope: ['pt-found', 'pt-prac', 'pt-lead'], exam: 'pt-senior-exam' },
+  },
+  {
+    id: 'redlead', name: 'Red Team Lead', blurb: 'You make an exercise useful to the defenders, lead testers who make mistakes, and put honesty and the safety of the client ahead of how an engagement looks.',
+    requires: { xp: 1000, passedTier: { 'pt-arch': 2 }, mastery: { scope: 60, findings: 60 }, masteryScope: ['pt-found', 'pt-prac', 'pt-lead', 'pt-arch'], exam: 'pt-lead-exam' },
   },
 ];
 
@@ -686,6 +799,10 @@ const NETWORK_RANKS = [
     id: 'senior', name: 'Senior Network Security Engineer', blurb: 'You cut a large network into zones without breaking the business, treat remote access as a front door, and say no safely when someone wants a hole in the perimeter.',
     requires: { xp: 650, passedTier: { 'net-lead': 3 }, mastery: { netdesign: 60, nettraffic: 55 }, masteryScope: ['net-found', 'net-prac', 'net-lead'], exam: 'net-senior-exam' },
   },
+  {
+    id: 'architect', name: 'Network Security Architect', blurb: 'You move a company from trusting the inside to checking every request, in steps the business can survive, and you protect containment when cost or speed would flatten the design.',
+    requires: { xp: 1000, passedTier: { 'net-arch': 2 }, mastery: { netdesign: 60, nettraffic: 55 }, masteryScope: ['net-found', 'net-prac', 'net-lead', 'net-arch'], exam: 'net-architect-exam' },
+  },
 ];
 
 const VULN_RANKS = [
@@ -699,6 +816,10 @@ const VULN_RANKS = [
     id: 'senior', name: 'Senior Vulnerability Analyst', blurb: 'You run a programme rather than a scan, measure it honestly, and hold the line on the numbers when leadership wants a cleaner headline than the facts support.',
     requires: { xp: 650, passedTier: { 'vm-lead': 3 }, mastery: { vulnscan: 60, vulnrisk: 55 }, masteryScope: ['vm-found', 'vm-prac', 'vm-lead'], exam: 'vm-senior-exam' },
   },
+  {
+    id: 'lead', name: 'Vulnerability Management Lead', blurb: 'You make the case for a programme with honest numbers, know what a closed ticket really means, and give customers and auditors the truth when a cleaner story is on offer.',
+    requires: { xp: 1000, passedTier: { 'vm-arch': 2 }, mastery: { vulnscan: 60, vulnrisk: 60 }, masteryScope: ['vm-found', 'vm-prac', 'vm-lead', 'vm-arch'], exam: 'vm-lead-exam' },
+  },
 ];
 
 const CLOUD_RANKS = [
@@ -711,6 +832,10 @@ const CLOUD_RANKS = [
   {
     id: 'senior', name: 'Senior Cloud Security Engineer', blurb: 'You design for many accounts at once, roll guardrails out safely, and hold the line on logging and separation when someone wants to save money or time.',
     requires: { xp: 1000, passedTier: { 'cloud-lead': 3 }, mastery: { cloud: 60, identity: 55 }, masteryScope: ['cloud', 'cloud-prac', 'cloud-lead'], exam: 'cloud-senior-exam' },
+  },
+  {
+    id: 'architect', name: 'Cloud Security Architect', blurb: 'You turn cloud rules into code that is the same everywhere, keep exceptions from becoming permanent holes, and give a board an honest answer when a saving would remove a control.',
+    requires: { xp: 1500, passedTier: { 'cloud-arch': 2 }, mastery: { cloud: 60, identity: 55 }, masteryScope: ['cloud', 'cloud-prac', 'cloud-lead', 'cloud-arch'], exam: 'cloud-architect-exam' },
   },
 ];
 
@@ -730,10 +855,9 @@ export const PATHS = [
     headline: ['Build it ', 'secure.'],
     lead: 'Make sound design and configuration decisions, and prove they hold. Rank is earned through mastery and a practical exam.',
     ranks: ENGINEER_RANKS,
-    tiers: ['se-found', 'se-prac', 'se-lead'],
+    tiers: ['se-found', 'se-prac', 'se-lead', 'se-arch'],
     competencies: ['hardening', 'secretsiam', 'pipeline', 'response', 'reporting'],
     roadmap: [
-      { id: 'se-architect', title: 'Security Architect rank', note: 'Architecture at scale, multi-team platform security and security strategy.' },
       { id: 'se-more', title: 'More missions', note: 'Container and cloud platform security, infrastructure as code, and logging and detection design.' },
     ],
   },
@@ -743,10 +867,9 @@ export const PATHS = [
     headline: ['Secure the ', 'cloud.'],
     lead: 'Investigate how cloud accounts are exposed and abused, and close the gap in the right order.',
     ranks: CLOUD_RANKS,
-    tiers: ['cloud', 'cloud-prac', 'cloud-lead'],
+    tiers: ['cloud', 'cloud-prac', 'cloud-lead', 'cloud-arch'],
     competencies: ['cloud', 'identity', 'correlation', 'response', 'reporting'],
     roadmap: [
-      { id: 'cloud-architect', title: 'Cloud Security Architect rank', note: 'Policy as code, and cloud detection and response at scale.' },
       { id: 'cloud-more', title: 'More cloud missions', note: 'Containers and Kubernetes, serverless, data protection and cloud incident response.' },
     ],
   },
@@ -756,10 +879,9 @@ export const PATHS = [
     headline: ['Defend the ', 'network.'],
     lead: 'Read the network like an engineer, decide what should talk to what, and find what should not be there. Rank is earned through mastery and a practical exam.',
     ranks: NETWORK_RANKS,
-    tiers: ['net-found', 'net-prac', 'net-lead'],
+    tiers: ['net-found', 'net-prac', 'net-lead', 'net-arch'],
     competencies: ['netdesign', 'fwrules', 'nettraffic', 'response', 'reporting'],
     roadmap: [
-      { id: 'net-architect', title: 'Network Security Architect rank', note: 'Zero trust, data centre and cloud networking, and large-scale rule management.' },
       { id: 'net-more', title: 'More missions', note: 'Wireless security, VPN design, intrusion detection and network forensics.' },
     ],
   },
@@ -769,10 +891,9 @@ export const PATHS = [
     headline: ['Fix what ', 'matters.'],
     lead: 'Cut through thousands of findings to the few that matter, and get them fixed. Rank is earned through mastery and a practical exam.',
     ranks: VULN_RANKS,
-    tiers: ['vm-found', 'vm-prac', 'vm-lead'],
+    tiers: ['vm-found', 'vm-prac', 'vm-lead', 'vm-arch'],
     competencies: ['vulnscan', 'vulnrisk', 'remediate', 'response', 'reporting'],
     roadmap: [
-      { id: 'vm-lead-rank', title: 'Vulnerability Management Lead rank', note: 'Running a whole programme: strategy, budget and reporting to the board.' },
       { id: 'vm-more', title: 'More missions', note: 'Asset discovery, cloud and container scanning, patch automation and board reporting.' },
     ],
   },
@@ -782,10 +903,9 @@ export const PATHS = [
     headline: ['Hack ', 'ethically.'],
     lead: 'Decision-based practice in method and judgement: what is in scope, what to do when you find something serious, and how to report it honestly. It does not teach working exploits.',
     ranks: PENTEST_RANKS,
-    tiers: ['pt-found', 'pt-prac', 'pt-lead'],
+    tiers: ['pt-found', 'pt-prac', 'pt-lead', 'pt-arch'],
     competencies: ['scope', 'recon', 'findings', 'reporting'],
     roadmap: [
-      { id: 'pt-redteam-lead', title: 'Red Team Lead rank', note: 'Adversary simulation, purple teaming and running a team of testers.' },
       { id: 'pt-more', title: 'More missions', note: 'Web application, wireless and cloud testing judgement, and working with clients on remediation.' },
     ],
   },

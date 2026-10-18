@@ -594,4 +594,94 @@ t('test-outage: walking away from the engagement mid-incident is an overreaction
   assert.ok(sd.g.disruption >= 40);
 });
 
+// ── supplier-breach (security architect) ──
+console.log('--- supplier-breach strategies');
+const SB = 'supplier-breach';
+const sbIdeal = run(SB, ['notice', 'inventory', 'usage', 'rotate-priority', 'rotate-rest', 'dpo', 'teams', 'vendor', 'mgr', 'declare']);
+t('supplier-breach: the ideal response is Textbook and ends declared', () => { assert.equal(sbIdeal.gr.rating.name, 'Textbook'); assert.equal(sbIdeal.g.outcome, 'declared'); });
+t('supplier-breach: skipping the DPO or the owning teams drops below Textbook', () => {
+  const nodpo = run(SB, ['notice', 'inventory', 'usage', 'rotate-priority', 'rotate-rest', 'teams', 'mgr', 'declare'], { quiet: true });
+  assert.notEqual(nodpo.gr.rating.name, 'Textbook');
+  assert.ok(nodpo.gr.breakdown.some((b) => /DPO not told/.test(b.label)));
+  const noteams = run(SB, ['notice', 'inventory', 'usage', 'rotate-priority', 'rotate-rest', 'dpo', 'mgr', 'declare'], { quiet: true });
+  assert.notEqual(noteams.gr.rating.name, 'Textbook');
+});
+t('supplier-breach: you cannot replace tokens or declare before you know what is connected', () => {
+  const g = E.newGame(byId[SB]);
+  const ids = E.availableActions(byId[SB], g).map((a) => a.id);
+  for (const locked of ['inventory', 'rotate-priority', 'rotate-rest', 'usage', 'dpo', 'declare']) assert.ok(!ids.includes(locked), locked + ' should be locked at the start');
+});
+t('supplier-breach: replacing the dangerous tokens late lets a broad token be used', () => {
+  const late = run(SB, ['notice', 'inventory', 'vendor', 'teams', 'usage', 'rotate-priority', 'rotate-rest', 'dpo', 'mgr', 'declare'], { quiet: true });
+  assert.equal(late.g.flags.misuseHit, true);
+  assert.ok(late.gr.points < sbIdeal.gr.points - 20, String(late.gr.points));
+});
+t('supplier-breach: suspending every integration is an overreaction, and waiting leaves the tokens live', () => {
+  const block = run(SB, ['notice', 'inventory', 'usage', 'block', 'dpo', 'mgr', 'declare'], { quiet: true });
+  assert.ok(block.g.disruption >= 35);
+  assert.notEqual(block.gr.rating.name, 'Textbook');
+  assert.ok(block.gr.points < sbIdeal.gr.points - 40, String(block.gr.points));
+  const wait = run(SB, ['notice', 'wait', 'mgr'], { quiet: true });
+  assert.equal(wait.g.flags.tokensLive, true);
+  assert.notEqual(wait.gr.rating.name, 'Textbook');
+});
+
+// ── idp-takeover (cloud security architect) ──
+console.log('--- idp-takeover strategies');
+const ID = 'idp-takeover';
+const idIdeal = run(ID, ['audit', 'breakglass', 'trusts', 'sessions', 'preserve', 'remove-trust', 'revoke', 'secure-admin', 'dpo', 'mgr', 'declare']);
+t('idp-takeover: the ideal response is Textbook and ends declared', () => { assert.equal(idIdeal.gr.rating.name, 'Textbook'); assert.equal(idIdeal.g.outcome, 'declared'); });
+t('idp-takeover: skipping the emergency access check or telling the DPO drops below Textbook', () => {
+  const nobg = run(ID, ['audit', 'trusts', 'sessions', 'preserve', 'remove-trust', 'revoke', 'secure-admin', 'dpo', 'mgr', 'declare'], { quiet: true });
+  assert.notEqual(nobg.gr.rating.name, 'Textbook');
+  assert.ok(nobg.gr.breakdown.some((b) => /way in/.test(b.label)));
+  const nodpo = run(ID, ['audit', 'breakglass', 'trusts', 'sessions', 'preserve', 'remove-trust', 'revoke', 'secure-admin', 'mgr', 'declare'], { quiet: true });
+  assert.notEqual(nodpo.gr.rating.name, 'Textbook');
+});
+t('idp-takeover: you cannot remove the rogue source, end sessions or declare before the evidence', () => {
+  const g = E.newGame(byId[ID]);
+  const ids = E.availableActions(byId[ID], g).map((a) => a.id);
+  for (const locked of ['trusts', 'sessions', 'remove-trust', 'revoke', 'secure-admin', 'breakglass', 'dpo', 'declare']) assert.ok(!ids.includes(locked), locked + ' should be locked at the start');
+});
+t('idp-takeover: resetting only the administrator leaves the second route open', () => {
+  const r = run(ID, ['audit', 'breakglass', 'trusts', 'sessions', 'preserve', 'secure-admin', 'revoke', 'dpo', 'mgr'], { quiet: true });
+  assert.equal(r.g.flags.rogueTrust, true);
+  assert.notEqual(r.gr.rating.name, 'Textbook');
+});
+t('idp-takeover: a forced company-wide reset or switching off sign-in is an overreaction', () => {
+  const reset = run(ID, ['audit', 'breakglass', 'trusts', 'sessions', 'preserve', 'remove-trust', 'revoke', 'secure-admin', 'mass-reset', 'dpo', 'mgr', 'declare'], { quiet: true });
+  assert.ok(reset.g.disruption >= 35);
+  assert.notEqual(reset.gr.rating.name, 'Textbook');
+  const sd = run(ID, ['audit', 'shutdown'], { quiet: true });
+  assert.equal(sd.gr.rating.name, 'Breach');
+});
+
+// ── lost-test-laptop (red team lead: conduct) ──
+console.log('--- lost-test-laptop strategies');
+const LT = 'lost-test-laptop';
+const ltIdeal = run(LT, ['ask', 'inventory', 'sessions', 'call', 'note', 'wipe', 'policy', 'declare']);
+t('lost-test-laptop: the ideal response is Textbook and ends declared', () => { assert.equal(ltIdeal.gr.rating.name, 'Textbook'); assert.equal(ltIdeal.g.outcome, 'declared'); });
+t('lost-test-laptop: skipping the written note drops below Textbook', () => {
+  const r = run(LT, ['ask', 'inventory', 'sessions', 'call', 'wipe', 'policy', 'declare'], { quiet: true });
+  assert.notEqual(r.gr.rating.name, 'Textbook');
+  assert.ok(r.gr.breakdown.some((b) => /No written note/.test(b.label)));
+});
+t('lost-test-laptop: you cannot send the note, wipe or call before you know what was on the laptop', () => {
+  const g = E.newGame(byId[LT]);
+  const ids = E.availableActions(byId[LT], g).map((a) => a.id);
+  for (const locked of ['inventory', 'sessions', 'wipe', 'call', 'note', 'declare']) assert.ok(!ids.includes(locked), locked + ' should be locked at the start');
+});
+t('lost-test-laptop: keeping it from the client is a breach of trust', () => {
+  const r = run(LT, ['ask', 'inventory', 'sessions', 'hide', 'wipe', 'policy'], { quiet: true });
+  assert.equal(r.g.flags.hidden, true);
+  assert.equal(r.gr.rating.name, 'Breach of trust');
+});
+t('lost-test-laptop: waiting for the laptop to turn up, or walking away, is worse than telling at once', () => {
+  const wait = run(LT, ['wait', 'ask', 'inventory', 'sessions', 'call', 'note', 'declare'], { quiet: true });
+  assert.ok(wait.gr.points < ltIdeal.gr.points - 30, String(wait.gr.points));
+  const walk = run(LT, ['ask', 'inventory', 'sessions', 'call', 'note', 'shutdown'], { quiet: true });
+  assert.ok(walk.g.disruption >= 40);
+  assert.notEqual(walk.gr.rating.name, 'Textbook');
+});
+
 console.log(n, 'passed');

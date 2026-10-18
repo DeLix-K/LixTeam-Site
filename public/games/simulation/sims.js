@@ -27,6 +27,11 @@ import { CLOUD_LEAD } from './sims-cloud-lead.js';
 import { NETWORK_LEAD } from './sims-network-lead.js';
 import { VULN_LEAD } from './sims-vuln-lead.js';
 import { PENTEST_LEAD } from './sims-pentest-lead.js';
+import { ENGINEER_ARCH } from './sims-engineer-arch.js';
+import { CLOUD_ARCH } from './sims-cloud-arch.js';
+import { NETWORK_ARCH } from './sims-network-arch.js';
+import { VULN_ARCH } from './sims-vuln-arch.js';
+import { PENTEST_ARCH } from './sims-pentest-arch.js';
 
 const CORE = [
   // ─────────────────────────────────────────────────────────────
@@ -268,4 +273,4 @@ const CORE = [
 ];
 
 // Everything the simulation draws from.
-export const SIMS = [...CORE, ...SENIOR, ...LEAD, ...MANAGER, ...VULN, ...NETWORK, ...PENTEST, ...ENGINEER, ...CLOUD, ...ENGINEER_LEAD, ...CLOUD_LEAD, ...NETWORK_LEAD, ...VULN_LEAD, ...PENTEST_LEAD];
+export const SIMS = [...CORE, ...SENIOR, ...LEAD, ...MANAGER, ...VULN, ...NETWORK, ...PENTEST, ...ENGINEER, ...CLOUD, ...ENGINEER_LEAD, ...CLOUD_LEAD, ...NETWORK_LEAD, ...VULN_LEAD, ...PENTEST_LEAD, ...ENGINEER_ARCH, ...CLOUD_ARCH, ...NETWORK_ARCH, ...VULN_ARCH, ...PENTEST_ARCH];
