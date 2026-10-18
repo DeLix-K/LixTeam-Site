@@ -484,4 +484,39 @@ t('leaked-admin-key: cleaning the repository history is not a fix, and shutting 
   assert.ok(sd.g.disruption >= 40);
 });
 
+// ── dns-hijack (senior network security) ──
+console.log('--- dns-hijack strategies');
+const DH = 'dns-hijack';
+const dhIdeal = run(DH, ['records', 'registrar', 'cert', 'preserve', 'secure', 'restore', 'revoke-cert', 'reset', 'mgr', 'declare']);
+t('dns-hijack: the ideal response is Textbook and ends declared', () => { assert.equal(dhIdeal.gr.rating.name, 'Textbook'); assert.equal(dhIdeal.g.outcome, 'declared'); });
+t('dns-hijack: not warning customers, not revoking the certificate or not briefing support drops below Textbook', () => {
+  const nowarn = run(DH, ['records', 'registrar', 'cert', 'preserve', 'secure', 'restore', 'revoke-cert', 'mgr', 'declare'], { quiet: true });
+  assert.notEqual(nowarn.gr.rating.name, 'Textbook');
+  assert.ok(nowarn.gr.breakdown.some((b) => /not warned/.test(b.label)));
+  const nocert = run(DH, ['records', 'registrar', 'preserve', 'secure', 'restore', 'reset', 'mgr', 'declare'], { quiet: true });
+  assert.notEqual(nocert.gr.rating.name, 'Textbook');
+  const nobrief = run(DH, ['records', 'registrar', 'cert', 'preserve', 'secure', 'restore', 'revoke-cert', 'reset', 'declare'], { quiet: true });
+  assert.notEqual(nobrief.gr.rating.name, 'Textbook');
+});
+t('dns-hijack: you cannot restore, secure, warn customers or declare before you have the evidence', () => {
+  const g = E.newGame(byId[DH]);
+  const ids = E.availableActions(byId[DH], g).map((a) => a.id);
+  for (const locked of ['secure', 'restore', 'revoke-cert', 'reset', 'mgr', 'declare']) assert.ok(!ids.includes(locked), locked + ' should be locked at the start');
+});
+t('dns-hijack: restoring the records before taking the account back is undone by the attacker', () => {
+  const r = run(DH, ['records', 'restore-early', 'registrar', 'secure', 'restore', 'reset', 'mgr', 'declare'], { quiet: true });
+  assert.ok(r.gr.points < dhIdeal.gr.points - 30, String(r.gr.points));
+  assert.ok(r.g.threat >= 40, 'threat ' + r.g.threat);
+});
+t('dns-hijack: leaving the registrar account open ends in a Breach', () => {
+  const r = run(DH, ['records', 'registrar', 'cert', 'preserve', 'revoke-cert', 'reset', 'mgr'], { quiet: true });
+  assert.equal(r.g.flags.accountOpen, true);
+  assert.equal(r.gr.rating.name, 'Breach');
+});
+t('dns-hijack: taking the whole sign-in service offline is an overreaction', () => {
+  const sd = run(DH, ['shutdown'], { quiet: true });
+  assert.equal(sd.gr.rating.name, 'Breach');
+  assert.ok(sd.g.disruption >= 40);
+});
+
 console.log(n, 'passed');

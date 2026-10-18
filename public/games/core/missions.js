@@ -50,6 +50,7 @@ export const TIERS = [
   { id: 'pt-prac', name: 'Practitioner', xpMultiplier: 1.5, path: 'pentest', note: 'Needs two Foundations missions passed.' },
   { id: 'net-found', name: 'Foundations', xpMultiplier: 1, path: 'network' },
   { id: 'net-prac', name: 'Practitioner', xpMultiplier: 1.5, path: 'network', note: 'Needs two Foundations missions passed.' },
+  { id: 'net-lead', name: 'Senior', xpMultiplier: 2.5, path: 'network', note: 'Opens when you reach Network Security Engineer.' },
   { id: 'vm-found', name: 'Foundations', xpMultiplier: 1, path: 'vuln' },
   { id: 'vm-prac', name: 'Practitioner', xpMultiplier: 1.5, path: 'vuln', note: 'Needs two Foundations missions passed.' },
 ];
@@ -333,6 +334,25 @@ export const MISSIONS = [
     competencies: { secretsiam: 0.4, hardening: 0.3, reporting: 0.3 },
     unlock: { passedTier: { 'se-found': 2 } },
   },
+  // ── Network Security path: senior tier
+  {
+    id: 'nw07-zones', title: 'Cutting the network into zones', tier: 'net-lead', kind: 'simulation', mode: 'simulation', ref: 'segmentation-programme', minutes: 22, par: 0, access: 'plus',
+    blurb: 'Every laptop can reach the finance database and the factory controllers. Decide which zones to build first and roll them out without an outage.',
+    competencies: { netdesign: 0.5, fwrules: 0.2, reporting: 0.3 },
+    unlock: { rank: 'nse' },
+  },
+  {
+    id: 'nw08-gateway', title: 'The gateway that let them in', tier: 'net-lead', kind: 'breach', mode: 'breach-room', ref: 'edge-appliance', minutes: 14, par: 250, access: 'plus',
+    blurb: 'Finance files have appeared on a leak site and nobody was phished. Rebuild how someone got from the internet to a file server.',
+    competencies: { nettraffic: 0.5, netdesign: 0.2, response: 0.3 },
+    unlock: { rank: 'nse' },
+  },
+  {
+    id: 'nw09-dns', title: 'The login page that was not ours', tier: 'net-lead', kind: 'incident', mode: 'incident-commander', ref: 'dns-hijack', minutes: 10, par: 125, access: 'plus',
+    blurb: 'Customers are typing their passwords into a fake sign-in page because someone changed where your domain points. Take the name back and protect your customers.',
+    competencies: { response: 0.5, nettraffic: 0.3, reporting: 0.2 },
+    unlock: { rank: 'nse' },
+  },
   // ── Cloud Security path: senior tier
   {
     id: 'c07-landing', title: 'Forty accounts, no plan', tier: 'cloud-lead', kind: 'simulation', mode: 'simulation', ref: 'landing-zone', minutes: 22, par: 0, access: 'plus',
@@ -547,6 +567,13 @@ export const MISSIONS = [
     unlock: { rank: 'se', passedTier: { 'se-lead': 3 }, mastery: { hardening: 60, pipeline: 50 }, masteryScope: ['se-found', 'se-prac', 'se-lead'] },
   },
   {
+    id: 'net-senior-exam', title: 'Promotion exam: Senior Network Security Engineer', tier: 'net-lead', kind: 'simulation', mode: 'simulation', ref: 'net-senior-exam', minutes: 28, par: 0, access: 'plus',
+    exam: true, promotes: 'senior', passTier: 2,
+    blurb: 'A new site, a supplier who wants a door left open and an executive who backs them. Silver or better to pass.',
+    competencies: { netdesign: 0.3, fwrules: 0.2, nettraffic: 0.2, response: 0.1, reporting: 0.2 },
+    unlock: { rank: 'nse', passedTier: { 'net-lead': 3 }, mastery: { netdesign: 60, nettraffic: 55 }, masteryScope: ['net-found', 'net-prac', 'net-lead'] },
+  },
+  {
     id: 'cloud-senior-exam', title: 'Promotion exam: Senior Cloud Security Engineer', tier: 'cloud-lead', kind: 'simulation', mode: 'simulation', ref: 'cloud-senior-exam', minutes: 28, par: 0, access: 'plus',
     exam: true, promotes: 'senior', passTier: 2,
     blurb: 'A cost-saving programme, a request to remove logging and an account nobody can explain. Silver or better to pass.',
@@ -596,6 +623,10 @@ const NETWORK_RANKS = [
   {
     id: 'nse', name: 'Network Security Engineer', blurb: 'You design zones, write rules from evidence, and make changes safely and honestly.',
     requires: { xp: 250, passedTier: { 'net-found': 3, 'net-prac': 2 }, mastery: { netdesign: 55, fwrules: 55 }, masteryScope: ['net-found', 'net-prac'], exam: 'net-exam' },
+  },
+  {
+    id: 'senior', name: 'Senior Network Security Engineer', blurb: 'You cut a large network into zones without breaking the business, treat remote access as a front door, and say no safely when someone wants a hole in the perimeter.',
+    requires: { xp: 650, passedTier: { 'net-lead': 3 }, mastery: { netdesign: 60, nettraffic: 55 }, masteryScope: ['net-found', 'net-prac', 'net-lead'], exam: 'net-senior-exam' },
   },
 ];
 
@@ -663,10 +694,10 @@ export const PATHS = [
     headline: ['Defend the ', 'network.'],
     lead: 'Read the network like an engineer, decide what should talk to what, and find what should not be there. Rank is earned through mastery and a practical exam.',
     ranks: NETWORK_RANKS,
-    tiers: ['net-found', 'net-prac'],
+    tiers: ['net-found', 'net-prac', 'net-lead'],
     competencies: ['netdesign', 'fwrules', 'nettraffic', 'response', 'reporting'],
     roadmap: [
-      { id: 'net-senior', title: 'Senior Network Security Engineer and Network Security Architect ranks', note: 'Zero trust, data centre and cloud networking, and large-scale rule management.' },
+      { id: 'net-architect', title: 'Network Security Architect rank', note: 'Zero trust, data centre and cloud networking, and large-scale rule management.' },
       { id: 'net-more', title: 'More missions', note: 'Wireless security, VPN design, intrusion detection and network forensics.' },
     ],
   },
