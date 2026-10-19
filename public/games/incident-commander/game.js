@@ -2,6 +2,7 @@ import { INCIDENTS } from './incidents.js';
 import * as engine from './engine.js';
 import * as profile from '../core/profile.js';
 import * as missionLink from '../core/mission-link.js';
+import * as weekly from '../core/weekly.js';
 
 const BEST_KEY = 'lixteam.incidentCommander.best';
 const MISSION = missionLink.current('incident-commander');
@@ -51,7 +52,7 @@ function renderPicker() {
   const best = readBest();
   const list = $('incident-list');
   list.replaceChildren();
-  for (const inc of INCIDENTS) {
+  for (const inc of INCIDENTS.filter((x) => weekly.visible('incident-commander', x.id))) {
     const skill = profile.SKILLS.find((s) => s.id === inc.skill);
     const card = h(
       'button',
@@ -61,7 +62,7 @@ function renderPicker() {
       h(
         'div',
         { class: 'meta' },
-        h('span', { class: 'chip', text: skill ? skill.name : inc.skill }),
+        h('span', { class: 'chip', text: profile.skillLabel(inc.skill) }),
         h('span', { class: 'chip', text: `${inc.maxTime * inc.minutesPerUnit} min of working time` }),
         best[inc.id] ? h('span', { class: 'chip best', text: `Best: ${best[inc.id].rating} (${best[inc.id].points})` }) : null
       )

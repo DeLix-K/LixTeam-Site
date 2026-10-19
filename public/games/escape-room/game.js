@@ -71,7 +71,7 @@ function renderPicker() {
         { class: 'meta' },
         h('span', { class: 'chip', text: `${e.rooms.length} rooms` }),
         h('span', { class: 'chip', text: `${Math.round(e.totalSeconds / 60)} minutes` }),
-        h('span', { class: 'chip', text: skill ? skill.name : e.skill }),
+        h('span', { class: 'chip', text: profile.skillLabel(e.skill) }),
         best[e.id] ? h('span', { class: 'chip best', text: `Best: ${best[e.id].rating} (${best[e.id].points})` }) : null
       )
     );

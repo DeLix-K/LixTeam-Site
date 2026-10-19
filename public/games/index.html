@@ -74,7 +74,7 @@
           <div class="progress"><div id="p-bar"></div></div>
           <small id="p-next"></small>
         </div>
-        <div class="hud-tile"><span class="hud-label">Daily missions</span><span class="hud-big" id="p-streak">0</span></div>
+        <div class="hud-tile hud-streak"><span class="hud-label">Day streak</span><span class="hud-big" id="p-streak">0</span><small class="hud-note" id="streak-note"></small></div>
         <div class="hud-tile"><span class="hud-label">Gold medals</span><span class="hud-big gold" id="p-gold">0</span></div>
         <div class="hud-tile"><span class="hud-label">Paths started</span><span class="hud-big" id="p-paths">0<small>/9</small></span></div>
       </div>
@@ -88,6 +88,20 @@
         </span>
         <span class="btn primary">Resume</span>
       </a>
+
+      <div class="weekly" id="weekly" hidden>
+        <div class="weekly-text">
+          <p class="tag-line">This week's case</p>
+          <h2 id="weekly-title"></h2>
+          <p id="weekly-blurb"></p>
+          <p class="weekly-meta"><span class="chip" id="weekly-mode"></span><span class="chip" id="weekly-status"></span><span class="weekly-next" id="weekly-next"></span></p>
+        </div>
+        <a class="btn primary big" id="weekly-btn" href="#">Play</a>
+      </div>
+      <details class="weekly-archive" id="weekly-archive" hidden>
+        <summary>Earlier weekly cases</summary>
+        <ul id="weekly-list"></ul>
+      </details>
 
       <h2 class="sec" id="paths">Choose your path</h2>
       <p class="section-sub">Every path is its own ladder with its own ranks, skills and promotion exams. Try any of them, and switch whenever you like.</p>

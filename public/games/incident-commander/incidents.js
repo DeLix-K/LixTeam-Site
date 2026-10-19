@@ -24,6 +24,7 @@ import { PENTEST_ARCH } from './incidents-pentest-arch.js';
 import { DFIR } from './incidents-dfir.js';
 import { GRC } from './incidents-grc.js';
 import { TI } from './incidents-ti.js';
+import { WEEKLY } from './incidents-weekly.js';
 
 const CORE = [
   // ─────────────────────────────────────────────────────────────
@@ -420,4 +421,4 @@ const CORE = [
 ];
 
 // Everything the game draws from.
-export const INCIDENTS = [...CORE, ...EXTRA, ...LEAD, ...VULN, ...NETWORK, ...PENTEST, ...ENGINEER, ...CLOUD, ...ENGINEER_LEAD, ...CLOUD_LEAD, ...NETWORK_LEAD, ...VULN_LEAD, ...PENTEST_LEAD, ...ENGINEER_ARCH, ...CLOUD_ARCH, ...PENTEST_ARCH, ...DFIR, ...GRC, ...TI];
+export const INCIDENTS = [...CORE, ...EXTRA, ...LEAD, ...VULN, ...NETWORK, ...PENTEST, ...ENGINEER, ...CLOUD, ...ENGINEER_LEAD, ...CLOUD_LEAD, ...NETWORK_LEAD, ...VULN_LEAD, ...PENTEST_LEAD, ...ENGINEER_ARCH, ...CLOUD_ARCH, ...PENTEST_ARCH, ...DFIR, ...GRC, ...TI, ...WEEKLY];

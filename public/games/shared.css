@@ -101,3 +101,5 @@ kbd { font: inherit; font-size: 13px; opacity: 0.7; border: 1px solid currentCol
 .rankup strong { display: block; font-size: 22px; letter-spacing: -0.3px; }
 @keyframes pop { 0% { opacity: 0; transform: scale(0.5) rotate(-8deg); } 60% { transform: scale(1.12) rotate(2deg); } 100% { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .mission-card .medal-icon, .rankup .rank-badge { animation: none; } }
+
+.mission-card .mission-streak { color: #fb923c; font-weight: 700; }

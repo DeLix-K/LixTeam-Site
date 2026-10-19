@@ -75,7 +75,7 @@ function renderPicker() {
         'div',
         { class: 'meta' },
         h('span', { class: 'chip', text: s.channel }),
-        h('span', { class: 'chip', text: skill ? skill.name : s.skill }),
+        h('span', { class: 'chip', text: profile.skillLabel(s.skill) }),
         best[s.id] ? h('span', { class: 'chip best', text: `Best: ${best[s.id].rating} (${best[s.id].points})` }) : null
       )
     );

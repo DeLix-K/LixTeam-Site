@@ -1,6 +1,8 @@
 import * as profile from './core/profile.js';
 import * as career from './core/career.js';
-import { PATHS } from './core/missions.js';
+import * as streak from './core/streak.js';
+import * as weekly from './core/weekly.js';
+import { PATHS, MEDALS } from './core/missions.js';
 import { rankBadge, modeIcon, pathIcon, MODE_COLOUR } from './core/art.js';
 
 const $ = (id) => document.getElementById(id);
@@ -84,8 +86,37 @@ function renderPaths() {
   }
 }
 
+const MODE_NAME = { 'cyber-detective': 'Cyber Detective', 'breach-room': 'The Breach Room', 'incident-commander': 'Incident Commander', simulation: 'Incident Simulation' };
+
+// This week's case, and the ones before it. One new case is released every Monday.
+function renderWeekly() {
+  const cur = weekly.current();
+  $('weekly').hidden = !cur;
+  if (!cur) return;
+  const res = weekly.resultOf(cur.id);
+  $('weekly-title').textContent = cur.title;
+  $('weekly-blurb').textContent = cur.blurb;
+  $('weekly-mode').textContent = `${MODE_NAME[cur.mode] || cur.mode} · about ${cur.minutes} min`;
+  $('weekly-status').textContent = res && res.tier > 0 ? `Done: ${MEDALS[res.tier]}` : res ? 'Not passed yet' : 'New';
+  $('weekly-status').classList.toggle('done', !!(res && res.tier > 0));
+  const nx = weekly.next();
+  $('weekly-next').textContent = nx ? `Next case ${nx.days === 0 ? 'today' : nx.days === 1 ? 'tomorrow' : 'in ' + nx.days + ' days'}` : '';
+  $('weekly-btn').href = `${cur.mode}/?weekly=${cur.id}`;
+  $('weekly-btn').textContent = res && res.tier > 0 ? 'Play again' : 'Play';
+  const past = weekly.released().filter((e) => e.id !== cur.id).sort((a, b) => (a.release < b.release ? 1 : -1));
+  $('weekly-archive').hidden = past.length === 0;
+  $('weekly-list').replaceChildren(
+    ...past.map((e) => {
+      const r = weekly.resultOf(e.id);
+      const a = h('a', { href: `${e.mode}/?weekly=${e.id}` }, h('strong', { text: e.title }), h('small', { text: ` ${MODE_NAME[e.mode] || e.mode}${r && r.tier > 0 ? ' · ' + MEDALS[r.tier] : ''}` }));
+      return h('li', {}, a);
+    })
+  );
+}
+
 function render() {
   renderPaths();
+  renderWeekly();
   const p = profile.load();
   const info = profile.levelInfo(p.xp);
 
@@ -93,7 +124,12 @@ function render() {
   $('p-xp').textContent = `${p.xp} XP`;
   $('p-next').textContent = `${info.to - p.xp} to level ${info.level + 1}`;
   $('p-bar').style.width = `${Math.round(info.progress * 100)}%`;
-  $('p-streak').textContent = String(p.daily.total || 0);
+  streak.seedFrom(career.load().attempts.map((a) => a.at));
+  const st = streak.status();
+  $('p-streak').textContent = String(st.current);
+  $('p-streak').classList.toggle('lit', st.today && st.current > 0);
+  $('streak-note').textContent = st.current === 0 ? 'Finish any case to start' : st.atRisk ? 'Play today to keep it' : st.shields ? `Best ${st.best} · shield ready` : `Best ${st.best}`;
+  $('streak-note').classList.toggle('warn', st.atRisk);
 
   // Daily mission
   const done = profile.dailyDone();
@@ -148,6 +184,7 @@ function render() {
 $('reset-btn').addEventListener('click', () => {
   if (confirm('Reset your practice level, XP, streak and skill history on this device? Your career ranks are kept.')) {
     profile.reset();
+    streak.reset();
     render();
   }
 });

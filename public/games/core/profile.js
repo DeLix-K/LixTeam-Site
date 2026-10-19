@@ -3,9 +3,13 @@
 // If storage is blocked (private mode), everything still works for the
 // session; progress just is not remembered.
 
+import * as streak from './streak.js';
+
 // The key keeps its original name (from before the game was called RootLine) so nobody loses saved progress.
 const KEY = 'lixteam.cyberRange.v1';
 
+// Cases written for the career paths use finer skill names than the practice categories above.
+const EXTRA_LABELS = { hardening: 'Career case', correlation: 'Evidence correlation', devices: 'Everyday digital safety' };
 export const SKILLS = [
   { id: 'email', name: 'Email & message security', blurb: 'Phishing, fake invoices, QR scams' },
   { id: 'identity', name: 'Identity & account security', blurb: 'MFA, sign-ins, account recovery' },
@@ -76,7 +80,14 @@ export function levelInfo(xp) {
   return { level, from, to, progress: (xp - from) / (to - from) };
 }
 
+// The name shown on a case card for a skill id: a practice category, or a friendly label for career cases.
+export function skillLabel(id) {
+  const s = SKILLS.find((x) => x.id === id);
+  return s ? s.name : EXTRA_LABELS[id] || 'Career case';
+}
+
 export function addXp(n) {
+  streak.touch(); // any finished round keeps the day streak alive
   const p = load();
   const before = levelInfo(p.xp).level;
   p.xp += Math.max(0, Math.round(n));

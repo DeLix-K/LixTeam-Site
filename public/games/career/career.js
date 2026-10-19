@@ -1,4 +1,5 @@
 import * as career from '../core/career.js';
+import * as streak from '../core/streak.js';
 import { MISSIONS, TIERS, MEDALS, ROADMAP, PATHS } from '../core/missions.js';
 import { rankBadge, medalIcon, skillRadar, pathIcon } from '../core/art.js';
 
@@ -71,6 +72,10 @@ function render() {
 
   // Rank and what the next promotion needs
   $('rank-name').textContent = r.rank.name;
+  streak.seedFrom(s.attempts.map((a) => a.at));
+  const st = streak.status();
+  $('c-streak').hidden = st.current === 0;
+  $('c-streak').textContent = st.atRisk ? `${st.current}-day streak. Finish a case today to keep it.` : `${st.current}-day streak${st.shields ? ' · shield ready' : ''}`;
   $('rank-badge').replaceChildren(rankBadge(career.rankBadgeSpec(pid, r.rank), 96, { label: `Rank: ${r.rank.name}` }));
   const pct100 = Math.round(r.progress * 100);
   $('rank-progress').hidden = r.isTop;

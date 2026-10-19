@@ -6,14 +6,27 @@
 // newly opened missions). render() shows that summary on the results screen.
 
 import * as career from './career.js';
+import * as streak from './streak.js';
+import * as weekly from './weekly.js';
 import { missionById, MEDALS } from './missions.js';
 import { medalIcon, rankBadge } from './art.js';
 
 const CAMPAIGN_URL = '/games/career/';
+const HOME_URL = '/games/';
 
-// The mission this page was opened for, if it belongs to this mode.
+// The mission this page was opened for, if it belongs to this mode. A weekly case (?weekly=wk01) is
+// described the same way, so each game mode handles it without knowing the difference.
 export function current(mode) {
-  const id = new URLSearchParams(location.search).get('mission');
+  const params = new URLSearchParams(location.search);
+  const wid = params.get('weekly');
+  if (wid) {
+    const e = weekly.byId(wid);
+    if (e && weekly.isReleased(e) && (!mode || e.mode === mode)) {
+      return { id: 'weekly:' + e.id, weekly: e, mode: e.mode, ref: e.ref, title: e.title, minutes: e.minutes, par: 0, exam: false };
+    }
+    return null;
+  }
+  const id = params.get('mission');
   const m = id ? missionById(id) : null;
   return m && (!mode || m.mode === mode) ? m : null;
 }
@@ -21,9 +34,10 @@ export function current(mode) {
 // In mission mode the way back goes to the campaign, not the games hub.
 export function applyChrome() {
   const back = document.querySelector('a.back');
+  const isWeekly = new URLSearchParams(location.search).has('weekly');
   if (back) {
-    back.href = CAMPAIGN_URL;
-    back.textContent = '← Campaign';
+    back.href = isWeekly ? HOME_URL : CAMPAIGN_URL;
+    back.textContent = isWeekly ? '← Home' : '← Campaign';
   }
   for (const id of ['res-other']) {
     const el = document.getElementById(id);
@@ -33,6 +47,7 @@ export function applyChrome() {
 
 // result: { points, tier (0..3), perf (0..1, optional), summary: string[] }
 export function report(mission, result) {
+  if (mission.weekly) return { weekly: true, mission, ...weekly.record(mission.weekly.id, result) };
   const s = career.load();
   const res = career.recordAttempt(s, { missionId: mission.id, ...result });
   career.save();
@@ -46,7 +61,31 @@ function el(tag, cls, text) {
   return e;
 }
 
+function renderWeekly(container, res) {
+  container.replaceChildren();
+  container.hidden = false;
+  const box = el('div', `mission-card medal-${res.tier}`);
+  const head = el('div', 'result-head');
+  head.append(medalIcon(res.tier, 44));
+  const headText = el('div');
+  headText.append(el('p', 'mission-eyebrow', `This week's case · ${res.mission.title}`), el('h2', '', res.tier > 0 ? `Weekly case complete: ${MEDALS[res.tier]}` : 'Not passed yet'));
+  head.append(headText);
+  box.append(head);
+  if (res.tier === 0) box.append(el('p', '', 'You need at least bronze to pass. Replay it and try a different approach.'));
+  else if (res.bonus > 0) box.append(el('p', '', `+${res.bonus} bonus XP for finishing this week's case.`));
+  else box.append(el('p', '', 'Bonus XP is paid once, the first time a weekly case is passed.'));
+  const st = streak.status();
+  if (st.current > 0) box.append(el('p', 'mission-streak', `Day streak: ${st.current}${st.current === 1 ? ' day' : ' days'}. Come back tomorrow to keep it going.`));
+  const nx = weekly.next();
+  if (nx) box.append(el('p', 'mission-unlock', `Next weekly case: ${nx.days === 0 ? 'today' : nx.days === 1 ? 'tomorrow' : 'in ' + nx.days + ' days'}.`));
+  const a = el('a', 'btn primary big', 'Back to the home screen');
+  a.href = HOME_URL;
+  box.append(a);
+  container.append(box);
+}
+
 export function render(container, res) {
+  if (res.weekly) return renderWeekly(container, res);
   container.replaceChildren();
   container.hidden = false;
   const m = res.mission;
@@ -76,6 +115,8 @@ export function render(container, res) {
     up.append(rankBadge(career.rankBadgeSpec(res.path, res.promoted), 58), txt);
     box.append(up);
   }
+  const st = streak.status();
+  if (st.current > 0) box.append(el('p', 'mission-streak', `Day streak: ${st.current}${st.current === 1 ? ' day' : ' days'}. Come back tomorrow to keep it going.`));
   if (res.featuredDone) box.append(el('p', 'mission-unlock', "This week's featured case: done."));
   if (res.newlyUnlocked.length) box.append(el('p', 'mission-unlock', `Unlocked: ${res.newlyUnlocked.map((u) => u.title).join(', ')}.`));
 

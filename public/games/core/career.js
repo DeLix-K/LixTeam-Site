@@ -13,6 +13,7 @@
 // server. A progress code lets a player move between devices by hand.
 // Ranks and scores are game progression, not qualifications.
 
+import * as streak from './streak.js';
 import { MISSIONS, RANKS, PATHS, COMPETENCIES, TIERS, MEDAL_XP, MEDALS, TRY_XP, EXAM_XP, missionById } from './missions.js';
 
 const KEY = 'lixteam.career.v1';
@@ -314,6 +315,8 @@ export function recordAttempt(s, input) {
   s.xp += xpGained;
   if (!s.path) s.path = pathId; // playing a case from a link starts that path
 
+  streak.seedFrom(s.attempts.map((a) => a.at)); // players with history keep their past days
+  streak.touch(input.now ? new Date(input.now) : new Date());
   s.attempts.push({ id: m.id, at: input.now || new Date().toISOString(), points, tier, perf, summary: (input.summary || []).slice(0, 8) });
   if (s.attempts.length > MAX_ATTEMPTS) s.attempts.splice(0, s.attempts.length - MAX_ATTEMPTS);
 

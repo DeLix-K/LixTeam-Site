@@ -35,6 +35,7 @@ import { PENTEST_ARCH } from './sims-pentest-arch.js';
 import { DFIR } from './sims-dfir.js';
 import { GRC } from './sims-grc.js';
 import { TI } from './sims-ti.js';
+import { WEEKLY } from './sims-weekly.js';
 
 const CORE = [
   // ─────────────────────────────────────────────────────────────
@@ -276,4 +277,4 @@ const CORE = [
 ];
 
 // Everything the simulation draws from.
-export const SIMS = [...CORE, ...SENIOR, ...LEAD, ...MANAGER, ...VULN, ...NETWORK, ...PENTEST, ...ENGINEER, ...CLOUD, ...ENGINEER_LEAD, ...CLOUD_LEAD, ...NETWORK_LEAD, ...VULN_LEAD, ...PENTEST_LEAD, ...ENGINEER_ARCH, ...CLOUD_ARCH, ...NETWORK_ARCH, ...VULN_ARCH, ...PENTEST_ARCH, ...DFIR, ...GRC, ...TI];
+export const SIMS = [...CORE, ...SENIOR, ...LEAD, ...MANAGER, ...VULN, ...NETWORK, ...PENTEST, ...ENGINEER, ...CLOUD, ...ENGINEER_LEAD, ...CLOUD_LEAD, ...NETWORK_LEAD, ...VULN_LEAD, ...PENTEST_LEAD, ...ENGINEER_ARCH, ...CLOUD_ARCH, ...NETWORK_ARCH, ...VULN_ARCH, ...PENTEST_ARCH, ...DFIR, ...GRC, ...TI, ...WEEKLY];

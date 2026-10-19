@@ -190,3 +190,5 @@ label.check a { color: var(--accent); }
 .path-bar > div { background: var(--path); border-radius: 0; }
 .paths-more { margin: 14px 0 8px; }
 @media (prefers-reduced-motion: reduce) { .path-card { transition: none; } .path-card:hover:not(:disabled) { transform: none; } }
+
+.streak-chip { display: inline-block; margin: 8px 0 0; padding: 3px 12px; border-radius: 99px; font: 700 12.5px var(--mono); letter-spacing: 0.3px; color: #fb923c; background: rgba(251, 146, 60, 0.12); border: 1px solid rgba(251, 146, 60, 0.4); }

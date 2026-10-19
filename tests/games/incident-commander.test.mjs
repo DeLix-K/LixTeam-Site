@@ -779,4 +779,65 @@ t('partner-warning: naming a group, blocking all attachments or waiting are poor
   assert.ok(wait.gr.points < pwIdeal.gr.points - 40, String(wait.gr.points));
 });
 
+// ── usb-in-car-park (weekly) ──
+console.log('--- usb-in-car-park strategies');
+const UB = 'usb-in-car-park';
+const ubIdeal = run(UB, ['ask', 'logs', 'isolate', 'keepstick', 'accounts', 'preserve', 'staff', 'mgr', 'declare']);
+t('usb-in-car-park: the ideal response is Textbook and ends declared', () => { assert.equal(ubIdeal.gr.rating.name, 'Textbook'); assert.equal(ubIdeal.g.outcome, 'declared'); });
+t('usb-in-car-park: skipping the evidence capture, the stick or the warning drops below Textbook', () => {
+  for (const seq of [['ask', 'logs', 'isolate', 'keepstick', 'accounts', 'staff', 'mgr', 'declare'], ['ask', 'logs', 'isolate', 'accounts', 'preserve', 'staff', 'mgr', 'declare'], ['ask', 'logs', 'isolate', 'keepstick', 'accounts', 'preserve', 'mgr', 'declare']]) {
+    assert.notEqual(run(UB, seq, { quiet: true }).gr.rating.name, 'Textbook', seq.join());
+  }
+});
+t('usb-in-car-park: you cannot isolate, reset or declare before you know what happened', () => {
+  const g = E.newGame(byId[UB]);
+  const ids = E.availableActions(byId[UB], g).map((a) => a.id);
+  for (const locked of ['logs', 'isolate', 'accounts', 'keepstick', 'preserve', 'declare']) assert.ok(!ids.includes(locked), locked + ' should be locked at the start');
+});
+t('usb-in-car-park: plugging the stick into your own laptop is a serious mistake', () => {
+  const r = run(UB, ['ask', 'logs', 'isolate', 'keepstick', 'accounts', 'plugin', 'preserve', 'staff', 'mgr', 'declare'], { quiet: true });
+  assert.equal(r.g.flags.plugged, true);
+  assert.equal(r.gr.rating.name, 'Costly');
+});
+t('usb-in-car-park: wiping the computer, waiting or cutting the whole office off are poor responses', () => {
+  const wipe = run(UB, ['ask', 'logs', 'reimage', 'keepstick', 'accounts', 'staff', 'mgr', 'declare'], { quiet: true });
+  assert.ok(wipe.gr.points < ubIdeal.gr.points - 30, String(wipe.gr.points));
+  const wait = run(UB, ['wait', 'ask', 'logs', 'isolate', 'keepstick', 'accounts', 'preserve', 'staff', 'mgr', 'declare'], { quiet: true });
+  assert.notEqual(wait.gr.rating.name, 'Textbook');
+  const sd = run(UB, ['ask', 'logs', 'shutdown', 'keepstick', 'accounts', 'staff', 'mgr'], { quiet: true });
+  assert.ok(sd.g.disruption >= 40);
+  assert.notEqual(sd.gr.rating.name, 'Textbook');
+});
+
+// ── mailbox-rule (weekly) ──
+console.log('--- mailbox-rule strategies');
+const MB = 'mailbox-rule';
+const mbIdeal = run(MB, ['rules', 'signins', 'sent', 'preserve', 'removerule', 'secure', 'finance', 'dpo', 'declare']);
+t('mailbox-rule: the ideal response is Textbook and ends declared', () => { assert.equal(mbIdeal.gr.rating.name, 'Textbook'); assert.equal(mbIdeal.g.outcome, 'declared'); });
+t('mailbox-rule: skipping the DPO, the evidence or the finance warning drops below Textbook', () => {
+  for (const seq of [['rules', 'signins', 'sent', 'preserve', 'removerule', 'secure', 'finance', 'declare'], ['rules', 'signins', 'sent', 'removerule', 'secure', 'finance', 'dpo', 'declare'], ['rules', 'signins', 'sent', 'preserve', 'removerule', 'secure', 'dpo', 'declare']]) {
+    assert.notEqual(run(MB, seq, { quiet: true }).gr.rating.name, 'Textbook', seq.join());
+  }
+});
+t('mailbox-rule: you cannot remove the rule, lock the account or declare before looking', () => {
+  const g = E.newGame(byId[MB]);
+  const ids = E.availableActions(byId[MB], g).map((a) => a.id);
+  for (const locked of ['removerule', 'secure', 'preserve', 'finance', 'dpo', 'declare']) assert.ok(!ids.includes(locked), locked + ' should be locked at the start');
+});
+t('mailbox-rule: removing the rule but leaving the attacker able to sign in is not contained', () => {
+  const r = run(MB, ['rules', 'signins', 'sent', 'preserve', 'removerule', 'finance', 'dpo'], { quiet: true });
+  assert.equal(r.g.flags.accountOpen, true);
+  assert.notEqual(r.gr.rating.name, 'Textbook');
+});
+t('mailbox-rule: deleting the rule unsaved, resetting everyone and switching off email are poor responses', () => {
+  const del = run(MB, ['rules', 'signins', 'sent', 'delete', 'secure', 'finance', 'dpo', 'declare'], { quiet: true });
+  assert.equal(del.g.flags.deleted, true);
+  assert.notEqual(del.gr.rating.name, 'Textbook');
+  const all = run(MB, ['rules', 'signins', 'sent', 'preserve', 'removerule', 'secure', 'resetall', 'finance', 'dpo', 'declare'], { quiet: true });
+  assert.ok(all.g.disruption >= 30);
+  assert.notEqual(all.gr.rating.name, 'Textbook');
+  const sd = run(MB, ['rules', 'shutdown'], { quiet: true });
+  assert.equal(sd.gr.rating.name, 'Breach');
+});
+
 console.log(n, 'passed');

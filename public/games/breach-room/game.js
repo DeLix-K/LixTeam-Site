@@ -2,6 +2,7 @@ import { CASES } from './cases.js';
 import * as engine from './engine.js';
 import * as profile from '../core/profile.js';
 import * as missionLink from '../core/mission-link.js';
+import * as weekly from '../core/weekly.js';
 
 const BEST_KEY = 'lixteam.breachRoom.best';
 const MISSION = missionLink.current('breach-room');
@@ -60,7 +61,7 @@ function renderPicker() {
   const best = readBest();
   const list = $('case-list');
   list.replaceChildren();
-  for (const cs of CASES) {
+  for (const cs of CASES.filter((x) => weekly.visible('breach-room', x.id))) {
     const skill = profile.SKILLS.find((s) => s.id === cs.skill);
     const card = h(
       'button',
@@ -72,7 +73,7 @@ function renderPicker() {
         { class: 'meta' },
         h('span', { class: 'chip', text: `${cs.cards.length} pieces of evidence` }),
         h('span', { class: 'chip', text: `${cs.stages.length} stages` }),
-        h('span', { class: 'chip', text: skill ? skill.name : cs.skill }),
+        h('span', { class: 'chip', text: profile.skillLabel(cs.skill) }),
         best[cs.id] ? h('span', { class: 'chip best', text: `Best: ${best[cs.id].rating} (${best[cs.id].points})` }) : null
       )
     );
@@ -91,7 +92,7 @@ function start(cs) {
   answers = {};
   $('case-title').textContent = cs.title;
   const skill = profile.SKILLS.find((s) => s.id === cs.skill);
-  $('case-sub').textContent = skill ? skill.name : '';
+  $('case-sub').textContent = profile.skillLabel(cs.skill);
   $('brief-body').replaceChildren(...cs.brief.map((p) => h('p', { text: p })));
   $('brief').open = true;
   $('pivot-note').textContent = '';

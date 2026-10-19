@@ -2,6 +2,7 @@ import { SIMS } from './sims.js';
 import * as engine from './engine.js';
 import * as profile from '../core/profile.js';
 import * as missionLink from '../core/mission-link.js';
+import * as weekly from '../core/weekly.js';
 
 const BEST_KEY = 'lixteam.simulation.best';
 const SAVE_KEY = 'lixteam.simulation.save';
@@ -127,7 +128,7 @@ function renderPicker() {
   const best = readBest();
   const list = $('sim-list');
   list.replaceChildren();
-  for (const s of SIMS) {
+  for (const s of SIMS.filter((x) => weekly.visible('simulation', x.id))) {
     const skill = profile.SKILLS.find((x) => x.id === s.skill);
     const card = h(
       'button',
@@ -139,7 +140,7 @@ function renderPicker() {
         { class: 'meta' },
         h('span', { class: 'chip', text: `${s.stages.length} stages` }),
         h('span', { class: 'chip', text: `About ${s.minutes} minutes` }),
-        h('span', { class: 'chip', text: skill ? skill.name : s.skill }),
+        h('span', { class: 'chip', text: profile.skillLabel(s.skill) }),
         best[s.id] ? h('span', { class: 'chip best', text: `Best: ${best[s.id].rating} (${best[s.id].points})` }) : null
       )
     );
