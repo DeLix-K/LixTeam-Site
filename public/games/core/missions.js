@@ -713,6 +713,12 @@ export const MISSIONS = [
     competencies: { fwrules: 0.5, reporting: 0.3, netdesign: 0.2 },
     unlock: { passedTier: { 'net-found': 2 } },
   },
+  {
+    id: 'nw12-bench', title: 'The network with no walls', tier: 'net-prac', kind: 'workspace', mode: 'workspace', ref: 'net-flat', minutes: 25, par: 0, access: 'plus',
+    blurb: 'A contractor laptop is probing the office and copying the file server. Trace the traffic, write the firewall rules, and stop it without breaking payroll, the cameras or the website.',
+    competencies: { fwrules: 0.4, nettraffic: 0.3, netdesign: 0.3 },
+    unlock: { passedTier: { 'net-found': 2 } },
+  },
   // ── Vulnerability Management path
   {
     id: 'vm01-scan', title: 'Monday\'s scan', tier: 'vm-found', kind: 'simulation', mode: 'simulation', ref: 'scan-triage', minutes: 16, par: 0, access: 'free',

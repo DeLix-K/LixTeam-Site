@@ -2,14 +2,16 @@
 // textContent; nothing from the scenario data is parsed as HTML.
 
 import * as E from './engine.js';
+import * as Net from './net.js';
 import { SOC_INVOICE } from './scenarios/soc-invoice.js';
 import { DFIR_LAPTOP } from './scenarios/dfir-laptop.js';
+import { NET_FLAT } from './scenarios/net-flat.js';
 import { medalIcon } from '../core/art.js';
 import { MEDALS } from '../core/missions.js';
 import * as streak from '../core/streak.js';
 import * as missionLink from '../core/mission-link.js';
 
-const SCENARIOS = [SOC_INVOICE, DFIR_LAPTOP];
+const SCENARIOS = [SOC_INVOICE, DFIR_LAPTOP, NET_FLAT];
 const MISSION = missionLink.current('workspace');
 const BEST_KEY = 'lixteam.workspace.best.v1';
 const $ = (id) => document.getElementById(id);
@@ -77,6 +79,10 @@ const freshUi = () => ({
   seenAlerts: new Set(),
   report: Object.fromEntries(scn.report.map((f) => [f.id, f.kind === 'set' ? [] : ''])),
   closeReason: 'Explained by context',
+  traceFlow: null,
+  fwForm: { action: 'deny', src: '*', dst: '*', port: '*', proto: '*', where: 'top' },
+  fwTest: scn.net ? { ...scn.net.test, port: String(scn.net.test.port) } : {},
+  fwMsg: null,
 });
 
 const KIND = { user: 'Account', host: 'Machine', file: 'File', ip: 'Address', domain: 'Domain', mail: 'Sender' };
@@ -88,6 +94,8 @@ const NAV_ALL = {
   entities: { label: 'People & machines' },
   tree: { label: 'Process tree' },
   map: { label: 'Network map' },
+  topology: { label: 'Topology' },
+  firewall: { label: 'Firewall' },
   respond: { label: 'Respond' },
   case: { label: 'Case file', narrow: true },
   report: { label: 'Report' },
@@ -161,7 +169,7 @@ function updateChrome() {
   $('ws-open').textContent = String(open);
   $('ws-open').parentElement.hidden = scn.alerts.length === 0;
   $('ws-pins').textContent = String(st.pins.length);
-  const dis = Math.min(40, st.disruption);
+  const dis = Math.min(40, E.disruptionNow(scn, st));
   $('ws-dis').style.width = `${(dis / 40) * 100}%`;
   $('ws-dis').parentElement.setAttribute('aria-valuenow', String(dis));
   $('ws-dis').className = dis >= 20 ? 'hot' : dis >= 8 ? 'warm' : '';
@@ -213,7 +221,7 @@ function setView(v) {
 function renderView() {
   const keep = document.activeElement && document.activeElement.dataset ? document.activeElement.dataset.key : null;
   const stage = $('view');
-  const fn = { alerts: viewAlerts, brief: viewBrief, logs: viewLogs, entities: viewEntities, tree: viewTree, map: viewMap, respond: viewRespond, case: viewCase, report: viewReport }[ui.view];
+  const fn = { topology: viewTopology, firewall: viewFirewall, alerts: viewAlerts, brief: viewBrief, logs: viewLogs, entities: viewEntities, tree: viewTree, map: viewMap, respond: viewRespond, case: viewCase, report: viewReport }[ui.view];
   stage.replaceChildren(fn());
   if (keep) {
     const again = stage.querySelector(`[data-key="${CSS.escape(keep)}"]`);
@@ -287,6 +295,11 @@ function inspector() {
   if (e.host) add(`Everything on ${e.host}`, () => pivotSearch(`host:${e.host}`));
   for (const k of ['dst', 'src']) if (f[k] && IPV4.test(String(f[k]))) add(`Everything with ${f[k]}`, () => pivotSearch(`ip:${f[k]}`));
   if (f.proc) add(`Process ${f.proc}`, () => pivotSearch(`proc:${f.proc}`));
+  if (e.flow || (e.synthetic && f.port !== undefined && f.src)) {
+    const fw = e.flow || { src: f.src, dst: f.dst, port: f.port, proto: f.proto };
+    add('Trace this connection', () => { ui.traceFlow = fw; setView('topology'); });
+    add(`Everything on port ${fw.port}`, () => pivotSearch(`port:${fw.port}`));
+  }
   if (f.file && !String(f.file).includes('*')) add(`Everything with ${f.file}`, () => pivotSearch(`file:${f.file}`));
   if (f.domain) add(`Domain ${f.domain}`, () => pivotSearch(`domain:${f.domain}`));
   if (f.from) add(`Sender ${f.from}`, () => pivotSearch(`from:${f.from}`));
@@ -493,7 +506,7 @@ function viewMap() {
     ? h('div', { class: 'edge-detail' }, h('h3', { text: `${sel.from} → ${sel.to === 'other' ? 'other internet addresses' : sel.to}` }), h('p', { class: 'dim', text: `${sel.count} connection${sel.count === 1 ? '' : 's'}, ${fmtBytes(sel.bytes)} in total, last at ${timeText(sel.last)}.${blocked(sel) ? ' Blocked or isolated since.' : ''}` }), h('div', { class: 'erows' }, sel.events.map((id) => E.eventById(scn, st, id)).filter(Boolean).sort((a, b) => b.t - a.t).slice(0, 20).map(eventRow)))
     : null;
   const table = h('table', { class: 'links' }, h('thead', {}, h('tr', {}, ['From', 'To', 'Connections', 'Data', 'Last'].map((c) => h('th', { text: c })))), h('tbody', {}, list.map((e) => h('tr', { class: ui.edgeKey === e.key ? 'sel' : '' }, h('td', {}, h('button', { class: 'linkbtn', type: 'button', 'data-key': `edge-${e.key}`, onclick: () => pickEdge(e.key), text: e.from })), h('td', { text: e.to === 'other' ? 'Other internet' : e.to }), h('td', {}, sevChip(e.sev), ` ${e.count}`), h('td', { text: fmtBytes(e.bytes) }), h('td', { text: timeText(e.last) })))));
-  return h('div', { class: 'map-view' }, tipFor('map', 'Thicker links carry more traffic; red and amber links are the ones that were flagged. Click a link to see the individual connections, or a machine to open it.'), h('div', { class: 'mapwrap' }, svg), withInspector(h('div', {}, detail, h('h3', { text: 'All links' }), table)));
+  return h('div', { class: 'map-view' }, tipFor('map', 'Thicker links carry more traffic; red and amber links are the ones that were flagged. Click a link to see the individual connections, or a machine to open it.'), h('div', { class: 'mapwrap' }, svg), withInspector(h('div', {}, detail, h('h3', { text: 'All links' }), h('div', { class: 'tablewrap' }, table))));
 }
 const blockedNode = (id) => st.flags[`isolate:${id}`] !== undefined || st.flags[`block-ip:${id}`] !== undefined;
 function pickEdge(key) {
@@ -544,6 +557,7 @@ function renderCaseFile(box) {
   box.replaceChildren(
     h('header', {}, h('strong', { text: 'Case file' }), h('small', { text: `${E.clockText(st.clock)}` })),
     h('dl', { class: 'cstat' }, scn.alerts.length ? h('dt', { text: 'Alerts' }) : null, scn.alerts.length ? h('dd', { text: `${openAlerts().length} open · ${esc} escalated · ${closed} closed` }) : null, h('dt', { text: 'Searches' }), h('dd', { text: String(st.searches) }), h('dt', { text: 'Actions' }), h('dd', { text: String(st.actions.length) })),
+    scn.net ? servicesBlock() : null,
     h('h3', { text: 'Pinned timeline' }),
     pins.length
       ? h('ol', { class: 'pintl' }, pins.map((e) => h('li', {}, h('time', { text: timeText(e.t) }), h('span', { text: e.summary }), h('button', { class: 'x', type: 'button', 'aria-label': 'Unpin', onclick: () => { E.unpin(st, e.id); refresh(); }, text: '×' }))))
@@ -553,6 +567,173 @@ function viewCase() {
   const box = h('div', { class: 'casefile-inline' });
   renderCaseFile(box);
   return h('div', {}, tipFor('case', 'This is your evidence timeline, in time order. A good one tells the story of the attack from the first email to the data staged for removal.'), box);
+}
+
+// ── Network: topology and trace ─────────────────────────────────
+const sevRank = (e) => E.rank(e.sev);
+function servicesBlock() {
+  const st2 = Net.serviceStatus(scn, Net.currentPolicy(st));
+  const broken = st2.filter((x) => !x.ok);
+  return h('div', { class: 'svc' }, h('h3', { text: 'Services' }), h('p', { class: broken.length ? 'svc-bad' : 'svc-ok', text: broken.length ? `${st2.length - broken.length} of ${st2.length} running. Broken: ${broken.map((x) => x.label).join('; ')}.` : `All ${st2.length} services running.` }));
+}
+
+function flowGroups() {
+  const groups = new Map();
+  for (const e of E.visibleEvents(scn, st)) {
+    if (e.type !== 'flow' && !(e.synthetic && e.denied)) continue;
+    const f = e.fields;
+    const denied = !!e.denied;
+    const key = `${f.szone}>${f.dzone}:${f.port}/${f.proto}`;
+    const g = groups.get(key) || { key, szone: f.szone, dzone: f.dzone, port: f.port, proto: f.proto, count: 0, denied: 0, bytes: 0, last: 0, sev: 'info', events: [], flow: { src: f.src, dst: f.dst, port: f.port, proto: f.proto } };
+    if (denied) g.denied += 1;
+    else {
+      g.count += 1;
+      g.bytes += Number(f.bytes_out || 0) + Number(f.bytes_in || 0);
+    }
+    g.last = Math.max(g.last, e.t);
+    if (sevRank(e) > E.rank(g.sev)) g.sev = e.sev;
+    g.events.push(e);
+    groups.set(key, g);
+  }
+  return [...groups.values()].sort((a, b) => E.rank(b.sev) - E.rank(a.sev) || b.bytes - a.bytes);
+}
+
+function viewTopology() {
+  const W = 800;
+  const H = 520;
+  const px = (x) => (x / 100) * W;
+  const py = (y) => (y / 100) * H;
+  const fwEnt = entity(scn.net.fw);
+  const fwAt = { x: px(fwEnt.x), y: py(fwEnt.y) };
+  const zoneBox = (id) => scn.net.zones.find((z) => z.id === id);
+  const anchor = (id) => {
+    const z = zoneBox(id);
+    return z ? { x: px(z.x + z.w / 2), y: py(z.y + z.h) } : fwAt;
+  };
+  const hostAt = (id) => {
+    const x = entity(id);
+    return x && x.x !== undefined ? { x: px(x.x), y: py(x.y) } : anchor(Net.zoneOf(scn, id));
+  };
+  const policy = Net.currentPolicy(st);
+  const groups = flowGroups();
+  const svg = sv('svg', { viewBox: `0 0 ${W} ${H}`, class: 'netmap topo', role: 'group', 'aria-label': 'Network topology. The traffic between zones is also listed below.' });
+  for (const z of scn.net.zones) {
+    svg.append(sv('rect', { x: px(z.x), y: py(z.y), width: px(z.w), height: py(z.h), rx: 12, class: `zone zn-${z.id}` }), sv('text', { x: px(z.x) + 10, y: py(z.y) + 17, class: 'zlabel' }, z.label));
+    const a = anchor(z.id);
+    svg.append(sv('line', { x1: a.x, y1: a.y, x2: fwAt.x, y2: fwAt.y, class: 'uplink' }));
+  }
+  for (const g of groups) {
+    const a = anchor(g.szone);
+    const b = anchor(g.dzone);
+    if (g.szone === g.dzone) continue;
+    const open = Net.decide(scn, policy, g.flow).action === 'allow';
+    const w = Math.min(8, 1.4 + Math.log2(1 + g.count + g.denied) * 0.7);
+    const d = `M ${a.x} ${a.y} Q ${fwAt.x} ${fwAt.y} ${b.x} ${b.y}`;
+    svg.append(sv('path', { d, class: `link lk-${g.sev}${open ? '' : ' blocked'}${ui.edgeKey === g.key ? ' sel' : ''}`, 'stroke-width': w, fill: 'none' }));
+    svg.append(sv('path', { d, class: 'hit', 'stroke-width': 14, fill: 'none', tabindex: 0, role: 'button', 'aria-label': `${g.szone} to ${g.dzone} port ${g.port}, ${g.count} connections`, onclick: () => pickGroup(g.key), onkeydown: (ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); pickGroup(g.key); } } }));
+  }
+  const nodeIds = scn.entities.filter((x) => x.x !== undefined).map((x) => x.id);
+  for (const id of nodeIds) {
+    const x = entity(id);
+    const p = { x: px(x.x), y: py(x.y) };
+    const wBox = Math.max(56, id.length * 7 + 14);
+    svg.append(sv('g', { class: `node nk-${x.kind}${id === scn.net.fw ? ' fwnode' : ''}`, tabindex: 0, role: 'button', 'aria-label': id, onclick: () => { ui.entityId = id; setView('entities'); }, onkeydown: (ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); ui.entityId = id; setView('entities'); } } }, sv('rect', { x: p.x - wBox / 2, y: p.y - 13, width: wBox, height: 26, rx: 6 }), sv('text', { x: p.x, y: p.y + 4, 'text-anchor': 'middle' }, id)));
+  }
+  // the traced connection, hop by hop
+  let trace = null;
+  if (ui.traceFlow) {
+    const hops = Net.pathOf(scn, ui.traceFlow);
+    const verdict = Net.decide(scn, policy, ui.traceFlow);
+    const pts = hops.map((hp) => (hp.kind === 'host' ? hostAt(hp.id) : hp.kind === 'fw' ? fwAt : anchor(hp.zone)));
+    const cut = hops.findIndex((hp) => hp.kind === 'fw');
+    const solid = verdict.action === 'allow' || cut < 0 ? pts : pts.slice(0, cut + 1);
+    svg.append(sv('polyline', { points: solid.map((q) => `${q.x},${q.y}`).join(' '), class: `trace ${verdict.action === 'allow' ? 'ok' : 'no'}` }));
+    if (verdict.action === 'deny' && cut >= 0) svg.append(sv('text', { x: fwAt.x + 40, y: fwAt.y - 20, class: 'tracex' }, 'blocked here'));
+    trace = traceTable(hops, verdict);
+  }
+  const sel = groups.find((x) => x.key === ui.edgeKey);
+  const detail = sel ? h('div', { class: 'edge-detail' }, h('h3', { text: `${sel.szone} to ${sel.dzone}, port ${sel.port}/${sel.proto}` }), h('p', { class: 'dim', text: `${sel.count} connection${sel.count === 1 ? '' : 's'} allowed${sel.denied ? `, ${sel.denied} denied` : ''}, ${fmtBytes(sel.bytes)} in total, last at ${timeText(sel.last)}.` }), h('div', { class: 'erows' }, sel.events.slice().sort((a, b) => b.t - a.t).slice(0, 20).map(eventRow))) : null;
+  const table = h('table', { class: 'links' }, h('thead', {}, h('tr', {}, ['From zone', 'To zone', 'Port', 'Seen', 'Data', 'Last', 'Now'].map((c) => h('th', { text: c })))), h('tbody', {}, groups.map((g) => {
+    const open = Net.decide(scn, policy, g.flow).action === 'allow';
+    return h('tr', { class: ui.edgeKey === g.key ? 'sel' : '' }, h('td', {}, h('button', { class: 'linkbtn', type: 'button', 'data-key': `edge-${g.key}`, onclick: () => pickGroup(g.key), text: g.szone })), h('td', { text: g.dzone }), h('td', { text: `${g.port}/${g.proto}` }), h('td', {}, sevChip(g.sev), ` ${g.count}${g.denied ? ' (+' + g.denied + ' denied)' : ''}`), h('td', { text: fmtBytes(g.bytes) }), h('td', { text: timeText(g.last) }), h('td', { class: open ? 'okc' : 'noc', text: open ? 'Allowed' : 'Denied' }));
+  })));
+  return h('div', { class: 'map-view' }, tipFor('topology', 'Select a flow and trace it.'), h('div', { class: 'mapwrap' }, svg), trace, withInspector(h('div', {}, detail, h('h3', { text: 'Traffic between zones' }), h('div', { class: 'tablewrap' }, table))));
+}
+function pickGroup(key) {
+  ui.edgeKey = ui.edgeKey === key ? null : key;
+  ui.eventId = null;
+  renderView();
+}
+function traceTable(hops, verdict) {
+  const f = ui.traceFlow;
+  const rows = hops.map((hp, i) => {
+    let decision = '';
+    if (hp.kind === 'fw') decision = verdict.action === 'allow' ? `ALLOWED by ${verdict.rule ? `rule ${verdict.rule.id}` : 'the default policy'}` : `DENIED by ${verdict.rule ? `rule ${verdict.rule.id}` : 'the default policy'}`;
+    else if (verdict.action === 'deny' && hops.findIndex((x) => x.kind === 'fw') < i) decision = 'never reached';
+    else decision = i === 0 ? 'sends' : hp.kind === 'switch' ? 'forwards' : 'receives';
+    const x = entity(hp.id);
+    return h('tr', { class: hp.kind === 'fw' ? (verdict.action === 'allow' ? 'hop-ok' : 'hop-no') : '' }, h('td', { text: String(i + 1) }), h('td', { class: 'mono', text: hp.id }), h('td', { text: hp.kind === 'fw' ? 'Firewall' : hp.kind === 'switch' ? `${hp.zone} switch` : x ? x.role : 'Address' }), h('td', { text: decision }));
+  });
+  return h('div', { class: 'trace-panel' }, h('header', {}, h('strong', { text: `Trace: ${f.src} to ${f.dst}, port ${f.port}/${f.proto}` }), h('button', { class: 'x', type: 'button', 'aria-label': 'Close the trace', onclick: () => { ui.traceFlow = null; renderView(); }, text: '×' })), h('table', { class: 'links' }, h('thead', {}, h('tr', {}, ['Hop', 'Device', 'What it is', 'Result'].map((c) => h('th', { text: c })))), h('tbody', {}, rows)), h('p', { class: verdict.action === 'allow' ? 'okc' : 'noc', text: verdict.action === 'allow' ? 'This connection gets through.' : 'This connection is stopped at the firewall.' }));
+}
+
+// ── Network: firewall ───────────────────────────────────────────
+function selOptions() {
+  const label = (x) => `${x.id} · ${x.role}`;
+  return [
+    h('option', { value: '*', text: 'Anything' }),
+    h('optgroup', { label: 'Zones' }, scn.net.zones.map((z) => h('option', { value: z.id, text: `${z.label} (zone)` }))),
+    h('optgroup', { label: 'Machines' }, scn.entities.filter((x) => x.kind === 'host' && x.id !== scn.net.fw).map((x) => h('option', { value: x.id, text: label(x) }))),
+    h('optgroup', { label: 'Internet addresses' }, scn.entities.filter((x) => x.kind === 'ip').map((x) => h('option', { value: x.id, text: label(x) }))),
+  ];
+}
+function viewFirewall() {
+  const policy = Net.currentPolicy(st);
+  const status = Net.serviceStatus(scn, policy);
+  const broken = status.filter((x) => !x.ok);
+  const f = ui.fwForm;
+  const t = ui.fwTest;
+  const pick = (opts, cur, set, key) => h('select', { 'data-key': key, onchange: (ev) => set(ev.target.value) }, opts.map(([v, l]) => h('option', { value: v, selected: v === cur ? true : null, text: l })));
+  const withSel = (cur, set, key) => {
+    const el = h('select', { 'data-key': key, onchange: (ev) => set(ev.target.value) }, selOptions());
+    el.value = cur;
+    return el;
+  };
+  const portField = (cur, set, key, listId) => h('span', {}, h('input', { type: 'text', value: cur === '*' ? '' : cur, placeholder: 'any', size: 6, inputmode: 'numeric', list: listId, autocomplete: 'off', 'aria-label': 'Port', 'data-key': key, oninput: (ev) => set(ev.target.value.trim() === '' || /^any$/i.test(ev.target.value.trim()) ? '*' : ev.target.value.trim()) }), h('datalist', { id: listId }, scn.net.ports.map((p) => h('option', { value: String(p) }))));
+  const services = h('div', { class: 'svc-grid', role: 'list', 'aria-label': 'Services' }, status.map((x) => h('div', { class: `svc-chip ${x.ok ? 'up' : 'down'}`, role: 'listitem', title: x.note }, h('strong', { text: x.label }), h('small', { text: x.ok ? 'Running' : `Broken (cost ${x.weight})` }))));
+  const rows = policy.rules.map((r, i) => h('tr', { class: r.action }, h('td', { class: 'mono', text: String(i + 1) }), h('td', { class: 'mono', text: r.id }), h('td', {}, h('span', { class: `act-${r.action}`, text: r.action === 'allow' ? 'ALLOW' : 'DENY' })), h('td', { text: Net.describeSel(scn, r.src) }), h('td', { text: Net.describeSel(scn, r.dst) }), h('td', { class: 'mono', text: r.port === '*' ? 'any' : String(r.port) }), h('td', { class: 'mono', text: r.proto === '*' ? 'any' : r.proto }), h('td', { class: 'ctl' },
+    h('button', { class: 'x', type: 'button', 'aria-label': `Move ${r.id} up`, disabled: i === 0 ? true : null, 'data-key': `up-${r.id}`, onclick: () => { E.fwMove(scn, st, r.id, 'up'); refresh(); }, text: '↑' }),
+    h('button', { class: 'x', type: 'button', 'aria-label': `Move ${r.id} down`, disabled: i === policy.rules.length - 1 ? true : null, 'data-key': `down-${r.id}`, onclick: () => { E.fwMove(scn, st, r.id, 'down'); refresh(); }, text: '↓' }),
+    h('button', { class: 'x', type: 'button', 'aria-label': `Delete ${r.id}`, 'data-key': `del-${r.id}`, onclick: () => { E.fwRemove(scn, st, r.id); refresh(); }, text: '×' }))));
+  const table = h('table', { class: 'rules' }, h('thead', {}, h('tr', {}, ['#', 'Rule', 'Action', 'From', 'To', 'Port', 'Proto', ''].map((c) => h('th', { text: c })))), h('tbody', {}, rows, h('tr', { class: 'dflt' }, h('td', { colSpan: 2, text: '' }), h('td', {}, h('span', { class: `act-${policy.def}`, text: policy.def === 'allow' ? 'ALLOW' : 'DENY' })), h('td', { colSpan: 4, text: 'Everything else (the default policy)' }), h('td', { class: 'ctl' }, h('button', { class: 'btn small', type: 'button', 'data-key': 'default', onclick: () => { ui.fwMsg = null; const r = E.fwDefault(scn, st, policy.def === 'allow' ? 'deny' : 'allow'); ui.fwMsg = r.ok ? { ok: true, text: `The default policy is now ${policy.def === 'allow' ? 'deny' : 'allow'}.` } : { ok: false, text: r.text }; refresh(); }, text: policy.def === 'allow' ? 'Make deny' : 'Make allow' })))));
+  const addForm = h('div', { class: 'ruleform' },
+    h('label', {}, 'Action ', pick([['deny', 'Deny'], ['allow', 'Allow']], f.action, (v) => (f.action = v), 'f-action')),
+    h('label', {}, 'From ', withSel(f.src, (v) => (f.src = v), 'f-src')),
+    h('label', {}, 'To ', withSel(f.dst, (v) => (f.dst = v), 'f-dst')),
+    h('label', {}, 'Port ', portField(f.port, (v) => (f.port = v), 'f-port', 'ports-add')),
+    h('label', {}, 'Protocol ', pick([['*', 'Any'], ['tcp', 'TCP'], ['udp', 'UDP']], f.proto, (v) => (f.proto = v), 'f-proto')),
+    h('label', {}, 'Position ', pick([['top', 'Top (checked first)'], ['bottom', 'Bottom (checked last)']], f.where, (v) => (f.where = v), 'f-where')),
+    h('button', { class: 'btn primary', type: 'button', 'data-key': 'add-rule', onclick: () => { const r = E.fwAdd(scn, st, { action: f.action, src: f.src, dst: f.dst, port: f.port === '*' ? '*' : Number(f.port), proto: f.proto }, f.where); ui.fwMsg = r.ok ? { ok: true, text: `Added ${r.rule.id}: ${Net.ruleText(scn, r.rule)}.` } : { ok: false, text: r.text }; refresh(); }, text: `Add rule (${E.COSTS.rule} min)` }));
+  const testRes = (() => {
+    const flow = { src: t.src, dst: t.dst, port: Number(t.port), proto: t.proto };
+    if (!entity(t.src) || !entity(t.dst) || !Number.isInteger(flow.port)) return null;
+    const r = Net.decide(scn, policy, flow);
+    return { flow, r };
+  })();
+  const tester = h('div', { class: 'tester' },
+    h('div', { class: 'ruleform' },
+      h('label', {}, 'From ', withSel(t.src, (v) => (t.src = v), 't-src')),
+      h('label', {}, 'To ', withSel(t.dst, (v) => (t.dst = v), 't-dst')),
+      h('label', {}, 'Port ', portField(t.port, (v) => (t.port = v), 't-port', 'ports-test')),
+      h('label', {}, 'Protocol ', pick([['tcp', 'TCP'], ['udp', 'UDP']], t.proto, (v) => (t.proto = v), 't-proto')),
+      h('button', { class: 'btn', type: 'button', 'data-key': 'run-test', onclick: renderView, text: 'Test (free)' })),
+    !testRes ? h('p', { class: 'dim', text: 'Choose a specific machine or address for each end, and a port number.' }) : h('div', { class: `result ${testRes.r.action === 'allow' ? 'ok' : 'bad'}` }, h('strong', { text: `${testRes.r.action === 'allow' ? 'ALLOWED' : 'DENIED'} ${t.src} to ${t.dst}:${t.port}/${t.proto}` }), h('p', { text: testRes.r.rule ? `Matched rule ${testRes.r.rule.id}: ${Net.ruleText(scn, testRes.r.rule)}.` : `No rule matched, so the default policy (${policy.def}) applied.` }), h('button', { class: 'btn small', type: 'button', onclick: () => { ui.traceFlow = testRes.flow; setView('topology'); }, text: 'Trace it on the map' })));
+  return h('div', { class: 'fw-view' }, tipFor('firewall', 'Add rules and watch the services.'),
+    h('h3', { text: `Services (${status.length - broken.length} of ${status.length} running)` }), services,
+    ui.fwMsg ? h('div', { class: `result ${ui.fwMsg.ok ? 'ok' : 'bad'}`, role: 'status' }, h('p', { text: ui.fwMsg.text })) : null,
+    h('h3', { text: 'Rules, checked from the top' }), h('div', { class: 'tablewrap' }, table),
+    h('h3', { text: 'Add a rule' }), addForm,
+    h('h3', { text: 'Test a connection' }), tester);
 }
 
 // ── Report ──────────────────────────────────────────────────────

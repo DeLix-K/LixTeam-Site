@@ -12,7 +12,9 @@
 //   * Actions have consequences: some stop the attack, some do nothing, some hurt the business.
 //   * Everything the player concludes is graded against what really happened in the scenario.
 
-export const COSTS = { search: 1, entity: 1, tree: 1, map: 1, action: 3, alert: 1 };
+import * as Net from './net.js';
+
+export const COSTS = { search: 1, entity: 1, tree: 1, map: 1, action: 3, alert: 1, rule: 3, tweak: 1 };
 
 export const pad = (n) => String(n).padStart(2, '0');
 export const clockText = (t) => `${pad(Math.floor(t / 60) % 24)}:${pad(t % 60)}`;
@@ -26,7 +28,7 @@ export const parseClock = (s) => {
 
 // ── Starting a run ──────────────────────────────────────────────
 export function newRun(scn) {
-  return {
+  const st = {
     clock: scn.clockStart,
     flags: {}, // name -> the minute it was set
     log: [], // what the player did, in order
@@ -39,12 +41,15 @@ export function newRun(scn) {
     searches: 0,
     submitted: false,
   };
+  if (scn.net) st.fw = { history: [{ at: -1, policy: Net.initialPolicy(scn) }], next: scn.net.rules.length + 1 };
+  return st;
 }
 
 const flagName = (action, target) => `${action}:${target}`;
 
 // ── Events ──────────────────────────────────────────────────────
-function suppressed(e, st) {
+function suppressed(e, st, scn) {
+  if (scn && scn.net && e.flow && Net.decide(scn, Net.policyAt(st, e.t), e.flow).action === 'deny') return true;
   if (!e.unless) return false;
   return e.unless.some((f) => st.flags[f] !== undefined && st.flags[f] <= e.t);
 }
@@ -62,21 +67,32 @@ function lost(scn, e, st) {
   for (const f of e.lostWhen || []) if (st.flags[f] !== undefined && !kept(st.flags[f])) return true;
   if (!e.lostBy) return false;
   const w = byId(scn).get(e.lostBy);
-  if (!w || w.t > st.clock || suppressed(w, st)) return false;
+  if (!w || w.t > st.clock || suppressed(w, st, scn)) return false;
   return !kept(w.t);
 }
 
 // Every event the player can see right now (scenario events whose time has come, plus the player's own).
 export function visibleEvents(scn, st) {
   const out = [];
-  for (const e of scn.events) if (e.t <= st.clock && !suppressed(e, st) && !lost(scn, e, st)) out.push(e);
+  for (const e of scn.events) {
+    if (e.t > st.clock) continue;
+    if (suppressed(e, st, scn)) {
+      // A flow the firewall stopped shows up as a denied connection, so the player can see their rule working.
+      if (scn.net && e.flow && e.t <= st.clock) {
+        const d = Net.decide(scn, Net.policyAt(st, e.t), e.flow);
+        out.push({ id: `deny-${e.id}`, t: e.t, type: 'firewall', sev: 'info', host: scn.net.fw, summary: `Firewall denied ${e.flow.src} to ${e.flow.dst}:${e.flow.port}/${e.flow.proto} (${d.rule ? 'rule ' + d.rule.id : 'default policy'})`, fields: { src: e.flow.src, dst: e.flow.dst, port: e.flow.port, proto: e.flow.proto, szone: e.fields.szone, dzone: e.fields.dzone, action: 'deny', rule: d.rule ? d.rule.id : 'default' }, synthetic: true, denied: e.id });
+      }
+      continue;
+    }
+    if (!lost(scn, e, st)) out.push(e);
+  }
   for (const e of st.extra) out.push(e);
   return out.sort((a, b) => a.t - b.t || String(a.id).localeCompare(String(b.id)));
 }
 
 // Events that would have happened by now but were stopped by something the player did.
 export function preventedEvents(scn, st) {
-  return scn.events.filter((e) => suppressed(e, st) && e.t > 0);
+  return scn.events.filter((e) => suppressed(e, st, scn) && e.t > 0);
 }
 
 export const eventById = (scn, st, id) => visibleEvents(scn, st).find((e) => e.id === id) || null;
@@ -84,7 +100,7 @@ export const eventById = (scn, st, id) => visibleEvents(scn, st).find((e) => e.i
 // ── Search ──────────────────────────────────────────────────────
 // Query words: user:priya.n host:WS-FIN-07 ip:203.0.113.44 proc:powershell type:logon sev:high file:zip
 // Anything else is plain text, matched against the summary and every field. All words must match.
-const FIELD_ALIASES = { user: ['user'], host: ['host'], type: ['type'], sev: ['sev'], proc: ['proc', 'parent'], file: ['file'], ip: ['dst', 'src', 'ip'], dst: ['dst'], src: ['src'], domain: ['domain', 'dst'], from: ['from'], to: ['to'] };
+const FIELD_ALIASES = { user: ['user'], host: ['host'], type: ['type'], sev: ['sev'], proc: ['proc', 'parent'], file: ['file'], ip: ['dst', 'src', 'ip'], dst: ['dst'], src: ['src'], domain: ['domain', 'dst'], from: ['from'], to: ['to'], port: ['port'], proto: ['proto'], zone: ['szone', 'dzone'] };
 
 export function parseQuery(q) {
   const words = String(q || '').trim().split(/\s+/).filter(Boolean);
@@ -263,12 +279,59 @@ export function perform(scn, st, action, target) {
   return { ok: true, rule, text: rule.text, harm: rule.harm || 0 };
 }
 
+// ── Firewall ────────────────────────────────────────────────────
+// Every edit makes a new version of the policy, stamped with the time. A connection is judged by the policy in
+// force when it happened, so a new rule stops what comes next and never rewrites the past.
+function pushPolicy(scn, st, policy, minutes, why) {
+  st.fw.history.push({ at: st.clock, policy });
+  advance(st, minutes, why);
+}
+export function fwAdd(scn, st, spec, where = 'top') {
+  const bad = Net.checkRule(scn, spec);
+  if (bad) return { ok: false, text: bad };
+  const rule = { id: `R${st.fw.next++}`, action: spec.action, src: spec.src, dst: spec.dst, port: spec.port, proto: spec.proto, mine: true };
+  const p = Net.clonePolicy(Net.currentPolicy(st));
+  if (where === 'bottom') p.rules.push(rule);
+  else p.rules.unshift(rule);
+  pushPolicy(scn, st, p, COSTS.rule, `Firewall: ${Net.ruleText(scn, rule)}`);
+  return { ok: true, rule };
+}
+export function fwRemove(scn, st, id) {
+  const p = Net.clonePolicy(Net.currentPolicy(st));
+  const i = p.rules.findIndex((r) => r.id === id);
+  if (i < 0) return { ok: false, text: 'No such rule.' };
+  const [gone] = p.rules.splice(i, 1);
+  pushPolicy(scn, st, p, COSTS.tweak, `Firewall: removed ${gone.id}`);
+  return { ok: true };
+}
+export function fwMove(scn, st, id, dir) {
+  const p = Net.clonePolicy(Net.currentPolicy(st));
+  const i = p.rules.findIndex((r) => r.id === id);
+  const j = i + (dir === 'up' ? -1 : 1);
+  if (i < 0 || j < 0 || j >= p.rules.length) return { ok: false, text: 'It cannot move that way.' };
+  [p.rules[i], p.rules[j]] = [p.rules[j], p.rules[i]];
+  pushPolicy(scn, st, p, COSTS.tweak, `Firewall: moved ${id} ${dir}`);
+  return { ok: true };
+}
+export function fwDefault(scn, st, def) {
+  if (!['allow', 'deny'].includes(def)) return { ok: false, text: 'Choose allow or deny.' };
+  const p = Net.clonePolicy(Net.currentPolicy(st));
+  if (p.def === def) return { ok: false, text: 'That is already the default.' };
+  p.def = def;
+  pushPolicy(scn, st, p, COSTS.rule, `Firewall: default policy is now ${def}`);
+  return { ok: true };
+}
+export const fwTest = (scn, st, flow) => Net.decide(scn, Net.currentPolicy(st), flow);
+
+// Harm the business suffers right now: what the player's actions cost plus every service the firewall now blocks.
+export const disruptionNow = (scn, st) => st.disruption + (scn.net ? Net.brokenWeight(scn, Net.currentPolicy(st)) : 0);
+
 // ── What happened that the player did not stop ──────────────────
 // Events with a `consequence` that actually occurred (not suppressed) by the end of the run.
 export function consequences(scn, st, atClock = st.clock) {
   // atClock can be later than the player's own clock: what would happen once they stop working.
   const probe = { ...st, clock: atClock };
-  return scn.events.filter((e) => e.consequence && e.t <= atClock && !suppressed(e, probe));
+  return scn.events.filter((e) => e.consequence && e.t <= atClock && !suppressed(e, probe, scn));
 }
 
 // ── Grading ─────────────────────────────────────────────────────
@@ -327,6 +390,7 @@ export function grade(scn, st, report) {
 
   // Response
   let res = 0;
+  let harmNet = 0;
   const goodRules = scn.responses.filter((r) => r.good);
   const doneKeys = new Set(st.actions.map((a) => a.key));
   const hits = [];
@@ -337,17 +401,36 @@ export function grade(scn, st, report) {
       add('Response', `Done: ${r.label}`, r.points, r.points);
     } else add('Response', `Not done: ${r.label}`, 0, r.points, r.why || '');
   }
+  if (scn.net) {
+    const pol = Net.currentPolicy(st);
+    for (const th of Net.threatStatus(scn, pol)) {
+      if (th.blocked) {
+        res += th.points;
+        add('Response', `Blocked: ${th.label}`, th.points, th.points);
+      } else add('Response', `Still open: ${th.label}`, 0, th.points, th.why);
+    }
+    for (const sv of Net.serviceStatus(scn, pol)) {
+      if (sv.ok) continue;
+      harmNet += sv.weight * g.harmScale;
+      add('Response', `Service broken: ${sv.label}`, -sv.weight * g.harmScale, 0, sv.note);
+    }
+  }
   const harmful = st.actions.filter((a) => a.rule.harm);
   const harmTotal = harmful.reduce((s, a) => s + a.rule.harm, 0);
   for (const a of harmful) add('Response', `Cost to the business: ${a.rule.label || `${a.action} ${a.target}`}`, -a.rule.harm * g.harmScale, 0, a.rule.text);
-  res = Math.max(0, res - harmTotal * g.harmScale);
+  res = Math.max(0, res - harmTotal * g.harmScale - harmNet);
   const resMax = goodRules.reduce((s, r) => s + r.points, 0);
   const late = consequences(scn, st, scn.horizon ?? st.clock).filter((e) => e.consequence && e.consequence.cost);
   let lateCost = 0;
+  const byLabel = new Map();
   for (const e of late) {
     lateCost += e.consequence.cost;
-    add('Response', e.consequence.label, -e.consequence.cost, 0, e.consequence.text);
+    const cur = byLabel.get(e.consequence.label) || { n: 0, cost: 0, text: e.consequence.text };
+    cur.n += 1;
+    cur.cost += e.consequence.cost;
+    byLabel.set(e.consequence.label, cur);
   }
+  for (const [label, c] of byLabel) add('Response', c.n > 1 ? `${label} (${c.n} times)` : label, -c.cost, 0, c.text);
   res = Math.max(0, res - lateCost);
 
   // Report: the scenario lists the fields, what is true and what each is worth.
@@ -392,12 +475,12 @@ export function grade(scn, st, report) {
   const total = Math.round(parts.triage + parts.evidence + parts.response + parts.report);
   let tier = total >= g.gold ? 3 : total >= g.silver ? 2 : total >= g.bronze ? 1 : 0;
   // However well the rest went, a breach you could have stopped caps the medal.
-  const capped = !!g.cap && late.length > 0 && tier > 1;
+  const capped = !!g.cap && late.length >= (g.capAt ?? 1) && tier > 1;
   if (capped) {
     tier = 1;
     add('Response', 'Medal capped at bronze', 0, 0, g.cap);
   }
-  return { total, tier, capped, parts, max: { triage: triMax, evidence: g.evidence, response: g.response, report: g.reportTotal }, lines, minutes: st.clock - scn.clockStart, disruption: st.disruption };
+  return { total, tier, capped, parts, max: { triage: triMax, evidence: g.evidence, response: g.response, report: g.reportTotal }, lines, minutes: st.clock - scn.clockStart, disruption: disruptionNow(scn, st) };
 }
 
 const SEV_ORDER = ['low', 'medium', 'high', 'critical'];
@@ -439,7 +522,7 @@ export function problems(scn) {
     const [action, target] = f.split(':');
     if (!scn.responses.some((r) => (r.action === action && r.target === target) || (r.sets || []).includes(f))) out.push(`event ${e.id}: nothing the player can do sets ${f}`);
   }
-  const goodSum = scn.responses.filter((r) => r.good).reduce((n, r) => n + r.points, 0);
+  const goodSum = scn.responses.filter((r) => r.good).reduce((n, r) => n + r.points, 0) + (scn.net ? scn.net.threats.reduce((n, th) => n + th.points, 0) : 0);
   if (goodSum !== scn.grading.response) out.push(`good responses are worth ${goodSum}, the response score is ${scn.grading.response}`);
   const roles = new Set(scn.events.filter((e) => e.key && e.keyWeight !== 0).map((e) => e.key));
   for (const r of roles) if (!scn.roleLabels[r] || !scn.roleHints[r]) out.push(`evidence role ${r} needs a label and a hint`);
@@ -450,6 +533,14 @@ export function problems(scn) {
   for (const f of scn.report) {
     if (!f.id || !f.title || !f.points) out.push(`report field ${f.id} needs an id, a title and points`);
     if (f.kind !== 'text' && f.truth === undefined) out.push(`report field ${f.id} has no truth`);
+  }
+  if (scn.net) {
+    const pol = Net.initialPolicy(scn);
+    for (const sv of scn.net.services) if (Net.decide(scn, pol, sv.flow).action !== 'allow') out.push(`service ${sv.id} is blocked by the starting rules`);
+    for (const th of scn.net.threats) if (th.flows.every((f) => Net.decide(scn, pol, f).action === 'deny')) out.push(`threat ${th.id} is already blocked by the starting rules`);
+    const zones = new Set(scn.net.zones.map((z) => z.id));
+    for (const x of scn.entities) if (x.kind === 'host' && x.id !== scn.net.fw && !zones.has(x.zone)) out.push(`host ${x.id} is in an unknown zone`);
+    for (const e of scn.events) if (e.flow && (!scn.entities.some((x) => x.id === e.flow.src) || !scn.entities.some((x) => x.id === e.flow.dst))) out.push(`event ${e.id}: flow uses an unknown address`);
   }
   if (!Number.isFinite(scn.horizon) || scn.horizon <= scn.clockStart) out.push('horizon must be after the start');
   if (scn.alerts.some((a) => !a.late && a.at > scn.clockStart)) out.push('an alert that is not marked late appears after the start');
