@@ -49,10 +49,27 @@ function suppressed(e, st) {
   return e.unless.some((f) => st.flags[f] !== undefined && st.flags[f] <= e.t);
 }
 
+// Evidence that lives on a machine the attacker can still reach. Once the event named in `lostBy` has
+// happened, it can no longer be seen, unless something in `keptBy` was done before that moment.
+const indexes = new WeakMap();
+const byId = (scn) => {
+  if (!indexes.has(scn)) indexes.set(scn, new Map(scn.events.map((e) => [e.id, e])));
+  return indexes.get(scn);
+};
+function lost(scn, e, st) {
+  const kept = (t) => (e.keptBy || []).some((f) => st.flags[f] !== undefined && st.flags[f] <= t);
+  // Destroyed by something the player did (for example rebuilding the machine).
+  for (const f of e.lostWhen || []) if (st.flags[f] !== undefined && !kept(st.flags[f])) return true;
+  if (!e.lostBy) return false;
+  const w = byId(scn).get(e.lostBy);
+  if (!w || w.t > st.clock || suppressed(w, st)) return false;
+  return !kept(w.t);
+}
+
 // Every event the player can see right now (scenario events whose time has come, plus the player's own).
 export function visibleEvents(scn, st) {
   const out = [];
-  for (const e of scn.events) if (e.t <= st.clock && !suppressed(e, st)) out.push(e);
+  for (const e of scn.events) if (e.t <= st.clock && !suppressed(e, st) && !lost(scn, e, st)) out.push(e);
   for (const e of st.extra) out.push(e);
   return out.sort((a, b) => a.t - b.t || String(a.id).localeCompare(String(b.id)));
 }
@@ -222,6 +239,7 @@ export function perform(scn, st, action, target) {
   if (st.flags[key] !== undefined) return { ok: false, reason: 'already done', text: `${def.label} on ${target} has already been done.` };
   const rule = ruleFor(scn, action, target);
   if (!rule) return { ok: false, reason: 'not possible' };
+  if ((rule.blockedBy || []).some((f) => st.flags[f] !== undefined)) return { ok: false, reason: 'blocked', text: rule.blockedText || 'That is no longer possible.' };
 
   st.flags[key] = st.clock;
   for (const f of rule.sets || []) if (st.flags[f] === undefined) st.flags[f] = st.clock;
@@ -263,7 +281,7 @@ export function grade(scn, st, report) {
   // Triage. Alerts that only appear if the attack went unchecked count only when the player saw them.
   let tri = 0;
   const base = scn.alerts.filter((x) => !x.late);
-  const each = g.triage / base.length;
+  const each = base.length ? g.triage / base.length : 0;
   for (const a of scn.alerts) {
     const got = st.alerts[a.id];
     if (a.late && !got) continue;
@@ -332,30 +350,39 @@ export function grade(scn, st, report) {
   }
   res = Math.max(0, res - lateCost);
 
-  // Report
+  // Report: the scenario lists the fields, what is true and what each is worth.
   let rep = 0;
-  const T = scn.truth;
-  const rg = g.report;
-  const verdictOk = report && report.verdict === T.verdict;
-  rep += verdictOk ? rg.verdict : 0;
-  add('Report', verdictOk ? 'Verdict correct' : 'Verdict wrong', verdictOk ? rg.verdict : 0, rg.verdict, verdictOk ? '' : T.verdictNote || '');
-  const sevOk = report && report.severity === T.severity;
-  const sevNear = report && Math.abs(severityIndex(report.severity) - severityIndex(T.severity)) === 1;
-  const sevPts = sevOk ? rg.severity : sevNear ? rg.severity * 0.4 : 0;
-  rep += sevPts;
-  add('Report', sevOk ? 'Severity correct' : sevNear ? 'Severity one level out' : 'Severity wrong', sevPts, rg.severity, sevOk ? '' : T.severityNote || '');
-  const hostScore = setScore(report && report.hosts, T.hosts, rg.hosts);
-  rep += hostScore.points;
-  add('Report', `Affected hosts: ${hostScore.right} right${hostScore.wrong ? `, ${hostScore.wrong} wrong` : ''}${hostScore.missed ? `, ${hostScore.missed} missed` : ''}`, hostScore.points, rg.hosts, T.hostsNote || '');
-  const userScore = setScore(report && report.users, T.users, rg.users);
-  rep += userScore.points;
-  add('Report', `Affected accounts: ${userScore.right} right${userScore.wrong ? `, ${userScore.wrong} wrong` : ''}${userScore.missed ? `, ${userScore.missed} missed` : ''}`, userScore.points, rg.users, T.usersNote || '');
-  const causeOk = report && report.cause === T.cause;
-  rep += causeOk ? rg.cause : 0;
-  add('Report', causeOk ? 'Root cause correct' : 'Root cause wrong', causeOk ? rg.cause : 0, rg.cause, causeOk ? '' : T.causeNote || '');
-  const sumOk = report && String(report.summary || '').trim().length >= g.minSummary;
-  rep += sumOk ? rg.summary : 0;
-  add('Report', sumOk ? 'Summary written' : 'Summary missing or too short', sumOk ? rg.summary : 0, rg.summary);
+  const R = report || {};
+  for (const f of scn.report) {
+    const got = R[f.id];
+    let pts = 0;
+    let label;
+    let note = f.note || '';
+    if (f.kind === 'choice' || f.kind === 'ordinal') {
+      const ok = got === f.truth;
+      const near = !ok && f.kind === 'ordinal' && got && Math.abs(f.order.indexOf(got) - f.order.indexOf(f.truth)) === 1;
+      pts = ok ? f.points : near ? f.points * 0.4 : 0;
+      label = ok ? `${f.title} correct` : near ? `${f.title} one level out` : `${f.title} wrong`;
+      if (ok) note = '';
+    } else if (f.kind === 'set') {
+      const sc = setScore(got, f.truth, f.points);
+      pts = sc.points;
+      label = `${f.title}: ${sc.right} right${sc.wrong ? `, ${sc.wrong} wrong` : ''}${sc.missed ? `, ${sc.missed} missed` : ''}`;
+    } else if (f.kind === 'time') {
+      const t = parseClock(got);
+      const diff = t === null ? Infinity : Math.abs(t - f.truth);
+      pts = diff <= f.tolerance ? f.points : diff <= f.near ? f.points * 0.5 : 0;
+      label = diff <= f.tolerance ? `${f.title} correct (${clockText(f.truth)})` : diff <= f.near ? `${f.title} close (${clockText(f.truth)})` : `${f.title} wrong (it was ${clockText(f.truth)})`;
+      if (diff <= f.tolerance) note = '';
+    } else {
+      const ok = String(got || '').trim().length >= f.minLength;
+      pts = ok ? f.points : 0;
+      label = ok ? `${f.title} written` : `${f.title} missing or too short`;
+      note = '';
+    }
+    rep += pts;
+    add('Report', label, pts, f.points, note);
+  }
 
   // A report written without the evidence behind it is mostly a guess: it earns 40% plus a share of the rest for the evidence found.
   const grounded = 0.4 + 0.6 * Math.min(1, evi / g.evidence);
@@ -365,10 +392,10 @@ export function grade(scn, st, report) {
   const total = Math.round(parts.triage + parts.evidence + parts.response + parts.report);
   let tier = total >= g.gold ? 3 : total >= g.silver ? 2 : total >= g.bronze ? 1 : 0;
   // However well the rest went, a breach you could have stopped caps the medal.
-  const capped = late.length > 0 && tier > 1;
+  const capped = !!g.cap && late.length > 0 && tier > 1;
   if (capped) {
     tier = 1;
-    add('Response', 'Medal capped at bronze', 0, 0, 'The data left the network. A good investigation does not make up for that.');
+    add('Response', 'Medal capped at bronze', 0, 0, g.cap);
   }
   return { total, tier, capped, parts, max: { triage: triMax, evidence: g.evidence, response: g.response, report: g.reportTotal }, lines, minutes: st.clock - scn.clockStart, disruption: st.disruption };
 }
@@ -416,10 +443,14 @@ export function problems(scn) {
   if (goodSum !== scn.grading.response) out.push(`good responses are worth ${goodSum}, the response score is ${scn.grading.response}`);
   const roles = new Set(scn.events.filter((e) => e.key && e.keyWeight !== 0).map((e) => e.key));
   for (const r of roles) if (!scn.roleLabels[r] || !scn.roleHints[r]) out.push(`evidence role ${r} needs a label and a hint`);
-  const repSum = Object.values(scn.grading.report).reduce((n, v) => n + v, 0);
+  const repSum = scn.report.reduce((n, f) => n + f.points, 0);
   if (repSum !== scn.grading.reportTotal) out.push(`report parts add up to ${repSum}, not ${scn.grading.reportTotal}`);
   const total = scn.grading.triage + scn.grading.evidence + scn.grading.response + scn.grading.reportTotal;
   if (total !== 100) out.push(`grading adds up to ${total}, not 100`);
+  for (const f of scn.report) {
+    if (!f.id || !f.title || !f.points) out.push(`report field ${f.id} needs an id, a title and points`);
+    if (f.kind !== 'text' && f.truth === undefined) out.push(`report field ${f.id} has no truth`);
+  }
   if (!Number.isFinite(scn.horizon) || scn.horizon <= scn.clockStart) out.push('horizon must be after the start');
   if (scn.alerts.some((a) => !a.late && a.at > scn.clockStart)) out.push('an alert that is not marked late appears after the start');
   return out;

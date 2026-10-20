@@ -198,6 +198,13 @@ export const MISSIONS = [
     competencies: { phishing: 0.7, reporting: 0.3 },
     unlock: { passedTier: { beginner: 2 } },
   },
+  // The hands-on workspaces: a simulated workplace, live tools and consequences, graded out of 100.
+  {
+    id: 'm25-shift', title: 'Live shift: the invoice that phoned home', tier: 'intermediate', kind: 'workspace', mode: 'workspace', ref: 'soc-invoice', minutes: 22, par: 0, access: 'free',
+    blurb: 'Take over a live alert queue. Search the logs, follow the process tree, stop the attacker without breaking the business, and file your report.',
+    competencies: { triage: 0.3, correlation: 0.3, endpoint: 0.2, response: 0.2 },
+    unlock: { passedTier: { beginner: 2 } },
+  },
   // ── Advanced
   {
     id: 'm08-ransom', title: 'The macro that kept going', tier: 'advanced', kind: 'breach', mode: 'breach-room', ref: 'ransom', minutes: 12, par: 255, access: 'plus',
@@ -403,6 +410,12 @@ export const MISSIONS = [
     id: 'dr06-review', title: "Who is to blame?", tier: 'dr-prac', kind: 'simulation', mode: 'simulation', ref: 'learning-review', minutes: 20, par: 0, access: 'plus',
     blurb: "The incident is over and the director wants a name. Find the real causes and decide what the report should say.",
     competencies: { timeline: 0.5, reporting: 0.5 },
+    unlock: { passedTier: { 'dr-found': 2 } },
+  },
+  {
+    id: 'dr07-bench', title: 'The laptop that kept its secrets', tier: 'dr-prac', kind: 'workspace', mode: 'workspace', ref: 'dfir-laptop', minutes: 25, par: 0, access: 'plus',
+    blurb: 'Reconstruct a compromised laptop at the forensics bench: preserve the evidence before it is wiped, read the dates critically, contain it, and report.',
+    competencies: { evidence: 0.4, timeline: 0.3, response: 0.3 },
     unlock: { passedTier: { 'dr-found': 2 } },
   },
   // ── Governance, Risk and Compliance path

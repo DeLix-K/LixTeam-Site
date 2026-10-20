@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>SOC Workspace · RootLine</title>
-  <meta name="description" content="Work a live alert queue like a SOC analyst: search the logs, follow the process tree, contain the attack and file your report. Free, no sign-up, no tracking." />
+  <title>Workspaces · RootLine</title>
+  <meta name="description" content="Hands-on cyber workspaces: work a live alert queue or a forensics bench, search the logs, contain the attack and file your report. Free, no sign-up, no tracking." />
   <meta name="theme-color" content="#0a0a0a" />
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23a3e635'/%3E%3Ctext x='16' y='22' font-family='Arial' font-weight='900' font-size='15' text-anchor='middle' fill='%230a0a0a'%3ELT%3C/text%3E%3C/svg%3E" />
   <link rel="stylesheet" href="../shared.css" />
@@ -13,18 +13,18 @@
 <body data-mode="workspace">
   <header class="top">
     <a class="back" href="/games/">← All games</a>
-    <span class="title">SOC Workspace</span>
+    <span class="title">Workspaces</span>
     <span class="spacer" aria-hidden="true"></span>
   </header>
 
   <!-- Choose an assignment and read the brief -->
   <main id="app" class="screen-main">
     <section id="screen-pick" class="screen" aria-labelledby="pick-h">
-      <p class="eyebrow">Cyber Security Analyst · hands-on</p>
-      <h1 id="pick-h">SOC <span class="accent-text">Workspace</span></h1>
-      <p class="lead">A real alert queue, real log searches and real consequences. You are the analyst on shift. There are no multiple-choice questions to get through: you investigate, you decide, and the clock keeps moving.</p>
+      <p class="eyebrow">Hands-on · simulated workplaces</p>
+      <h1 id="pick-h">Hands-on <span class="accent-text">workspaces</span></h1>
+      <p class="lead">A simulated workplace, real tools and real consequences. There are no multiple-choice questions to get through: you investigate, you decide, and the clock keeps moving.</p>
       <ul class="howto">
-        <li><strong>Work the queue.</strong> Open each alert, then search the logs, open the people and machines involved and follow the process tree.</li>
+        <li><strong>Use the tools.</strong> Search the logs, open the people, machines and files involved, follow the process tree and the network map.</li>
         <li><strong>Pin what matters.</strong> Pin the events that prove what happened to your case timeline. Pinning noise costs you.</li>
         <li><strong>Act, but proportionately.</strong> Every action takes time and the attacker is still working. Shutting down the wrong thing hurts the business.</li>
         <li><strong>File your report.</strong> Say what happened, who and what was affected, and how it began.</li>
@@ -68,6 +68,7 @@
   <!-- Results -->
   <main id="app2" class="screen-main" hidden>
     <section id="screen-end" class="screen" aria-labelledby="end-h">
+      <div id="mission-result" class="mission-result" hidden></div>
       <div id="end-card"></div>
     </section>
   </main>

@@ -24,7 +24,9 @@ const { INCIDENTS: IC } = await import(U('incident-commander/incidents.js'));
 const { SCENARIOS: SE } = await import(U('social-engineering/scenarios.js'));
 const { SCENARIOS: POL } = await import(U('phish-or-legit/scenarios.js'));
 const { SIMS } = await import(U('simulation/sims.js'));
-const contentIds = { 'cyber-detective': DET.map((x) => x.id), 'breach-room': BR.map((x) => x.id), 'incident-commander': IC.map((x) => x.id), 'social-engineering': SE.map((x) => x.id), simulation: SIMS.map((x) => x.id) };
+const { SOC_INVOICE } = await import(U('workspace/scenarios/soc-invoice.js'));
+const { DFIR_LAPTOP } = await import(U('workspace/scenarios/dfir-laptop.js'));
+const contentIds = { workspace: [SOC_INVOICE.id, DFIR_LAPTOP.id], 'cyber-detective': DET.map((x) => x.id), 'breach-room': BR.map((x) => x.id), 'incident-commander': IC.map((x) => x.id), 'social-engineering': SE.map((x) => x.id), simulation: SIMS.map((x) => x.id) };
 
 t('content integrity: every mission points at a case that exists in its mode', () => {
   for (const m of M.MISSIONS) {
@@ -42,7 +44,7 @@ t('content integrity: every mission points at a case that exists in its mode', (
 t('content integrity: no two missions use the same case, and each mission has a par (or reports its own)', () => {
   const refs = M.MISSIONS.filter((m) => m.kind !== 'triage').map((m) => `${m.mode}/${m.ref}`);
   assert.equal(new Set(refs).size, refs.length, 'a case is used by two missions');
-  for (const m of M.MISSIONS) if (m.kind !== 'simulation') assert.ok(m.par > 0, m.id + ' needs a par'); else assert.equal(m.par, 0);
+  for (const m of M.MISSIONS) if (m.kind !== 'simulation' && m.kind !== 'workspace') assert.ok(m.par > 0, m.id + ' needs a par'); else assert.equal(m.par, 0);
 });
 t('content integrity: requirements only reference real tiers, competencies, exams and ranks', () => {
   const tiers = new Set(M.TIERS.map((x) => x.id)); const comps = new Set(M.COMPETENCIES.map((x) => x.id)); const ranks = new Set(M.PATHS.flatMap((p) => p.ranks.map((x) => x.id)));
@@ -71,7 +73,7 @@ t('mission data is well formed, with the right numbers per tier', () => {
     assert.ok(Math.abs(w.reduce((a, [, x]) => a + x, 0) - 1) < 1e-9, m.id + ' weights should sum to 1');
     if (m.exam) assert.ok(m.promotes && m.passTier >= 2);
   }
-  assert.deepEqual([ids('beginner').length, ids('intermediate').length, ids('advanced').length, ids('senior').length, ids('lead').length, ids('manager').length, ids('cloud').length], [4, 7, 4, 3, 4, 2, 3]);
+  assert.deepEqual([ids('beginner').length, ids('intermediate').length, ids('advanced').length, ids('senior').length, ids('lead').length, ids('manager').length, ids('cloud').length], [4, 8, 4, 3, 4, 2, 3]);
   assert.equal(M.MISSIONS.filter((m) => m.exam).length, 22);
   assert.equal(M.RANKS.length, 6);
   assert.equal(M.COMPETENCIES.length, 30);
@@ -1096,7 +1098,7 @@ for (const pid of ['dfir', 'grc', 'ti']) {
     const pracIds = M.MISSIONS.filter((m) => m.tier === prac && !m.exam).map((m) => m.id);
     const exam = pth.ranks[2].requires.exam;
     assert.equal(foundIds.length, 3);
-    assert.equal(pracIds.length, 3);
+    assert.ok(pracIds.length >= 3);
     const s = C.blank();
     for (const id of foundIds) assert.equal(C.missionStatus(s, id).unlocked, true, id + ' is open at the start');
     for (const id of pracIds) assert.equal(C.missionStatus(s, id).unlocked, false, id + ' is locked at the start');

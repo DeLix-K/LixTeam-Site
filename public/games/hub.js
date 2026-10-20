@@ -27,7 +27,7 @@ const MODES = [
   { n: 5, name: 'Cyber Escape Room', blurb: 'Solve connected security puzzles to protect the vault.', href: 'escape-room/', id: 'escape-room' },
   { n: 6, name: 'The Breach Room', blurb: 'Reconstruct how an organisation was compromised.', href: 'breach-room/', id: 'breach-room' },
   { n: 7, name: 'Incident Simulation', blurb: 'Work a whole incident from the first alert to the final report.', href: 'simulation/', id: 'simulation' },
-  { n: 8, name: 'SOC Workspace', blurb: 'A live alert queue, real log searches and a clock that keeps moving. Investigate, contain and report.', href: 'workspace/', id: 'workspace' },
+  { n: 8, name: 'Hands-on Workspaces', blurb: 'A SOC console and a forensics bench: live logs, real tools, a clock that keeps moving. Investigate, contain and report.', href: 'workspace/', id: 'workspace' },
 ];
 
 // The home screen belongs to no single path. It lists every path, and the one you last chose
@@ -87,7 +87,7 @@ function renderPaths() {
   }
 }
 
-const MODE_NAME = { 'cyber-detective': 'Cyber Detective', 'breach-room': 'The Breach Room', 'incident-commander': 'Incident Commander', simulation: 'Incident Simulation' };
+const MODE_NAME = { workspace: 'Hands-on Workspace', 'cyber-detective': 'Cyber Detective', 'breach-room': 'The Breach Room', 'incident-commander': 'Incident Commander', simulation: 'Incident Simulation' };
 
 // This week's case, and the ones before it. One new case is released every Monday.
 function renderWeekly() {

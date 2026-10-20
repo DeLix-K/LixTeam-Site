@@ -3,11 +3,14 @@
 
 import * as E from './engine.js';
 import { SOC_INVOICE } from './scenarios/soc-invoice.js';
+import { DFIR_LAPTOP } from './scenarios/dfir-laptop.js';
 import { medalIcon } from '../core/art.js';
 import { MEDALS } from '../core/missions.js';
 import * as streak from '../core/streak.js';
+import * as missionLink from '../core/mission-link.js';
 
-const SCENARIOS = [SOC_INVOICE];
+const SCENARIOS = [SOC_INVOICE, DFIR_LAPTOP];
+const MISSION = missionLink.current('workspace');
 const BEST_KEY = 'lixteam.workspace.best.v1';
 const $ = (id) => document.getElementById(id);
 const SVGNS = 'http://www.w3.org/2000/svg';
@@ -66,28 +69,32 @@ const freshUi = () => ({
   newest: false,
   results: null,
   resultsAt: null,
-  treeHost: 'WS-FIN-07',
+  treeHost: scn.ui.treeHost,
   entityId: null,
   edgeKey: null,
   respond: {},
   lastResult: null,
   seenAlerts: new Set(),
-  report: { verdict: '', severity: '', hosts: [], users: [], cause: '', summary: '' },
+  report: Object.fromEntries(scn.report.map((f) => [f.id, f.kind === 'set' ? [] : ''])),
   closeReason: 'Explained by context',
 });
 
-const KIND = { user: 'Account', host: 'Machine', ip: 'Address', domain: 'Domain', mail: 'Sender' };
+const KIND = { user: 'Account', host: 'Machine', file: 'File', ip: 'Address', domain: 'Domain', mail: 'Sender' };
 const SEV_LABEL = { info: 'Info', low: 'Low', medium: 'Medium', high: 'High', critical: 'Critical' };
-const NAV = [
-  { id: 'alerts', n: '01', label: 'Alerts' },
-  { id: 'logs', n: '02', label: 'Log search' },
-  { id: 'entities', n: '03', label: 'People & machines' },
-  { id: 'tree', n: '04', label: 'Process tree' },
-  { id: 'map', n: '05', label: 'Network map' },
-  { id: 'respond', n: '06', label: 'Respond' },
-  { id: 'case', n: '07', label: 'Case file', narrow: true },
-  { id: 'report', n: '08', label: 'Report' },
-];
+const NAV_ALL = {
+  alerts: { label: 'Alerts' },
+  brief: { label: 'Case brief' },
+  logs: { label: 'Log search' },
+  entities: { label: 'People & machines' },
+  tree: { label: 'Process tree' },
+  map: { label: 'Network map' },
+  respond: { label: 'Respond' },
+  case: { label: 'Case file', narrow: true },
+  report: { label: 'Report' },
+};
+// Each scenario says which tools its workspace has, in order, and may rename them.
+const navItems = () => scn.ui.nav.map((id, i) => ({ id, n: String(i + 1).padStart(2, '0'), label: (scn.ui.labels || {})[id] || NAV_ALL[id].label, narrow: !!NAV_ALL[id].narrow }));
+const tipFor = (view, fallback) => tip((scn.ui.tips || {})[view] || fallback);
 const entity = (id) => E.entityById(scn, id);
 const shiftOver = () => st.clock >= scn.horizon;
 const openAlerts = () => E.alertsNow(scn, st).filter((a) => !st.alerts[a.id]);
@@ -109,7 +116,7 @@ function renderPicker() {
   const best = readBest();
   for (const s of SCENARIOS) {
     const b = best[s.id];
-    const card = h('article', { class: 'assign-card' }, h('div', { class: 'assign-top' }, h('span', { class: 'chip' }, 'Cyber Security Analyst'), b ? h('span', { class: 'chip best' }, `Best: ${MEDALS[b.tier] || 'No medal'} · ${b.total}/100`) : h('span', { class: 'chip' }, 'New')), h('h3', { text: s.title }), h('p', { text: s.blurb }), h('button', { class: 'btn primary', type: 'button', onclick: () => openBrief(s) }, b ? 'Play again' : 'Take the shift'));
+    const card = h('article', { class: 'assign-card' }, h('div', { class: 'assign-top' }, h('span', { class: 'chip' }, s.pathLabel), b ? h('span', { class: 'chip best' }, `Best: ${MEDALS[b.tier] || 'No medal'} · ${b.total}/100`) : h('span', { class: 'chip' }, 'New')), h('h3', { text: s.title }), h('p', { text: s.blurb }), h('button', { class: 'btn primary', type: 'button', onclick: () => openBrief(s) }, b ? 'Play again' : 'Take the shift'));
     list.append(card);
   }
 }
@@ -120,17 +127,7 @@ function openBrief(s) {
   $('brief-h').textContent = s.title;
   const body = $('brief-body');
   body.replaceChildren(...s.brief.map((p) => h('p', { text: p })));
-  $('toolkit').replaceChildren(
-    ...[
-      ['Alert queue', 'Every alert needs a decision: escalate it into the incident, or close it as benign.'],
-      ['Log search', 'Try user:priya.n, host:FS-02, ip:203.0.113.44, proc:powershell, type:logon, sev:high or plain words. Each search takes a minute.'],
-      ['People & machines', 'Open an account, machine or address to see what is known about it and what it has done.'],
-      ['Process tree', 'See what started what on a machine. A document starting a command shell is a classic sign.'],
-      ['Network map', 'See who talked to whom, and click a link to inspect the traffic.'],
-      ['Respond', 'Isolate, disable, block, snapshot or notify. Each action takes time and some of them break things.'],
-      ['Case file', 'Pin the events that prove the story. This is the evidence you will be judged on.'],
-    ].map(([a, b]) => h('li', {}, h('strong', { text: a }), ' ', b))
-  );
+  $('toolkit').replaceChildren(...s.ui.toolkit.map(([a, b]) => h('li', {}, h('strong', { text: a }), ' ', b)));
   show('brief');
 }
 
@@ -139,11 +136,11 @@ function startShift() {
   st = E.newRun(scn);
   ui = freshUi();
   for (const a of E.alertsNow(scn, st)) ui.seenAlerts.add(a.id);
-  $('ws-name').textContent = 'Contoso SOC console';
+  $('ws-name').textContent = scn.ui.name;
   $('ws-sub').textContent = scn.title;
   buildRail();
   show('ws');
-  setView('alerts');
+  setView(scn.ui.nav[0]);
   refresh();
 }
 
@@ -151,7 +148,7 @@ function startShift() {
 function buildRail() {
   const rail = $('rail');
   rail.replaceChildren();
-  for (const n of NAV) {
+  for (const n of navItems()) {
     rail.append(
       h('button', { class: `rail-item${n.narrow ? ' only-narrow' : ''}`, type: 'button', 'data-view': n.id, onclick: () => setView(n.id) }, h('span', { class: 'rail-n', text: n.n }), h('span', { class: 'rail-l', text: n.label }), h('span', { class: 'rail-badge', hidden: true }))
     );
@@ -162,6 +159,7 @@ function updateChrome() {
   $('ws-clock').textContent = E.clockText(st.clock);
   const open = openAlerts().length;
   $('ws-open').textContent = String(open);
+  $('ws-open').parentElement.hidden = scn.alerts.length === 0;
   $('ws-pins').textContent = String(st.pins.length);
   const dis = Math.min(40, st.disruption);
   $('ws-dis').style.width = `${(dis / 40) * 100}%`;
@@ -215,7 +213,7 @@ function setView(v) {
 function renderView() {
   const keep = document.activeElement && document.activeElement.dataset ? document.activeElement.dataset.key : null;
   const stage = $('view');
-  const fn = { alerts: viewAlerts, logs: viewLogs, entities: viewEntities, tree: viewTree, map: viewMap, respond: viewRespond, case: viewCase, report: viewReport }[ui.view];
+  const fn = { alerts: viewAlerts, brief: viewBrief, logs: viewLogs, entities: viewEntities, tree: viewTree, map: viewMap, respond: viewRespond, case: viewCase, report: viewReport }[ui.view];
   stage.replaceChildren(fn());
   if (keep) {
     const again = stage.querySelector(`[data-key="${CSS.escape(keep)}"]`);
@@ -289,10 +287,11 @@ function inspector() {
   if (e.host) add(`Everything on ${e.host}`, () => pivotSearch(`host:${e.host}`));
   for (const k of ['dst', 'src']) if (f[k] && IPV4.test(String(f[k]))) add(`Everything with ${f[k]}`, () => pivotSearch(`ip:${f[k]}`));
   if (f.proc) add(`Process ${f.proc}`, () => pivotSearch(`proc:${f.proc}`));
+  if (f.file && !String(f.file).includes('*')) add(`Everything with ${f.file}`, () => pivotSearch(`file:${f.file}`));
   if (f.domain) add(`Domain ${f.domain}`, () => pivotSearch(`domain:${f.domain}`));
   if (f.from) add(`Sender ${f.from}`, () => pivotSearch(`from:${f.from}`));
   if (f.pid !== undefined && e.host) add(`Process tree on ${e.host}`, () => { ui.treeHost = e.host; ui.eventId = e.id; setView('tree'); });
-  for (const id of [e.user, e.host, f.dst, f.src, f.domain, f.from]) if (id && entity(id)) add(`Open ${id}`, () => { ui.entityId = id; setView('entities'); });
+  for (const id of [e.user, e.host, f.dst, f.src, f.domain, f.from, f.file]) if (id && entity(id)) add(`Open ${id}`, () => { ui.entityId = id; setView('entities'); });
   const rows = Object.entries(f).map(([k, v]) => h('tr', {}, h('th', { text: k }), h('td', { text: String(v) })));
   return h(
     'aside',
@@ -307,6 +306,19 @@ function inspector() {
 }
 
 const withInspector = (main, extra) => h('div', { class: `split${ui.eventId ? ' has-ins' : ''}` }, h('div', { class: 'split-main' }, main), ui.eventId ? h('div', { class: 'split-side' }, inspector(), extra) : null);
+
+// ── Case brief (for assignments that start from a referral instead of an alert queue) ──
+function viewBrief() {
+  const b = scn.ui.briefPanel;
+  return h('div', { class: 'brief-view' },
+    tipFor('brief', 'Read the referral, then start where the evidence is. Nothing here is a conclusion yet.'),
+    h('h2', { text: b.heading }),
+    b.paragraphs.map((p) => h('p', { class: 'dim', text: p })),
+    h('h3', { text: 'What is known so far' }),
+    h('ul', { class: 'facts' }, b.known.map((k) => h('li', { text: k }))),
+    h('h3', { text: 'What you are asked for' }),
+    h('ul', { class: 'facts' }, b.asks.map((k) => h('li', { text: k }))));
+}
 
 // ── Alerts ──────────────────────────────────────────────────────
 function viewAlerts() {
@@ -325,7 +337,7 @@ function viewAlerts() {
   }
   const sel = alerts.find((a) => a.id === ui.alertId);
   return h('div', { class: 'alerts-view' },
-    tip('Open an alert to see what fired it. Then decide: escalate it into the incident, or close it as benign. Check the context before you decide: an alert is a question, not an answer.'),
+    tipFor('alerts', 'Open an alert to see what fired it. Then decide: escalate it into the incident, or close it as benign. Check the context before you decide: an alert is a question, not an answer.'),
     h('div', { class: 'two-col' }, h('div', { class: 'col-list' }, list), h('div', { class: 'col-detail' }, sel ? alertDetail(sel) : h('p', { class: 'empty', text: 'Choose an alert from the queue.' }))));
 }
 
@@ -356,11 +368,11 @@ function alertDetail(a) {
 
 // ── Logs ────────────────────────────────────────────────────────
 function viewLogs() {
-  const examples = ['user:svc-backup', 'host:FS-02 sev:high', 'ip:203.0.113.44', 'proc:powershell', 'type:logon', 'file:zip', 'payroll'];
+  const examples = scn.ui.examples;
   const form = h('form', { class: 'sform', onsubmit: (ev) => { ev.preventDefault(); ui.query = ev.target.q.value; ui.from = ev.target.from.value; ui.to = ev.target.to.value; runSearch(); refresh(); } },
     h('div', { class: 'qrow' },
       h('label', { class: 'sr', for: 'q' }, 'Search the logs'),
-      h('input', { id: 'q', name: 'q', type: 'text', value: ui.query, placeholder: 'user:priya.n   host:WS-FIN-07   ip:203.0.113.44   proc:powershell   or plain words', autocomplete: 'off', spellcheck: 'false', 'data-key': 'q' }),
+      h('input', { id: 'q', name: 'q', type: 'text', value: ui.query, placeholder: scn.ui.searchHint, autocomplete: 'off', spellcheck: 'false', 'data-key': 'q' }),
       h('button', { class: 'btn primary', type: 'submit', text: 'Search (1 min)' })),
     h('div', { class: 'frow' },
       h('label', {}, 'From ', h('input', { name: 'from', type: 'text', value: ui.from, placeholder: '09:00', size: 5, inputmode: 'numeric', autocomplete: 'off' })),
@@ -378,14 +390,14 @@ function viewLogs() {
       h('p', { class: 'rescount', text: `${rows.length} event${rows.length === 1 ? '' : 's'} for "${ui.query.trim() || 'everything'}" as at ${timeText(ui.resultsAt)}${rows.length > shown.length ? `. Showing the first ${shown.length}: narrow your search.` : '.'}` }),
       rows.length ? h('div', { class: 'erows' }, shown.map(eventRow)) : h('p', { class: 'empty', text: 'Nothing matches. Check the spelling, or try fewer words.' }));
   }
-  return h('div', { class: 'logs-view' }, tip('Search the logs. Click an event to inspect it, pin the ones that prove the story and pivot to the next question.'), form, withInspector(body));
+  return h('div', { class: 'logs-view' }, tipFor('logs', 'Search the logs. Click an event to inspect it, pin the ones that prove the story and pivot to the next question.'), form, withInspector(body));
 }
 
 // ── People & machines ───────────────────────────────────────────
-const TOKEN = { user: 'user', host: 'host', ip: 'ip', domain: 'domain', mail: 'from' };
+const TOKEN = { user: 'user', host: 'host', file: 'file', ip: 'ip', domain: 'domain', mail: 'from' };
 function viewEntities() {
   const groups = h('div', { class: 'egroups' });
-  for (const kind of ['user', 'host', 'ip', 'domain', 'mail']) {
+  for (const kind of ['user', 'host', 'file', 'ip', 'domain', 'mail']) {
     const items = E.entityList(scn, kind);
     if (!items.length) continue;
     groups.append(h('h3', { text: KIND[kind] + (kind === 'mail' ? '' : 's') }), h('ul', { class: 'elist' }, items.map((x) => h('li', {}, h('button', { class: `eitem${ui.entityId === x.id ? ' sel' : ''}`, type: 'button', 'data-key': `ent-${x.id}`, onclick: () => { ui.entityId = x.id; ui.eventId = null; renderView(); toDetail(); } }, h('strong', { text: x.id }), h('small', { text: x.role }))))));
@@ -400,6 +412,7 @@ function viewEntities() {
       card = h('div', { class: 'ecard' },
         h('header', {}, h('span', { class: 'chip', text: KIND[x.kind] }), h('h2', { text: x.id }), h('p', { class: 'dim', text: `${x.name} · ${x.role}` })),
         info.state.length ? h('p', {}, info.state.map((s) => h('span', { class: 'chip state', text: s }))) : null,
+        x.meta ? h('table', { class: 'fields meta' }, h('tbody', {}, x.meta.map(([k, v]) => h('tr', {}, h('th', { text: k }), h('td', { text: v }))))) : null,
         h('ul', { class: 'facts' }, x.facts.map((f) => h('li', { text: f }))),
         h('p', { class: 'dim', text: `${info.count} logged event${info.count === 1 ? '' : 's'}${info.last !== null ? ', last at ' + timeText(info.last) : ''}.` }),
         h('div', { class: 'quick' },
@@ -409,7 +422,7 @@ function viewEntities() {
         recent.length ? h('div', {}, h('h3', { text: 'Latest activity' }), h('div', { class: 'erows' }, recent.map(eventRow))) : null);
     }
   }
-  return h('div', { class: 'ent-view' }, tip('Context is how you tell an attack from a normal day. Open an account or machine to see who it belongs to and what it normally does.'), h('div', { class: 'two-col' }, h('div', { class: 'col-list' }, groups), h('div', { class: 'col-detail' }, withInspector(card))));
+  return h('div', { class: 'ent-view' }, tipFor('entities', 'Context is how you tell an attack from a normal day. Open an account or machine to see who it belongs to and what it normally does.'), h('div', { class: 'two-col' }, h('div', { class: 'col-list' }, groups), h('div', { class: 'col-detail' }, withInspector(card))));
 }
 
 // ── Process tree ────────────────────────────────────────────────
@@ -423,7 +436,7 @@ function viewTree() {
     n.children.length ? h('ul', {}, n.children.map(node)) : null);
   const sel = h('label', { class: 'sel-label' }, 'Machine ', h('select', { 'aria-label': 'Machine', 'data-key': 'treehost', onchange: (ev) => { ui.treeHost = ev.target.value; ui.eventId = null; renderView(); } }, hosts.map((x) => h('option', { value: x, selected: x === ui.treeHost ? true : null, text: x }))));
   const tree = roots.length ? h('ul', { class: 'ptree' }, roots.map(node)) : h('p', { class: 'empty', text: 'No process activity recorded on this machine yet.' });
-  return h('div', { class: 'tree-view' }, tip('Read the tree top to bottom: each process was started by the one above it. Ask what a document, a mail client or a browser has no business starting.'), sel, withInspector(tree));
+  return h('div', { class: 'tree-view' }, tipFor('tree', 'Read the tree top to bottom: each process was started by the one above it. Ask what a document, a mail client or a browser has no business starting.'), sel, withInspector(tree));
 }
 
 // ── Network map ─────────────────────────────────────────────────
@@ -480,7 +493,7 @@ function viewMap() {
     ? h('div', { class: 'edge-detail' }, h('h3', { text: `${sel.from} → ${sel.to === 'other' ? 'other internet addresses' : sel.to}` }), h('p', { class: 'dim', text: `${sel.count} connection${sel.count === 1 ? '' : 's'}, ${fmtBytes(sel.bytes)} in total, last at ${timeText(sel.last)}.${blocked(sel) ? ' Blocked or isolated since.' : ''}` }), h('div', { class: 'erows' }, sel.events.map((id) => E.eventById(scn, st, id)).filter(Boolean).sort((a, b) => b.t - a.t).slice(0, 20).map(eventRow)))
     : null;
   const table = h('table', { class: 'links' }, h('thead', {}, h('tr', {}, ['From', 'To', 'Connections', 'Data', 'Last'].map((c) => h('th', { text: c })))), h('tbody', {}, list.map((e) => h('tr', { class: ui.edgeKey === e.key ? 'sel' : '' }, h('td', {}, h('button', { class: 'linkbtn', type: 'button', 'data-key': `edge-${e.key}`, onclick: () => pickEdge(e.key), text: e.from })), h('td', { text: e.to === 'other' ? 'Other internet' : e.to }), h('td', {}, sevChip(e.sev), ` ${e.count}`), h('td', { text: fmtBytes(e.bytes) }), h('td', { text: timeText(e.last) })))));
-  return h('div', { class: 'map-view' }, tip('Thicker links carry more traffic; red and amber links are the ones that were flagged. Click a link to see the individual connections, or a machine to open it.'), h('div', { class: 'mapwrap' }, svg), withInspector(h('div', {}, detail, h('h3', { text: 'All links' }), table)));
+  return h('div', { class: 'map-view' }, tipFor('map', 'Thicker links carry more traffic; red and amber links are the ones that were flagged. Click a link to see the individual connections, or a machine to open it.'), h('div', { class: 'mapwrap' }, svg), withInspector(h('div', {}, detail, h('h3', { text: 'All links' }), table)));
 }
 const blockedNode = (id) => st.flags[`isolate:${id}`] !== undefined || st.flags[`block-ip:${id}`] !== undefined;
 function pickEdge(key) {
@@ -503,14 +516,16 @@ function viewRespond() {
     const select = h('select', { 'aria-label': `${a.label}: target`, 'data-key': `sel-${a.id}`, onchange: (ev) => { ui.respond[a.id] = ev.target.value; renderView(); } },
       h('option', { value: '', text: 'Choose…' }), targets.map((t) => h('option', { value: t, selected: t === value ? true : null, text: label(a.targetKind, t) })));
     const done = value && st.flags[`${a.id}:${value}`] !== undefined;
-    return h('div', { class: 'act' }, h('strong', { text: a.label }), select,
-      h('button', { class: `btn small ${done ? '' : 'danger'}`, type: 'button', disabled: !value || done ? true : null, 'data-key': `do-${a.id}`, onclick: () => doAction(a.id, value), text: done ? 'Done' : `Do it (${a.cost ?? E.COSTS.action} min)` }));
+    return { group: a.group || '', node: h('div', { class: 'act' }, h('strong', { text: a.label }), select,
+      h('button', { class: `btn small ${done ? '' : 'danger'}`, type: 'button', disabled: !value || done ? true : null, 'data-key': `do-${a.id}`, onclick: () => doAction(a.id, value), text: done ? 'Done' : `Do it (${a.cost ?? E.COSTS.action} min)` })) };
   });
+  const groups = [...new Set(cards.map((c) => c.group))];
+  const acts = h('div', { class: 'acts' }, groups.map((g) => h('div', { class: 'agroup' }, g ? h('h3', { text: g }) : null, cards.filter((c) => c.group === g).map((c) => c.node))));
   const res = ui.lastResult;
   return h('div', { class: 'respond-view' },
-    tip('Every action takes time, and the attacker keeps working. Stopping the right things is good; stopping the wrong things costs the business. Past events stay in the logs: an action only changes what happens next.'),
+    tipFor('respond', 'Every action takes time, and the attacker keeps working. Stopping the right things is good; stopping the wrong things costs the business. Past events stay in the logs: an action only changes what happens next.'),
     res ? h('div', { class: `result ${res.ok ? (res.harm ? 'bad' : 'ok') : 'note'}`, role: 'status' }, h('strong', { text: res.title }), h('p', { text: res.text }), res.harm ? h('p', { class: 'harm', text: `Business disruption +${res.harm}` }) : null) : null,
-    h('div', { class: 'acts' }, cards),
+    acts,
     h('h3', { text: 'What you have done' }),
     st.actions.length ? h('ol', { class: 'did' }, st.actions.map((a) => h('li', {}, h('time', { text: timeText(a.at) }), ' ', a.rule.label || `${a.action} ${a.target}`))) : h('p', { class: 'empty', text: 'Nothing yet.' }));
 }
@@ -528,7 +543,7 @@ function renderCaseFile(box) {
   const closed = Object.values(st.alerts).filter((a) => a.status === 'closed').length;
   box.replaceChildren(
     h('header', {}, h('strong', { text: 'Case file' }), h('small', { text: `${E.clockText(st.clock)}` })),
-    h('dl', { class: 'cstat' }, h('dt', { text: 'Alerts' }), h('dd', { text: `${openAlerts().length} open · ${esc} escalated · ${closed} closed` }), h('dt', { text: 'Searches' }), h('dd', { text: String(st.searches) }), h('dt', { text: 'Actions' }), h('dd', { text: String(st.actions.length) })),
+    h('dl', { class: 'cstat' }, scn.alerts.length ? h('dt', { text: 'Alerts' }) : null, scn.alerts.length ? h('dd', { text: `${openAlerts().length} open · ${esc} escalated · ${closed} closed` }) : null, h('dt', { text: 'Searches' }), h('dd', { text: String(st.searches) }), h('dt', { text: 'Actions' }), h('dd', { text: String(st.actions.length) })),
     h('h3', { text: 'Pinned timeline' }),
     pins.length
       ? h('ol', { class: 'pintl' }, pins.map((e) => h('li', {}, h('time', { text: timeText(e.t) }), h('span', { text: e.summary }), h('button', { class: 'x', type: 'button', 'aria-label': 'Unpin', onclick: () => { E.unpin(st, e.id); refresh(); }, text: '×' }))))
@@ -537,32 +552,32 @@ function renderCaseFile(box) {
 function viewCase() {
   const box = h('div', { class: 'casefile-inline' });
   renderCaseFile(box);
-  return h('div', {}, tip('This is your evidence timeline, in time order. A good one tells the story of the attack from the first email to the data staged for removal.'), box);
+  return h('div', {}, tipFor('case', 'This is your evidence timeline, in time order. A good one tells the story of the attack from the first email to the data staged for removal.'), box);
 }
 
 // ── Report ──────────────────────────────────────────────────────
 function viewReport() {
   const r = ui.report;
-  const radio = (name, items, cur, set) => h('div', { class: 'opts' }, items.map(([v, l]) => h('label', { class: 'opt' }, h('input', { type: 'radio', name, value: v, checked: cur === v ? true : null, onchange: () => { set(v); validate(); } }), h('span', { text: l }))));
-  const checks = (kind, list) => h('div', { class: 'opts cols' }, list.map((id) => h('label', { class: 'opt' }, h('input', { type: 'checkbox', checked: r[kind].includes(id) ? true : null, onchange: (ev) => { r[kind] = ev.target.checked ? [...r[kind], id] : r[kind].filter((x) => x !== id); } }), h('span', {}, h('strong', { text: id }), entity(id) ? h('small', { text: ` ${entity(id).role}` }) : null))));
   const submit = h('button', { class: 'btn primary big', type: 'button', 'data-key': 'submit', onclick: finish, text: 'Submit report' });
-  const counter = h('small', { class: 'count', text: '' });
   const validate = () => {
-    submit.disabled = !(r.verdict && r.severity && r.cause);
-    counter.textContent = `${r.summary.trim().length} characters (at least ${scn.grading.minSummary} for full credit)`;
+    submit.disabled = !scn.report.every((f) => f.kind === 'text' || f.kind === 'set' || (f.kind === 'time' ? E.parseClock(r[f.id]) !== null : r[f.id]));
+    for (const c of document.querySelectorAll('.count[data-field]')) c.textContent = `${r[c.dataset.field].trim().length} characters (at least ${c.dataset.min} for full credit)`;
   };
-  const ta = h('textarea', { rows: 5, 'aria-label': 'Summary', placeholder: 'What happened, in plain words. How did it start, what did the attacker do and what have you done about it?', oninput: (ev) => { r.summary = ev.target.value; validate(); } });
-  ta.value = r.summary;
-  const form = h('div', { class: 'report' },
-    tip('Your report is graded against what really happened, and credit depends on the evidence you pinned. You can keep investigating until you submit; the clock keeps running.'),
-    h('fieldset', {}, h('legend', { text: 'Verdict' }), radio('verdict', [['confirmed', 'Confirmed security incident'], ['false-positive', 'False positive: nothing malicious happened'], ['inconclusive', 'Inconclusive: not enough evidence']], r.verdict, (v) => (r.verdict = v))),
-    h('fieldset', {}, h('legend', { text: 'Severity' }), radio('severity', [['low', 'Low'], ['medium', 'Medium'], ['high', 'High'], ['critical', 'Critical']], r.severity, (v) => (r.severity = v))),
-    h('fieldset', {}, h('legend', { text: 'Machines affected' }), checks('hosts', scn.targets.host)),
-    h('fieldset', {}, h('legend', { text: 'Accounts affected' }), checks('users', scn.targets.user)),
-    h('fieldset', {}, h('legend', { text: 'How did it begin?' }), radio('cause', scn.causes.map((c) => [c.id, c.label]), r.cause, (v) => (r.cause = v))),
-    h('fieldset', {}, h('legend', { text: 'Summary' }), ta, counter),
-    h('div', { class: 'btn-row' }, submit));
-  validate();
+  const options = (f) => (f.from ? scn.targets[f.from].map((id) => [id, id, entity(id) ? entity(id).role : '']) : f.options.map(([v, l]) => [v, l, '']));
+  const radio = (f) => h('div', { class: 'opts' }, options(f).map(([v, l]) => h('label', { class: 'opt' }, h('input', { type: 'radio', name: f.id, value: v, checked: r[f.id] === v ? true : null, onchange: () => { r[f.id] = v; validate(); } }), h('span', { text: l }))));
+  const checks = (f) => h('div', { class: 'opts cols' }, options(f).map(([v, l, role]) => h('label', { class: 'opt' }, h('input', { type: 'checkbox', checked: r[f.id].includes(v) ? true : null, onchange: (ev) => { r[f.id] = ev.target.checked ? [...r[f.id], v] : r[f.id].filter((x) => x !== v); } }), h('span', {}, h('strong', { text: l }), role ? h('small', { text: ` ${role}` }) : null))));
+  const field = (f) => {
+    if (f.kind === 'set') return checks(f);
+    if (f.kind === 'time') return h('div', {}, h('input', { type: 'text', name: f.id, value: r[f.id], placeholder: 'HH:MM', size: 6, inputmode: 'numeric', autocomplete: 'off', 'aria-label': f.label, oninput: (ev) => { r[f.id] = ev.target.value; validate(); } }), f.hint ? h('small', { class: 'count', text: f.hint }) : null);
+    if (f.kind === 'text') {
+      const ta = h('textarea', { rows: 5, 'aria-label': f.label, placeholder: f.placeholder || '', oninput: (ev) => { r[f.id] = ev.target.value; validate(); } });
+      ta.value = r[f.id];
+      return h('div', {}, ta, h('small', { class: 'count', 'data-field': f.id, 'data-min': String(f.minLength) }));
+    }
+    return radio(f);
+  };
+  const form = h('div', { class: 'report' }, tipFor('report', 'Your report is graded against what really happened, and credit depends on the evidence you pinned. You can keep investigating until you submit; the clock keeps running.'), scn.report.map((f) => h('fieldset', {}, h('legend', { text: f.label }), field(f))), h('div', { class: 'btn-row' }, submit));
+  queueMicrotask(validate);
   return form;
 }
 
@@ -583,11 +598,17 @@ function finish() {
   for (const id of toastTimers) clearTimeout(id);
   toastTimers = [];
   renderEnd(g);
+  $('mission-result').hidden = true;
+  if (MISSION) {
+    const res = missionLink.report(MISSION, { points: g.total, tier: g.tier, perf: g.total / 100, summary: [`Score ${g.total}/100`, ...Object.entries(g.parts).filter(([k]) => g.max[k] > 0).map(([k, v]) => `${k[0].toUpperCase() + k.slice(1)} ${Math.round(v)}/${g.max[k]}`), `Business disruption ${g.disruption}`] });
+    missionLink.render($('mission-result'), res);
+  }
   show('end');
 }
 
-const GROUPS = [['Triage', 'triage', 'Alert decisions'], ['Evidence', 'evidence', 'Evidence pinned'], ['Response', 'response', 'Response'], ['Report', 'report', 'Report']];
+const ALL_GROUPS = [['Triage', 'triage', 'Alert decisions'], ['Evidence', 'evidence', 'Evidence pinned'], ['Response', 'response', 'Response'], ['Report', 'report', 'Report']];
 function renderEnd(g) {
+  const GROUPS = ALL_GROUPS.filter(([, k]) => g.max[k] > 0).map(([n, k, l]) => [n, k, (scn.ui.groupLabels || {})[k] || l]);
   const root = $('end-card');
   root.replaceChildren();
   const head = h('div', { class: 'end-head' }, medalIcon(g.tier, 56), h('div', {}, h('p', { class: 'eyebrow', text: scn.title }), h('h1', {}, h('span', { class: 'accent-text', text: g.tier > 0 ? `${MEDALS[g.tier]} medal` : 'Not passed yet' }))));
@@ -629,6 +650,15 @@ function debriefQ(q) {
 
 // ── Start ───────────────────────────────────────────────────────
 $('brief-start').addEventListener('click', startShift);
-$('brief-back').addEventListener('click', () => show('pick'));
-renderPicker();
-show('pick');
+$('brief-back').addEventListener('click', () => {
+  if (MISSION) location.href = '/games/career/';
+  else show('pick');
+});
+const fromCampaign = MISSION && SCENARIOS.find((x) => x.id === MISSION.ref);
+if (fromCampaign) {
+  missionLink.applyChrome();
+  openBrief(fromCampaign);
+} else {
+  renderPicker();
+  show('pick');
+}
