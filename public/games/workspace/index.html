@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SOC Workspace · RootLine</title>
+  <meta name="description" content="Work a live alert queue like a SOC analyst: search the logs, follow the process tree, contain the attack and file your report. Free, no sign-up, no tracking." />
+  <meta name="theme-color" content="#0a0a0a" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23a3e635'/%3E%3Ctext x='16' y='22' font-family='Arial' font-weight='900' font-size='15' text-anchor='middle' fill='%230a0a0a'%3ELT%3C/text%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="../shared.css" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body data-mode="workspace">
+  <header class="top">
+    <a class="back" href="/games/">← All games</a>
+    <span class="title">SOC Workspace</span>
+    <span class="spacer" aria-hidden="true"></span>
+  </header>
+
+  <!-- Choose an assignment and read the brief -->
+  <main id="app" class="screen-main">
+    <section id="screen-pick" class="screen" aria-labelledby="pick-h">
+      <p class="eyebrow">Cyber Security Analyst · hands-on</p>
+      <h1 id="pick-h">SOC <span class="accent-text">Workspace</span></h1>
+      <p class="lead">A real alert queue, real log searches and real consequences. You are the analyst on shift. There are no multiple-choice questions to get through: you investigate, you decide, and the clock keeps moving.</p>
+      <ul class="howto">
+        <li><strong>Work the queue.</strong> Open each alert, then search the logs, open the people and machines involved and follow the process tree.</li>
+        <li><strong>Pin what matters.</strong> Pin the events that prove what happened to your case timeline. Pinning noise costs you.</li>
+        <li><strong>Act, but proportionately.</strong> Every action takes time and the attacker is still working. Shutting down the wrong thing hurts the business.</li>
+        <li><strong>File your report.</strong> Say what happened, who and what was affected, and how it began.</li>
+      </ul>
+      <div class="assignments" id="assignment-list"></div>
+      <p class="fine">Everything here is fictional. Your progress stays on this device and is never sent anywhere.</p>
+    </section>
+
+    <section id="screen-brief" class="screen" hidden aria-labelledby="brief-h">
+      <p class="eyebrow" id="brief-eyebrow">Handover</p>
+      <h1 id="brief-h"></h1>
+      <div id="brief-body" class="brief-body"></div>
+      <h2>Your tools</h2>
+      <ul class="toolkit" id="toolkit"></ul>
+      <div class="btn-row">
+        <button class="btn primary big" id="brief-start" type="button">Start your shift</button>
+        <button class="btn big" id="brief-back" type="button">Back</button>
+      </div>
+    </section>
+  </main>
+
+  <!-- The workspace -->
+  <div id="screen-ws" class="ws" hidden>
+    <div class="ws-bar" role="group" aria-label="Case status">
+      <div class="ws-brand"><strong id="ws-name">SOC console</strong><small id="ws-sub"></small></div>
+      <div class="ws-stat clock-stat" aria-live="off"><small>Time</small><span id="ws-clock">14:05</span></div>
+      <div class="ws-stat"><small>Open alerts</small><span id="ws-open">6</span></div>
+      <div class="ws-stat"><small>Pinned</small><span id="ws-pins">0</span></div>
+      <div class="ws-stat dis"><small>Business disruption</small><div class="dbar" role="progressbar" aria-label="Business disruption" aria-valuemin="0" aria-valuemax="40" aria-valuenow="0"><div id="ws-dis"></div></div></div>
+      <button class="btn primary" id="ws-report-btn" type="button">File report</button>
+    </div>
+
+    <div class="ws-body">
+      <nav class="rail" id="rail" aria-label="Tools"></nav>
+      <section class="stage" id="view" tabindex="-1" aria-live="off"></section>
+      <aside class="casefile" id="casefile" aria-label="Case file"></aside>
+    </div>
+    <div class="toasts" id="toasts" role="status" aria-live="polite"></div>
+  </div>
+
+  <!-- Results -->
+  <main id="app2" class="screen-main" hidden>
+    <section id="screen-end" class="screen" aria-labelledby="end-h">
+      <div id="end-card"></div>
+    </section>
+  </main>
+
+  <script type="module" src="../core/chrome.js"></script>
+  <script type="module" src="game.js"></script>
+</body>
+</html>

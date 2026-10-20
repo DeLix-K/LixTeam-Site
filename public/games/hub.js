@@ -27,6 +27,7 @@ const MODES = [
   { n: 5, name: 'Cyber Escape Room', blurb: 'Solve connected security puzzles to protect the vault.', href: 'escape-room/', id: 'escape-room' },
   { n: 6, name: 'The Breach Room', blurb: 'Reconstruct how an organisation was compromised.', href: 'breach-room/', id: 'breach-room' },
   { n: 7, name: 'Incident Simulation', blurb: 'Work a whole incident from the first alert to the final report.', href: 'simulation/', id: 'simulation' },
+  { n: 8, name: 'SOC Workspace', blurb: 'A live alert queue, real log searches and a clock that keeps moving. Investigate, contain and report.', href: 'workspace/', id: 'workspace' },
 ];
 
 // The home screen belongs to no single path. It lists every path, and the one you last chose

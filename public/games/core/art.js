@@ -116,6 +116,7 @@ export const MODE_COLOUR = {
   'escape-room': '#fbbf24',
   'breach-room': '#f87171',
   simulation: '#2dd4bf',
+  workspace: '#a3e635',
 };
 
 const ICONS = {
@@ -126,6 +127,7 @@ const ICONS = {
   'escape-room': () => [s('circle', { cx: 8, cy: 12, r: 4 }), s('line', { x1: 12, y1: 12, x2: 21, y2: 12 }), s('line', { x1: 18, y1: 12, x2: 18, y2: 16 }), s('line', { x1: 21, y1: 12, x2: 21, y2: 15 })],
   'breach-room': () => [s('line', { x1: 5, y1: 6, x2: 19, y2: 6 }), s('line', { x1: 5, y1: 6, x2: 12, y2: 18 }), s('line', { x1: 19, y1: 6, x2: 12, y2: 18 }), s('circle', { cx: 5, cy: 6, r: 2 }), s('circle', { cx: 19, cy: 6, r: 2 }), s('circle', { cx: 12, cy: 18, r: 2 })],
   simulation: () => [s('rect', { x: 3, y: 4, width: 18, height: 16, rx: 2 }), s('polyline', { points: '7,10 10,13 7,16' }), s('line', { x1: 12, y1: 16, x2: 17, y2: 16 })],
+  workspace: () => [s('rect', { x: 3, y: 4, width: 18, height: 13, rx: 2 }), s('polyline', { points: '6,12 9,12 11,8 13,14 15,11 18,11' }), s('line', { x1: 9, y1: 21, x2: 15, y2: 21 }), s('line', { x1: 12, y1: 17, x2: 12, y2: 21 })],
 };
 
 export function modeIcon(modeId, size = 24) {
