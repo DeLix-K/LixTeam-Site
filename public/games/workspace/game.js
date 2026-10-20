@@ -3,15 +3,17 @@
 
 import * as E from './engine.js';
 import * as Net from './net.js';
+import * as Cloud from './cloud.js';
 import { SOC_INVOICE } from './scenarios/soc-invoice.js';
 import { DFIR_LAPTOP } from './scenarios/dfir-laptop.js';
 import { NET_FLAT } from './scenarios/net-flat.js';
+import { CLOUD_BUCKET } from './scenarios/cloud-bucket.js';
 import { medalIcon } from '../core/art.js';
 import { MEDALS } from '../core/missions.js';
 import * as streak from '../core/streak.js';
 import * as missionLink from '../core/mission-link.js';
 
-const SCENARIOS = [SOC_INVOICE, DFIR_LAPTOP, NET_FLAT];
+const SCENARIOS = [SOC_INVOICE, DFIR_LAPTOP, NET_FLAT, CLOUD_BUCKET];
 const MISSION = missionLink.current('workspace');
 const BEST_KEY = 'lixteam.workspace.best.v1';
 const $ = (id) => document.getElementById(id);
@@ -80,6 +82,8 @@ const freshUi = () => ({
   report: Object.fromEntries(scn.report.map((f) => [f.id, f.kind === 'set' ? [] : ''])),
   closeReason: 'Explained by context',
   traceFlow: null,
+  nodeId: null,
+  cloudMsg: null,
   fwForm: { action: 'deny', src: '*', dst: '*', port: '*', proto: '*', where: 'top' },
   fwTest: scn.net ? { ...scn.net.test, port: String(scn.net.test.port) } : {},
   fwMsg: null,
@@ -95,6 +99,9 @@ const NAV_ALL = {
   tree: { label: 'Process tree' },
   map: { label: 'Network map' },
   topology: { label: 'Topology' },
+  findings: { label: 'Findings' },
+  estate: { label: 'Estate' },
+  changes: { label: 'Changes' },
   firewall: { label: 'Firewall' },
   respond: { label: 'Respond' },
   case: { label: 'Case file', narrow: true },
@@ -221,7 +228,7 @@ function setView(v) {
 function renderView() {
   const keep = document.activeElement && document.activeElement.dataset ? document.activeElement.dataset.key : null;
   const stage = $('view');
-  const fn = { topology: viewTopology, firewall: viewFirewall, alerts: viewAlerts, brief: viewBrief, logs: viewLogs, entities: viewEntities, tree: viewTree, map: viewMap, respond: viewRespond, case: viewCase, report: viewReport }[ui.view];
+  const fn = { findings: viewFindings, estate: viewEstate, changes: viewChanges, topology: viewTopology, firewall: viewFirewall, alerts: viewAlerts, brief: viewBrief, logs: viewLogs, entities: viewEntities, tree: viewTree, map: viewMap, respond: viewRespond, case: viewCase, report: viewReport }[ui.view];
   stage.replaceChildren(fn());
   if (keep) {
     const again = stage.querySelector(`[data-key="${CSS.escape(keep)}"]`);
@@ -304,7 +311,9 @@ function inspector() {
   if (f.domain) add(`Domain ${f.domain}`, () => pivotSearch(`domain:${f.domain}`));
   if (f.from) add(`Sender ${f.from}`, () => pivotSearch(`from:${f.from}`));
   if (f.pid !== undefined && e.host) add(`Process tree on ${e.host}`, () => { ui.treeHost = e.host; ui.eventId = e.id; setView('tree'); });
-  for (const id of [e.user, e.host, f.dst, f.src, f.domain, f.from, f.file]) if (id && entity(id)) add(`Open ${id}`, () => { ui.entityId = id; setView('entities'); });
+  for (const id of new Set([e.user, e.host, f.dst, f.src, f.domain, f.from, f.file, f.actor, f.resource])) if (id && entity(id)) add(`Open ${id}`, () => { if (scn.cloud) { ui.nodeId = id; setView('estate'); } else { ui.entityId = id; setView('entities'); } });
+  if (scn.cloud && f.actor && f.actor !== 'anonymous' && f.actor !== 'secret-scanner') add(`Everything by ${f.actor}`, () => pivotSearch(`actor:${f.actor}`));
+  if (scn.cloud && f.resource) add(`Everything on ${f.resource}`, () => pivotSearch(`resource:${f.resource}`));
   const rows = Object.entries(f).map(([k, v]) => h('tr', {}, h('th', { text: k }), h('td', { text: String(v) })));
   return h(
     'aside',
@@ -557,7 +566,7 @@ function renderCaseFile(box) {
   box.replaceChildren(
     h('header', {}, h('strong', { text: 'Case file' }), h('small', { text: `${E.clockText(st.clock)}` })),
     h('dl', { class: 'cstat' }, scn.alerts.length ? h('dt', { text: 'Alerts' }) : null, scn.alerts.length ? h('dd', { text: `${openAlerts().length} open · ${esc} escalated · ${closed} closed` }) : null, h('dt', { text: 'Searches' }), h('dd', { text: String(st.searches) }), h('dt', { text: 'Actions' }), h('dd', { text: String(st.actions.length) })),
-    scn.net ? servicesBlock() : null,
+    scn.net || scn.cloud ? servicesBlock() : null,
     h('h3', { text: 'Pinned timeline' }),
     pins.length
       ? h('ol', { class: 'pintl' }, pins.map((e) => h('li', {}, h('time', { text: timeText(e.t) }), h('span', { text: e.summary }), h('button', { class: 'x', type: 'button', 'aria-label': 'Unpin', onclick: () => { E.unpin(st, e.id); refresh(); }, text: '×' }))))
@@ -569,12 +578,132 @@ function viewCase() {
   return h('div', {}, tipFor('case', 'This is your evidence timeline, in time order. A good one tells the story of the attack from the first email to the data staged for removal.'), box);
 }
 
+// ── Cloud: findings, estate and changes ─────────────────────────
+function viewFindings() {
+  const list = Cloud.findingStatus(scn, Cloud.stateNow(scn, st));
+  const open = list.filter((f) => !f.closed).length;
+  return h('div', { class: 'findings-view' }, tipFor('findings', 'Open a finding to see it on the estate.'), h('p', { class: 'dim', text: `${open} of ${list.length} findings open.` }),
+    h('ul', { class: 'queue' }, list.map((f) => h('li', {}, h('div', { class: `acard${f.closed ? ' done-closed' : ''}` },
+      h('div', { class: 'acard-top' }, sevChip(f.sev), h('span', { class: `astate ${f.closed ? 'st-closed' : 'st-new'}`, text: f.closed ? 'Closed' : 'Open' })),
+      h('strong', { text: f.title }), h('small', { text: f.detail }),
+      h('div', { class: 'quick' }, h('button', { class: 'btn small', type: 'button', 'data-key': `find-${f.id}`, onclick: () => { ui.nodeId = f.resource; setView('estate'); }, text: 'Show on the estate' })))))));
+}
+
+const NODE_LABEL = { PUBLIC: 'The internet', ATTACKER: 'Attacker (leaked key)', ALL: 'Everything' };
+function viewEstate() {
+  const s2 = Cloud.stateNow(scn, st);
+  const W = 800;
+  const H = 520;
+  const px = (x) => (x / 100) * W;
+  const py = (y) => (y / 100) * H;
+  const POSN = { PUBLIC: { x: 13, y: 8 }, ATTACKER: { x: 14, y: 24 }, ALL: { x: 62, y: 97 } };
+  const at = (id) => { const p = POSN[id] || entity(id) || { x: 50, y: 50 }; return { x: px(p.x), y: py(p.y) }; };
+  const holds = Cloud.attackerHolds(scn, s2).filter((x) => x.startsWith('LEAK:')).map((x) => x.slice(5));
+  const edges = [];
+  for (const g of s2.grants) {
+    if (g.removed) continue;
+    const top = g.actions.includes('admin') ? 'adm' : g.actions.some((a) => a === 'write' || a === 'delete') ? 'wr' : 'rd';
+    for (const r of g.resources.includes('*') ? ['ALL'] : g.resources) edges.push({ a: g.who, b: r, cls: `gr-${top}`, label: g.label });
+  }
+  for (const t of s2.trusts) if (!t.removed) edges.push({ a: t.from, b: t.to, cls: 'trust', label: t.needsMfa ? 'may assume (needs MFA)' : 'may assume' });
+  for (const i of scn.cloud.identities) for (const g of i.memberOf || []) edges.push({ a: i.id, b: g, cls: 'mem', label: 'member of' });
+  for (const r of scn.cloud.resources) if (s2.res[r.id].public && s2.res[r.id].public !== 'none' && !s2.res[r.id].deleted) edges.push({ a: 'PUBLIC', b: r.id, cls: 'pub', label: 'open to the public' });
+  for (const id of holds) edges.push({ a: 'ATTACKER', b: id, cls: 'leak', label: 'leaked key' });
+  const sel = ui.nodeId;
+  const svg = sv('svg', { viewBox: `0 0 ${W} ${H}`, class: 'netmap estate', role: 'group', 'aria-label': 'The cloud estate as a graph of identities and resources' });
+  for (const e of edges) {
+    const A = at(e.a);
+    const B = at(e.b);
+    svg.append(sv('line', { x1: A.x, y1: A.y, x2: B.x, y2: B.y, class: `eg ${e.cls}${sel ? (e.a === sel || e.b === sel ? ' hot' : ' dim') : ''}` }, sv('title', {}, `${e.a} → ${e.b === 'ALL' ? 'everything' : e.b}: ${e.label}`)));
+  }
+  const ids = [...new Set([...scn.entities.filter((x) => ['user', 'group', 'role', 'service', 'resource'].includes(x.kind)).map((x) => x.id), 'PUBLIC', 'ATTACKER', 'ALL'])];
+  for (const id of ids) {
+    if (id === 'ATTACKER' && !holds.length) continue;
+    const x = entity(id);
+    const label = NODE_LABEL[id] || id;
+    const p = at(id);
+    const w = Math.max(60, label.length * 7 + 14);
+    const kind = x ? x.kind : id === 'ALL' ? 'all' : id === 'ATTACKER' ? 'attacker' : 'public';
+    const gone = x && x.kind === 'resource' && s2.res[id] && s2.res[id].deleted;
+    const sick = x && x.kind === 'service' && s2.ids[id] && (s2.ids[id].disabled || s2.ids[id].keyRotated);
+    const pick = () => { ui.nodeId = id === sel ? null : id; ui.cloudMsg = null; renderView(); };
+    svg.append(sv('g', { class: `node ck-${kind}${id === sel ? ' sel' : ''}${gone ? ' gone' : ''}${sick ? ' fixed' : ''}`, tabindex: 0, role: 'button', 'aria-label': label, 'aria-pressed': id === sel ? 'true' : 'false', onclick: pick, onkeydown: (ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); pick(); } } }, sv('rect', { x: p.x - w / 2, y: p.y - 13, width: w, height: 26, rx: 7 }), sv('text', { x: p.x, y: p.y + 4, 'text-anchor': 'middle' }, label)));
+  }
+  const legend = h('p', { class: 'legend dim' }, h('span', { class: 'lg adm' }, 'full access'), ' ', h('span', { class: 'lg wr' }, 'write'), ' ', h('span', { class: 'lg rd' }, 'read'), ' ', h('span', { class: 'lg trust' }, 'may assume'), ' ', h('span', { class: 'lg pub' }, 'open to the public'), ' ', h('span', { class: 'lg leak' }, 'leaked key'));
+  return h('div', { class: 'estate-view' }, tipFor('estate', 'Click a node.'), h('div', { class: 'mapwrap' }, svg), legend, sel ? nodeInspector(sel, s2) : h('p', { class: 'empty', text: 'Choose a node to see its settings, who can reach it, what it can reach and the fixes on offer.' }));
+}
+
+function fixRow(f) {
+  const applied = Cloud.currentApplied(st).includes(f.id);
+  const clash = !applied && Cloud.currentApplied(st).map((x) => Cloud.fixById(scn, x)).find((x) => x && x.target === f.target);
+  return h('li', { class: `fixrow${applied ? ' on' : ''}` }, h('div', {}, h('strong', { text: f.label }), h('small', { text: f.detail })),
+    applied ? h('button', { class: 'btn small', type: 'button', 'data-key': `undo-${f.id}`, onclick: () => { E.cloudUndo(scn, st, f.id); ui.cloudMsg = { ok: true, text: `Undid: ${f.label}.` }; refresh(); }, text: 'Undo' })
+      : h('button', { class: 'btn small danger', type: 'button', 'data-key': `fix-${f.id}`, disabled: clash ? true : null, title: clash ? `Undo "${clash.label}" first` : null, onclick: () => { const r = E.cloudFix(scn, st, f.id); ui.cloudMsg = r.ok ? { ok: true, text: `Applied: ${f.label}.` } : { ok: false, text: r.text }; refresh(); }, text: `Apply (${f.cost ?? E.COSTS.rule} min)` }));
+}
+
+function nodeInspector(id, s2) {
+  const pseudo = NODE_LABEL[id];
+  const x = entity(id);
+  if (pseudo) {
+    return h('div', { class: 'ninsp' }, h('h2', { text: pseudo }), h('p', { class: 'dim', text: id === 'PUBLIC' ? 'Requests with no credentials. They can reach only what a resource has been opened to the public.' : id === 'ATTACKER' ? 'Whoever found the leaked access key. They hold everything that key can do, plus anything open to the public.' : 'A grant on "everything" applies to every resource in the account, including ones created later.' }));
+  }
+  const isRes = x.kind === 'resource';
+  const cfg = isRes ? s2.res[id] : s2.ids[id] || {};
+  const rows = [];
+  if (isRes) rows.push(['Public access', cfg.deleted ? 'deleted' : cfg.public === 'none' ? 'none' : cfg.public], ['Encrypted at rest', cfg.encrypted ? 'yes' : 'no'], ['Audit logging', cfg.logging ? 'on' : 'off']);
+  else {
+    if (x.kind === 'user') rows.push(['Multi-factor sign-in', cfg.mfa ? 'on' : 'off']);
+    if (x.kind === 'service') rows.push(['Access key age', `${cfg.keyAgeDays} days`], ['Key', cfg.disabled ? 'account disabled' : cfg.keyRotated ? 'rotated: the old key no longer works' : 'original']);
+  }
+  const targets = [];
+  const tid = (t) => `${t}`;
+  if (isRes) {
+    targets.push({ title: 'Settings', t: [`res:${id}`, `res:${id}:enc`] });
+  } else {
+    targets.push({ title: 'Account', t: [`id:${id}`] });
+    for (const g of s2.grants.filter((g) => g.who === id)) targets.push({ title: `Grant: ${g.label}${g.removed ? ' (removed)' : ''}`, t: [`grant:${g.id}`] });
+    for (const t of s2.trusts.filter((t) => t.from === id || t.to === id)) targets.push({ title: `Trust: ${t.from} may assume ${t.to}${t.removed ? ' (removed)' : ''}`, t: [`trust:${t.id}`] });
+  }
+  const fixSections = targets.map((sec) => ({ title: sec.title, list: sec.t.flatMap((tg) => Cloud.fixesFor(scn, tg)) })).filter((sec) => sec.list.length);
+  const reach = isRes
+    ? Cloud.whoCanReach(scn, s2, id).map((r) => ({ a: r.who === 'PUBLIC' ? 'Anyone on the internet' : r.who, lvl: r.action, why: r.why }))
+    : Cloud.whatCanReach(scn, s2, id).map((r) => ({ a: r.resource, lvl: r.action, why: r.why }));
+  if (isRes && Cloud.can(scn, s2, Cloud.ATTACKER, id, 'read')) reach.unshift({ a: 'The attacker', lvl: 'read', why: Cloud.explain(scn, s2, Cloud.ATTACKER, id, 'read') });
+  const table = reach.length ? h('div', { class: 'tablewrap' }, h('table', { class: 'links' }, h('thead', {}, h('tr', {}, [isRes ? 'Who' : 'Resource', 'Level', 'How'].map((c) => h('th', { text: c })))), h('tbody', {}, reach.map((r) => h('tr', {}, h('td', { class: 'mono', text: r.a }), h('td', {}, h('span', { class: `lvl lvl-${r.lvl}`, text: r.lvl })), h('td', { class: 'how', text: r.why.join(' → ') })))))) : h('p', { class: 'empty', text: isRes ? 'Nobody can reach this.' : 'It cannot reach anything.' });
+  return h('div', { class: 'ninsp' },
+    h('header', {}, h('span', { class: 'chip', text: x.kind === 'resource' ? 'Resource' : x.kind === 'service' ? 'Service account' : x.kind === 'role' ? 'Role' : x.kind === 'group' ? 'Group' : 'Person' }), h('h2', { class: 'mono', text: id }), h('p', { class: 'dim', text: `${x.name} · ${x.role}` })),
+    rows.length ? h('table', { class: 'fields meta' }, h('tbody', {}, rows.map(([k, v]) => h('tr', {}, h('th', { text: k }), h('td', { text: v }))))) : null,
+    h('ul', { class: 'facts' }, x.facts.map((f) => h('li', { text: f }))),
+    h('div', { class: 'quick' }, h('button', { class: 'btn small', type: 'button', onclick: () => pivotSearch(isRes ? `resource:${id}` : `actor:${id}`), text: 'Search the log for it' })),
+    h('h3', { text: isRes ? 'Who can reach this' : 'What this can reach' }), table,
+    ui.cloudMsg ? h('div', { class: `result ${ui.cloudMsg.ok ? 'ok' : 'bad'}`, role: 'status' }, h('p', { text: ui.cloudMsg.text })) : null,
+    fixSections.length ? h('h3', { text: 'Fixes on offer' }) : null,
+    fixSections.map((sec) => h('div', { class: 'fixsec' }, h('h4', { text: sec.title }), h('ul', { class: 'fixes' }, sec.list.map(fixRow)))));
+}
+
+function viewChanges() {
+  const status = E.stateChecks(scn, st).services;
+  const broken = status.filter((x) => !x.ok);
+  const times = new Map();
+  let prev = [];
+  for (const hst of st.cloud.history) {
+    for (const f of hst.applied) if (!prev.includes(f)) times.set(f, hst.at);
+    prev = hst.applied;
+  }
+  const applied = Cloud.currentApplied(st);
+  return h('div', { class: 'changes-view' }, tipFor('changes', 'Your fixes and the services that must keep working.'),
+    h('h3', { text: `Business services (${status.length - broken.length} of ${status.length} working)` }),
+    h('div', { class: 'svc-grid', role: 'list' }, status.map((x) => h('div', { class: `svc-chip ${x.ok ? 'up' : 'down'}`, role: 'listitem', title: x.note }, h('strong', { text: x.label }), h('small', { text: x.ok ? 'Working' : `Broken (cost ${x.weight}): ${x.note}` })))),
+    h('h3', { text: 'Fixes you have applied' }),
+    applied.length ? h('ol', { class: 'did' }, applied.map((id) => { const f = Cloud.fixById(scn, id); return h('li', {}, h('time', { text: timeText(times.get(id) ?? st.clock) }), ' ', f.label, ' ', h('button', { class: 'btn small', type: 'button', 'data-key': `chg-undo-${id}`, onclick: () => { E.cloudUndo(scn, st, id); refresh(); }, text: 'Undo' })); })) : h('p', { class: 'empty', text: 'None yet. Click a node on the Estate to see the fixes on offer.' }));
+}
+
 // ── Network: topology and trace ─────────────────────────────────
 const sevRank = (e) => E.rank(e.sev);
 function servicesBlock() {
-  const st2 = Net.serviceStatus(scn, Net.currentPolicy(st));
+  const st2 = E.stateChecks(scn, st).services;
   const broken = st2.filter((x) => !x.ok);
-  return h('div', { class: 'svc' }, h('h3', { text: 'Services' }), h('p', { class: broken.length ? 'svc-bad' : 'svc-ok', text: broken.length ? `${st2.length - broken.length} of ${st2.length} running. Broken: ${broken.map((x) => x.label).join('; ')}.` : `All ${st2.length} services running.` }));
+  return h('div', { class: 'svc' }, h('h3', { text: 'Services' }), h('p', { class: broken.length ? 'svc-bad' : 'svc-ok', text: broken.length ? `${st2.length - broken.length} of ${st2.length} running. Broken: ${broken.map((x) => x.label.replace(/^./, (c) => c.toLowerCase())).join('; ')}.` : `All ${st2.length} services running.` }));
 }
 
 function flowGroups() {

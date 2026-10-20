@@ -27,7 +27,8 @@ const { SIMS } = await import(U('simulation/sims.js'));
 const { SOC_INVOICE } = await import(U('workspace/scenarios/soc-invoice.js'));
 const { DFIR_LAPTOP } = await import(U('workspace/scenarios/dfir-laptop.js'));
 const { NET_FLAT } = await import(U('workspace/scenarios/net-flat.js'));
-const contentIds = { workspace: [SOC_INVOICE.id, DFIR_LAPTOP.id, NET_FLAT.id], 'cyber-detective': DET.map((x) => x.id), 'breach-room': BR.map((x) => x.id), 'incident-commander': IC.map((x) => x.id), 'social-engineering': SE.map((x) => x.id), simulation: SIMS.map((x) => x.id) };
+const { CLOUD_BUCKET } = await import(U('workspace/scenarios/cloud-bucket.js'));
+const contentIds = { workspace: [SOC_INVOICE.id, DFIR_LAPTOP.id, NET_FLAT.id, CLOUD_BUCKET.id], 'cyber-detective': DET.map((x) => x.id), 'breach-room': BR.map((x) => x.id), 'incident-commander': IC.map((x) => x.id), 'social-engineering': SE.map((x) => x.id), simulation: SIMS.map((x) => x.id) };
 
 t('content integrity: every mission points at a case that exists in its mode', () => {
   for (const m of M.MISSIONS) {
@@ -523,7 +524,7 @@ t('the chooser summary: live paths report progress, paths without missions are "
   const s = C.blank();
   play(s, 'c01-bucket', 3);
   const cloud = C.pathSummary(s, 'cloud');
-  assert.equal(cloud.live, true); assert.equal(cloud.started, true); assert.equal(cloud.passed, 1); assert.equal(cloud.total, 11);
+  assert.equal(cloud.live, true); assert.equal(cloud.started, true); assert.equal(cloud.passed, 1); assert.equal(cloud.total, 12);
   const analyst = C.pathSummary(s, 'analyst');
   assert.equal(analyst.live, true); assert.equal(analyst.started, false);
   // every path on the chooser now has missions, so check the "coming soon" rule with a temporary empty path

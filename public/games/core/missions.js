@@ -492,6 +492,12 @@ export const MISSIONS = [
     competencies: { sources: 0.4, analysis: 0.3, briefing: 0.3 },
     unlock: { passedTier: { 'ti-found': 2 } },
   },
+  {
+    id: 'c12-bench', title: 'The bucket that anyone could read', tier: 'cloud-prac', kind: 'workspace', mode: 'workspace', ref: 'cloud-bucket', minutes: 25, par: 0, access: 'plus',
+    blurb: 'A public customer bucket and a leaked key. Map who can reach what, close the exposure with precise fixes, and keep every legitimate service working.',
+    competencies: { cloud: 0.5, identity: 0.3, response: 0.2 },
+    unlock: { passedTier: { cloud: 2 } },
+  },
   // ── Cloud Security path: architect tier
   {
     id: 'c10-guardrails', title: 'Guardrails as code', tier: 'cloud-arch', kind: 'simulation', mode: 'simulation', ref: 'guardrails-as-code', minutes: 24, par: 0, access: 'plus',

@@ -13,6 +13,7 @@
 //   * Everything the player concludes is graded against what really happened in the scenario.
 
 import * as Net from './net.js';
+import * as Cloud from './cloud.js';
 
 export const COSTS = { search: 1, entity: 1, tree: 1, map: 1, action: 3, alert: 1, rule: 3, tweak: 1 };
 
@@ -41,6 +42,7 @@ export function newRun(scn) {
     searches: 0,
     submitted: false,
   };
+  if (scn.cloud) st.cloud = { history: [{ at: -1, applied: [] }] };
   if (scn.net) st.fw = { history: [{ at: -1, policy: Net.initialPolicy(scn) }], next: scn.net.rules.length + 1 };
   return st;
 }
@@ -50,6 +52,7 @@ const flagName = (action, target) => `${action}:${target}`;
 // ── Events ──────────────────────────────────────────────────────
 function suppressed(e, st, scn) {
   if (scn && scn.net && e.flow && Net.decide(scn, Net.policyAt(st, e.t), e.flow).action === 'deny') return true;
+  if (scn && scn.cloud && e.access && !Cloud.can(scn, Cloud.stateAtTime(scn, st, e.t), e.access.who, e.access.resource, e.access.action)) return true;
   if (!e.unless) return false;
   return e.unless.some((f) => st.flags[f] !== undefined && st.flags[f] <= e.t);
 }
@@ -82,6 +85,9 @@ export function visibleEvents(scn, st) {
         const d = Net.decide(scn, Net.policyAt(st, e.t), e.flow);
         out.push({ id: `deny-${e.id}`, t: e.t, type: 'firewall', sev: 'info', host: scn.net.fw, summary: `Firewall denied ${e.flow.src} to ${e.flow.dst}:${e.flow.port}/${e.flow.proto} (${d.rule ? 'rule ' + d.rule.id : 'default policy'})`, fields: { src: e.flow.src, dst: e.flow.dst, port: e.flow.port, proto: e.flow.proto, szone: e.fields.szone, dzone: e.fields.dzone, action: 'deny', rule: d.rule ? d.rule.id : 'default' }, synthetic: true, denied: e.id });
       }
+      if (scn.cloud && e.access && e.t <= st.clock) {
+        out.push({ id: `deny-${e.id}`, t: e.t, type: 'denied', sev: 'info', host: e.host, summary: `Access denied: ${e.fields.actor} tried to ${e.fields.action} ${e.fields.resource} (a fix you applied removed that access)`, fields: { actor: e.fields.actor, action: e.fields.action, resource: e.fields.resource, result: 'denied', src: e.fields.src }, synthetic: true, denied: e.id });
+      }
       continue;
     }
     if (!lost(scn, e, st)) out.push(e);
@@ -100,7 +106,7 @@ export const eventById = (scn, st, id) => visibleEvents(scn, st).find((e) => e.i
 // ── Search ──────────────────────────────────────────────────────
 // Query words: user:priya.n host:WS-FIN-07 ip:203.0.113.44 proc:powershell type:logon sev:high file:zip
 // Anything else is plain text, matched against the summary and every field. All words must match.
-const FIELD_ALIASES = { user: ['user'], host: ['host'], type: ['type'], sev: ['sev'], proc: ['proc', 'parent'], file: ['file'], ip: ['dst', 'src', 'ip'], dst: ['dst'], src: ['src'], domain: ['domain', 'dst'], from: ['from'], to: ['to'], port: ['port'], proto: ['proto'], zone: ['szone', 'dzone'] };
+const FIELD_ALIASES = { user: ['user'], host: ['host'], type: ['type'], sev: ['sev'], proc: ['proc', 'parent'], file: ['file'], ip: ['dst', 'src', 'ip'], dst: ['dst'], src: ['src'], domain: ['domain', 'dst'], from: ['from'], to: ['to'], port: ['port'], proto: ['proto'], zone: ['szone', 'dzone'], actor: ['actor'], action: ['action'], resource: ['resource'], auth: ['auth'], region: ['region'] };
 
 export function parseQuery(q) {
   const words = String(q || '').trim().split(/\s+/).filter(Boolean);
@@ -323,8 +329,42 @@ export function fwDefault(scn, st, def) {
 }
 export const fwTest = (scn, st, flow) => Net.decide(scn, Net.currentPolicy(st), flow);
 
+// ── Cloud fixes ─────────────────────────────────────────────────
+// A fix is one named change. Only one fix may stand on each target; undo it first to try a different one.
+export function cloudFix(scn, st, id) {
+  const fix = Cloud.fixById(scn, id);
+  if (!fix) return { ok: false, text: 'No such fix.' };
+  const cur = Cloud.currentApplied(st);
+  if (cur.includes(id)) return { ok: false, text: 'That fix is already applied.' };
+  const clash = cur.map((x) => Cloud.fixById(scn, x)).find((f) => f && f.target === fix.target);
+  if (clash) return { ok: false, text: `"${clash.label}" is already applied to this. Undo it first to try a different fix.` };
+  st.cloud.history.push({ at: st.clock, applied: [...cur, id] });
+  advance(st, fix.cost ?? COSTS.rule, `Fix: ${fix.label}`);
+  return { ok: true, fix };
+}
+export function cloudUndo(scn, st, id) {
+  const cur = Cloud.currentApplied(st);
+  if (!cur.includes(id)) return { ok: false, text: 'That fix is not applied.' };
+  st.cloud.history.push({ at: st.clock, applied: cur.filter((x) => x !== id) });
+  advance(st, COSTS.tweak, `Undid fix: ${Cloud.fixById(scn, id).label}`);
+  return { ok: true };
+}
+
+// What the state of the estate says about the scenario's threats and the services that must keep working.
+export function stateChecks(scn, st) {
+  if (scn.net) {
+    const pol = Net.currentPolicy(st);
+    return { threats: Net.threatStatus(scn, pol), services: Net.serviceStatus(scn, pol) };
+  }
+  if (scn.cloud) {
+    const state = Cloud.stateNow(scn, st);
+    return { threats: Cloud.threatStatus(scn, state), services: Cloud.needStatus(scn, state) };
+  }
+  return null;
+}
+
 // Harm the business suffers right now: what the player's actions cost plus every service the firewall now blocks.
-export const disruptionNow = (scn, st) => st.disruption + (scn.net ? Net.brokenWeight(scn, Net.currentPolicy(st)) : 0);
+export const disruptionNow = (scn, st) => st.disruption + (stateChecks(scn, st) || { services: [] }).services.reduce((n, x) => n + (x.ok ? 0 : x.weight), 0);
 
 // ── What happened that the player did not stop ──────────────────
 // Events with a `consequence` that actually occurred (not suppressed) by the end of the run.
@@ -401,18 +441,18 @@ export function grade(scn, st, report) {
       add('Response', `Done: ${r.label}`, r.points, r.points);
     } else add('Response', `Not done: ${r.label}`, 0, r.points, r.why || '');
   }
-  if (scn.net) {
-    const pol = Net.currentPolicy(st);
-    for (const th of Net.threatStatus(scn, pol)) {
+  const ck = stateChecks(scn, st);
+  if (ck) {
+    for (const th of ck.threats) {
       if (th.blocked) {
         res += th.points;
-        add('Response', `Blocked: ${th.label}`, th.points, th.points);
+        add('Response', `Closed: ${th.label}`, th.points, th.points);
       } else add('Response', `Still open: ${th.label}`, 0, th.points, th.why);
     }
-    for (const sv of Net.serviceStatus(scn, pol)) {
+    for (const sv of ck.services) {
       if (sv.ok) continue;
       harmNet += sv.weight * g.harmScale;
-      add('Response', `Service broken: ${sv.label}`, -sv.weight * g.harmScale, 0, sv.note);
+      add('Response', `Broken: ${sv.label}`, -sv.weight * g.harmScale, 0, sv.note);
     }
   }
   const harmful = st.actions.filter((a) => a.rule.harm);
@@ -522,7 +562,7 @@ export function problems(scn) {
     const [action, target] = f.split(':');
     if (!scn.responses.some((r) => (r.action === action && r.target === target) || (r.sets || []).includes(f))) out.push(`event ${e.id}: nothing the player can do sets ${f}`);
   }
-  const goodSum = scn.responses.filter((r) => r.good).reduce((n, r) => n + r.points, 0) + (scn.net ? scn.net.threats.reduce((n, th) => n + th.points, 0) : 0);
+  const goodSum = scn.responses.filter((r) => r.good).reduce((n, r) => n + r.points, 0) + ((scn.net || scn.cloud) ? (scn.net || scn.cloud).threats.reduce((n, th) => n + th.points, 0) : 0);
   if (goodSum !== scn.grading.response) out.push(`good responses are worth ${goodSum}, the response score is ${scn.grading.response}`);
   const roles = new Set(scn.events.filter((e) => e.key && e.keyWeight !== 0).map((e) => e.key));
   for (const r of roles) if (!scn.roleLabels[r] || !scn.roleHints[r]) out.push(`evidence role ${r} needs a label and a hint`);
@@ -541,6 +581,37 @@ export function problems(scn) {
     const zones = new Set(scn.net.zones.map((z) => z.id));
     for (const x of scn.entities) if (x.kind === 'host' && x.id !== scn.net.fw && !zones.has(x.zone)) out.push(`host ${x.id} is in an unknown zone`);
     for (const e of scn.events) if (e.flow && (!scn.entities.some((x) => x.id === e.flow.src) || !scn.entities.some((x) => x.id === e.flow.dst))) out.push(`event ${e.id}: flow uses an unknown address`);
+  }
+  if (scn.cloud) {
+    const c = scn.cloud;
+    const ck = stateChecks(scn, newRun(scn));
+    for (const sv of ck.services) if (!sv.ok) out.push(`need ${sv.id} is already broken at the start`);
+    for (const th of ck.threats) if (th.blocked) out.push(`threat ${th.id} is already closed at the start`);
+    const known = new Set(scn.entities.map((x) => x.id));
+    const rid = new Set(c.resources.map((r) => r.id));
+    for (const g of c.grants) {
+      if (!known.has(g.who)) out.push(`grant ${g.id}: unknown identity ${g.who}`);
+      for (const r of g.resources) if (r !== '*' && !rid.has(r)) out.push(`grant ${g.id}: unknown resource ${r}`);
+    }
+    for (const f of c.fixes) {
+      if (!f.effects || !f.effects.length) out.push(`fix ${f.id} has no effect`);
+      for (const e of f.effects || []) {
+        const list = e.kind === 'res' ? c.resources : e.kind === 'id' ? c.identities : e.kind === 'grant' ? c.grants : c.trusts;
+        if (!list.some((x) => x.id === e.id)) out.push(`fix ${f.id}: unknown ${e.kind} ${e.id}`);
+      }
+    }
+    for (const e of scn.events) if (e.access && !(e.access.who.startsWith('LEAK:') || e.access.who === 'PUBLIC' || known.has(e.access.who))) out.push(`event ${e.id}: unknown principal ${e.access.who}`);
+    // the reference fixes (if the scenario names them) must close every threat and break nothing
+    if (c.reference) {
+      let st = newRun(scn);
+      for (const id of c.reference) {
+        const r = cloudFix(scn, st, id);
+        if (!r.ok) out.push(`reference fix ${id}: ${r.text}`);
+      }
+      const after = stateChecks(scn, st);
+      for (const th of after.threats) if (!th.blocked) out.push(`the reference fixes leave ${th.id} open`);
+      for (const sv of after.services) if (!sv.ok) out.push(`the reference fixes break ${sv.id}`);
+    }
   }
   if (!Number.isFinite(scn.horizon) || scn.horizon <= scn.clockStart) out.push('horizon must be after the start');
   if (scn.alerts.some((a) => !a.late && a.at > scn.clockStart)) out.push('an alert that is not marked late appears after the start');
