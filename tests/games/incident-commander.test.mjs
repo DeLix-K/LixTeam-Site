@@ -840,4 +840,38 @@ t('mailbox-rule: deleting the rule unsaved, resetting everyone and switching off
   assert.equal(sd.gr.rating.name, 'Breach');
 });
 
+// ── night-command (OT/IoT) ──
+console.log('--- night-command strategies');
+const NC = 'night-command';
+const ncIdeal = run(NC, ['verify', 'source', 'manual', 'isolate', 'revoke', 'logs', 'ops', 'quality', 'declare']);
+t('night-command: the ideal response is Textbook, low threat, and ends declared', () => { assert.equal(ncIdeal.gr.rating.name, 'Textbook'); assert.equal(ncIdeal.g.outcome, 'declared'); assert.ok(ncIdeal.g.threat <= 20 && ncIdeal.g.disruption <= 15, `threat ${ncIdeal.g.threat} disruption ${ncIdeal.g.disruption}`); });
+t('night-command: you cannot correct the dose or find the route before you have checked the real state', () => {
+  const g = E.newGame(byId[NC]);
+  const ids = E.availableActions(byId[NC], g).map((a) => a.id);
+  for (const locked of ['source', 'manual', 'isolate', 'revoke', 'logs', 'ops', 'quality', 'declare']) assert.ok(!ids.includes(locked), locked + ' should be locked at the start');
+});
+t('night-command: skipping the logs, the plant owners or the water-quality check drops below Textbook', () => {
+  for (const seq of [['verify', 'source', 'manual', 'isolate', 'revoke', 'ops', 'quality', 'declare'], ['verify', 'source', 'manual', 'isolate', 'revoke', 'logs', 'quality', 'declare'], ['verify', 'source', 'manual', 'isolate', 'revoke', 'logs', 'ops', 'declare']]) {
+    assert.notEqual(run(NC, seq, { quiet: true }).gr.rating.name, 'Textbook', seq.join());
+  }
+});
+t('night-command: closing the route before making the water safe lets the dose climb', () => {
+  const r = run(NC, ['verify', 'source', 'isolate', 'manual', 'revoke', 'logs', 'ops', 'quality', 'declare'], { quiet: true });
+  assert.ok(r.g.threat >= ncIdeal.g.threat, `threat ${r.g.threat}`);
+  assert.ok(r.gr.points <= ncIdeal.gr.points);
+});
+t('night-command: shutting the plant down, restarting the controller, scanning and waiting are all poor responses', () => {
+  const sd = run(NC, ['verify', 'source', 'manual', 'isolate', 'shutdown', 'ops', 'quality', 'declare'], { quiet: true });
+  assert.ok(sd.g.disruption >= 35);
+  assert.notEqual(sd.gr.rating.name, 'Textbook');
+  for (const bad of ['reboot', 'scan', 'wait']) {
+    const r = run(NC, ['verify', bad, 'source', 'manual', 'isolate', 'revoke', 'logs', 'ops', 'quality', 'declare'], { quiet: true });
+    assert.ok(r.gr.points < ncIdeal.gr.points - 20, `${bad}: ${r.gr.points} vs ${ncIdeal.gr.points}`);
+  }
+});
+t('night-command: doing nothing scores far below the ideal', () => {
+  const r = run(NC, ['wait'], { quiet: true });
+  assert.ok(r.gr.points < ncIdeal.gr.points - 60, String(r.gr.points));
+});
+
 console.log(n, 'passed');

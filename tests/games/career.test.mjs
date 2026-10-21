@@ -83,9 +83,9 @@ t('mission data is well formed, with the right numbers per tier', () => {
     if (m.exam) assert.ok(m.promotes && m.passTier >= 2);
   }
   assert.deepEqual([ids('beginner').length, ids('intermediate').length, ids('advanced').length, ids('senior').length, ids('lead').length, ids('manager').length, ids('cloud').length], [4, 9, 4, 3, 4, 2, 3]);
-  assert.equal(M.MISSIONS.filter((m) => m.exam).length, 22);
+  assert.equal(M.MISSIONS.filter((m) => m.exam).length, 23);
   assert.equal(M.RANKS.length, 6);
-  assert.equal(M.COMPETENCIES.length, 30);
+  assert.equal(M.COMPETENCIES.length, 33);
   for (const c of M.COMPETENCIES) assert.ok(M.MISSIONS.filter((m) => m.competencies[c.id]).length >= 2, c.id + ' needs at least two missions');
 });
 t('a new player is a Recruit with only the beginner missions open on the analyst path', () => {
@@ -380,8 +380,8 @@ t('the rank ladder is reachable with silver medals alone (no gold needed)', () =
 });
 
 // ═══════════════ separate career paths ═══════════════
-t('there are nine paths on the chooser, in a fixed order, and the first is the analyst ladder', () => {
-  assert.deepEqual(M.PATHS.map((x) => x.id), ['analyst', 'engineer', 'cloud', 'network', 'vuln', 'pentest', 'dfir', 'grc', 'ti']);
+t('there are ten paths on the chooser, in a fixed order, and the first is the analyst ladder', () => {
+  assert.deepEqual(M.PATHS.map((x) => x.id), ['analyst', 'engineer', 'cloud', 'network', 'vuln', 'pentest', 'dfir', 'grc', 'ti', 'ot']);
   assert.equal(M.PATHS[0].ranks, M.RANKS);
   for (const path of M.PATHS) {
     assert.ok(path.name && path.blurb && path.colour && path.headline.length === 2 && path.lead, path.id);
@@ -882,10 +882,10 @@ t('every mission in every path points at a case that exists in its mode (content
     assert.ok(pool.includes(m.ref), m.id + ' -> ' + m.mode + '/' + m.ref);
   }
 });
-t('all nine paths on the chooser are live: each has missions and a ladder of at least three ranks', () => {
+t('all ten paths on the chooser are live: each has missions and a ladder of at least three ranks', () => {
   const s = C.blank();
   const live = M.PATHS.filter((p) => C.pathSummary(s, p.id).live).map((p) => p.id);
-  assert.deepEqual(live, ['analyst', 'engineer', 'cloud', 'network', 'vuln', 'pentest', 'dfir', 'grc', 'ti']);
+  assert.deepEqual(live, ['analyst', 'engineer', 'cloud', 'network', 'vuln', 'pentest', 'dfir', 'grc', 'ti', 'ot']);
   for (const id of live) assert.ok(M.PATHS.find((p) => p.id === id).ranks.length >= 3, id + ' has a ladder');
 });
 
@@ -1097,8 +1097,8 @@ for (const pth of M.PATHS.filter((x) => x.tiers && x.tiers.some((id) => id.endsW
   });
 }
 
-// ── the three newest paths (incident response and forensics, GRC, threat intelligence) ──
-for (const pid of ['dfir', 'grc', 'ti']) {
+// ── the four newest paths (incident response and forensics, GRC, threat intelligence, OT/IoT) ──
+for (const pid of ['dfir', 'grc', 'ti', 'ot']) {
   t(`the ${pid} path: foundations open, practitioner needs two passes, Junior after two, the exam promotes at silver (bronze is not a pass)`, () => {
     const pth = M.PATHS.find((x) => x.id === pid);
     assert.ok(pth && pth.ranks.length === 3, pid + ' has three ranks');

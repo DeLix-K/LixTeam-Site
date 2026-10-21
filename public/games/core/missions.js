@@ -37,6 +37,9 @@ export const COMPETENCIES = [
   { id: 'sources', name: "Sources and reliability", blurb: "Judging where information comes from, how reliable it is and how it could be wrong." },
   { id: 'analysis', name: "Analysis and confidence", blurb: "Reaching a judgement, saying how sure you are, and resisting conclusions that go beyond the evidence." },
   { id: 'briefing', name: "Briefing decision-makers", blurb: "Telling the right people what matters, in terms they can act on." },
+  { id: 'safety', name: "Safety and availability first", blurb: "Putting people, the process and uptime ahead of data, and judging a change by what it could stop." },
+  { id: 'zones', name: "Zones, conduits and remote access", blurb: "Separating the plant from the office, controlling the few routes between them and the vendors who come in." },
+  { id: 'legacy', name: "Legacy devices and change control", blurb: "Protecting what cannot be patched, and making changes in agreed windows with the plant owners." },
   { id: 'remediate', name: 'Remediation and patching', blurb: 'Getting the right fixes done safely, and checking that they worked.' },
 ];
 
@@ -60,6 +63,8 @@ export const TIERS = [
   { id: 'pt-prac', name: 'Practitioner', xpMultiplier: 1.5, path: 'pentest', note: 'Needs two Foundations missions passed.' },
   { id: 'pt-lead', name: 'Senior', xpMultiplier: 2.5, path: 'pentest', note: 'Opens when you reach Penetration Tester.' },
   { id: 'pt-arch', name: 'Lead', xpMultiplier: 3, path: 'pentest', note: 'Opens when you reach Senior Penetration Tester.' },
+  { id: 'ot-found', name: 'Foundations', xpMultiplier: 1, path: 'ot' },
+  { id: 'ot-prac', name: 'Practitioner', xpMultiplier: 1.5, path: 'ot', note: "Needs two Foundations missions passed." },
   { id: 'ti-found', name: 'Foundations', xpMultiplier: 1, path: 'ti' },
   { id: 'ti-prac', name: 'Practitioner', xpMultiplier: 1.5, path: 'ti', note: "Needs two Foundations missions passed." },
   { id: 'gr-found', name: 'Foundations', xpMultiplier: 1, path: 'grc' },
@@ -522,6 +527,43 @@ export const MISSIONS = [
     competencies: { cloud: 0.5, identity: 0.3, response: 0.2 },
     unlock: { passedTier: { cloud: 2 } },
   },
+  // ── OT/IoT Security path
+  {
+    id: 'ot01-priorities', title: "Nothing may stop the plant", tier: 'ot-found', kind: 'simulation', mode: 'simulation', ref: 'plant-priorities', minutes: 20, par: 0, access: 'free',
+    blurb: "Your first week at a water utility. Rank what matters in a plant, and decide what to do about a request to scan the plant tonight.",
+    competencies: { safety: 0.6, zones: 0.2, reporting: 0.2 },
+    unlock: {},
+  },
+  {
+    id: 'ot02-forgotten', title: "The device nobody remembered", tier: 'ot-found', kind: 'detective', mode: 'cyber-detective', ref: 'forgotten-device', minutes: 12, par: 250, access: 'free',
+    blurb: "Passive monitoring spots a device at a remote pumping station that is on no list. Work out what it is and what to do first, without stopping the pumps.",
+    competencies: { zones: 0.5, legacy: 0.3, reporting: 0.2 },
+    unlock: {},
+  },
+  {
+    id: 'ot03-patch', title: "The controller that cannot be patched", tier: 'ot-found', kind: 'simulation', mode: 'simulation', ref: 'cant-patch', minutes: 20, par: 0, access: 'plus',
+    blurb: "An old controller and a Windows 7 operator PC cannot be updated, and replacement is two years away. Decide how to protect what cannot be fixed.",
+    competencies: { legacy: 0.6, safety: 0.2, reporting: 0.2 },
+    unlock: {},
+  },
+  {
+    id: 'ot04-night', title: "The command at two in the morning", tier: 'ot-prac', kind: 'incident', mode: 'incident-commander', ref: 'night-command', minutes: 10, par: 105, access: 'plus',
+    blurb: "A command reaches the chlorine dosing controller from a workstation nobody is using. Make the water safe first, then close the route, without shutting the plant down.",
+    competencies: { safety: 0.5, zones: 0.2, reporting: 0.3 },
+    unlock: { passedTier: { 'ot-found': 2 } },
+  },
+  {
+    id: 'ot05-route', title: "How the office reached the plant", tier: 'ot-prac', kind: 'breach', mode: 'breach-room', ref: 'office-to-plant', minutes: 14, par: 250, access: 'plus',
+    blurb: "A mistake in the office became a problem for the plant by the evening. Rebuild the route and say how serious it really was.",
+    competencies: { zones: 0.6, safety: 0.2, reporting: 0.2 },
+    unlock: { passedTier: { 'ot-found': 2 } },
+  },
+  {
+    id: 'ot06-plant', title: "The plant behind the office", tier: 'ot-prac', kind: 'workspace', mode: 'workspace', ref: 'ot-plant', minutes: 30, par: 0, access: 'plus',
+    blurb: "A water plant's control network has five routes in from the office and the internet. Close them with the right controls, in the right maintenance window, without stopping the plant.",
+    competencies: { zones: 0.4, safety: 0.3, legacy: 0.2, reporting: 0.1 },
+    unlock: { passedTier: { 'ot-found': 2 } },
+  },
   // ── Cloud Security path: architect tier
   {
     id: 'c10-guardrails', title: 'Guardrails as code', tier: 'cloud-arch', kind: 'simulation', mode: 'simulation', ref: 'guardrails-as-code', minutes: 24, par: 0, access: 'plus',
@@ -761,12 +803,6 @@ export const MISSIONS = [
     competencies: { fwrules: 0.4, nettraffic: 0.3, netdesign: 0.3 },
     unlock: { passedTier: { 'net-found': 2 } },
   },
-  {
-    id: 'nw13-plant', title: 'The plant behind the office', tier: 'net-prac', kind: 'workspace', mode: 'workspace', ref: 'ot-plant', minutes: 30, par: 0, access: 'plus',
-    blurb: 'A water plant\'s control network has five routes in from the office and the internet. Close them with the right controls, in the right maintenance window, without stopping the plant.',
-    competencies: { netdesign: 0.5, nettraffic: 0.2, response: 0.2, reporting: 0.1 },
-    unlock: { passedTier: { 'net-found': 2 } },
-  },
   // ── Vulnerability Management path
   {
     id: 'vm01-scan', title: 'Monday\'s scan', tier: 'vm-found', kind: 'simulation', mode: 'simulation', ref: 'scan-triage', minutes: 16, par: 0, access: 'free',
@@ -888,6 +924,13 @@ export const MISSIONS = [
     blurb: "A sector warning, a partial report and a chief executive who wants a name. Silver or better to pass.",
     competencies: { sources: 0.3, analysis: 0.3, briefing: 0.2, reporting: 0.2 },
     unlock: { passedTier: { 'ti-found': 3, 'ti-prac': 2 }, mastery: { sources: 55, analysis: 55 }, masteryScope: ['ti-found', 'ti-prac'] },
+  },
+  {
+    id: 'ot-exam', title: "Promotion exam: OT Security Engineer", tier: 'ot-prac', kind: 'simulation', mode: 'simulation', ref: 'ot-exam', minutes: 28, par: 0, access: 'plus',
+    exam: true, promotes: 'ot', passTier: 2,
+    blurb: "A vendor who wants permanent remote access, a board that wants to hear the plant is secure, and an operations manager who wants nothing to change. Silver or better to pass.",
+    competencies: { safety: 0.3, zones: 0.3, legacy: 0.2, reporting: 0.2 },
+    unlock: { passedTier: { 'ot-found': 3, 'ot-prac': 2 }, mastery: { safety: 55, zones: 55 }, masteryScope: ['ot-found', 'ot-prac'] },
   },
   {
     id: 'cloud-architect-exam', title: 'Promotion exam: Cloud Security Architect', tier: 'cloud-arch', kind: 'simulation', mode: 'simulation', ref: 'cloud-architect-exam', minutes: 28, par: 0, access: 'plus',
@@ -1062,6 +1105,15 @@ const TI_RANKS = [
   },
 ];
 
+const OT_RANKS = [
+  { id: 'recruit', name: 'Recruit', blurb: "You are learning why a plant is not an office, and how to protect one without stopping it.", requires: {} },
+  { id: 'junior', name: "Junior OT Security Analyst", blurb: "You know why safety comes first in a plant, what a zone is and why old devices are protected by structure.", requires: { xp: 60, passedTier: { 'ot-found': 2 } } },
+  {
+    id: 'ot', name: "OT Security Engineer", blurb: "You protect a live plant in the plant owners' terms: safety first, structure over patching, and changes in agreed windows.",
+    requires: { xp: 250, passedTier: { 'ot-found': 3, 'ot-prac': 2 }, mastery: { safety: 55, zones: 55 }, masteryScope: ['ot-found', 'ot-prac'], exam: 'ot-exam' },
+  },
+];
+
 const CLOUD_RANKS = [
   { id: 'recruit', name: 'Recruit', blurb: 'You are learning how cloud accounts get exposed.', requires: {} },
   { id: 'associate', name: 'Cloud Security Associate', blurb: 'You can read a cloud audit log and spot an exposed resource.', requires: { xp: 100, passedTier: { cloud: 1 } } },
@@ -1188,12 +1240,24 @@ export const PATHS = [
       { id: 'ti-more', title: "More missions", note: "Sector sharing groups, estimative language and intelligence-led exercises." },
     ],
   },
+  {
+    id: 'ot', name: "OT/IoT Security", short: "OT/IoT", colour: '#4ade80', live: true,
+    blurb: "Protect the systems that run plants and utilities, where safety comes first: zones, old devices, remote access and working with the people who run the plant.",
+    headline: ["Keep the plant ","safe."],
+    lead: "Decision-based practice in protecting industrial systems: why safety and availability come first, how to protect what cannot be patched, and how to work with the people who run the plant. It does not teach attacks on control systems.",
+    ranks: OT_RANKS,
+    tiers: ['ot-found', 'ot-prac'],
+    competencies: ['safety','zones','legacy','reporting'],
+    roadmap: [
+      { id: 'ot-senior', title: "Senior OT Security Engineer and OT Security Lead ranks", note: "Leading OT security programmes, designing segmented plant networks and working with regulators." },
+      { id: 'ot-more', title: "More missions", note: "Functional safety, building and medical device security, and plant incident exercises." },
+    ],
+  },
 ];
 
 // More paths planned beyond the nine on the chooser.
 export const ROADMAP = [
   { id: 'appsec', title: 'Application security', note: 'Review designs and code for weaknesses, and work with developers to fix them.' },
-  { id: 'ot', title: 'Industrial and operational technology security', note: 'Protect the systems that run factories, utilities and buildings, where safety comes first.' },
   { id: 'iam', title: 'Identity and access management', note: 'Design who can reach what, and keep access accurate as people join, move and leave.' },
 ];
 

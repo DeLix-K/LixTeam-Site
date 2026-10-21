@@ -31,6 +31,7 @@ import { DFIR } from './cases-dfir.js';
 import { GRC } from './cases-grc.js';
 import { TI } from './cases-ti.js';
 import { WEEKLY } from './cases-weekly.js';
+import { OT } from './cases-ot.js';
 
 const CORE = [
   // ─────────────────────────────────────────────────────────────
@@ -320,4 +321,4 @@ const CORE = [
 ];
 
 // Everything the game draws from.
-export const CASES = [...CORE, ...EXTRA, ...LEAD, ...VULN, ...NETWORK, ...PENTEST, ...ENGINEER, ...CLOUD, ...ENGINEER_LEAD, ...VULN_LEAD, ...PENTEST_LEAD, ...VULN_ARCH, ...DFIR, ...GRC, ...TI, ...WEEKLY];
+export const CASES = [...CORE, ...EXTRA, ...LEAD, ...VULN, ...NETWORK, ...PENTEST, ...ENGINEER, ...CLOUD, ...ENGINEER_LEAD, ...VULN_LEAD, ...PENTEST_LEAD, ...VULN_ARCH, ...DFIR, ...GRC, ...TI, ...WEEKLY, ...OT];
