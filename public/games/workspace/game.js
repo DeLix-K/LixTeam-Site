@@ -9,6 +9,7 @@ import * as GRC from './grc.js';
 import * as TI from './ti.js';
 import * as SE from './se.js';
 import * as X from './eng.js';
+import * as PT from './pt.js';
 import { SOC_INVOICE } from './scenarios/soc-invoice.js';
 import { DFIR_LAPTOP } from './scenarios/dfir-laptop.js';
 import { NET_FLAT } from './scenarios/net-flat.js';
@@ -18,12 +19,13 @@ import { GRC_AUDIT } from './scenarios/grc-audit.js';
 import { TI_PAPERTRAIL } from './scenarios/ti-papertrail.js';
 import { SE_SERVICEDESK } from './scenarios/se-servicedesk.js';
 import { ENG_TICKETS } from './scenarios/eng-tickets.js';
+import { PT_LAB } from './scenarios/pt-lab.js';
 import { medalIcon } from '../core/art.js';
 import { MEDALS } from '../core/missions.js';
 import * as streak from '../core/streak.js';
 import * as missionLink from '../core/mission-link.js';
 
-const SCENARIOS = [SOC_INVOICE, DFIR_LAPTOP, NET_FLAT, CLOUD_BUCKET, VM_PATCH, GRC_AUDIT, TI_PAPERTRAIL, SE_SERVICEDESK, ENG_TICKETS];
+const SCENARIOS = [SOC_INVOICE, DFIR_LAPTOP, NET_FLAT, CLOUD_BUCKET, VM_PATCH, GRC_AUDIT, TI_PAPERTRAIL, SE_SERVICEDESK, ENG_TICKETS, PT_LAB];
 const MISSION = missionLink.current('workspace');
 const BEST_KEY = 'lixteam.workspace.best.v1';
 const $ = (id) => document.getElementById(id);
@@ -89,6 +91,14 @@ const freshUi = () => ({
   respond: {},
   lastResult: null,
   seenAlerts: new Set(),
+  ptNode: null,
+  ptDraftMsg: null,
+  ptMsg: null,
+  ptLog: [],
+  ptHost: null,
+  ptTell: null,
+  draftId: null,
+  draft: null,
   report: Object.fromEntries(scn.report.map((f) => [f.id, f.kind === 'set' ? [] : ''])),
   closeReason: 'Explained by context',
   traceFlow: null,
@@ -139,6 +149,9 @@ const NAV_ALL = {
   arch: { label: 'Architecture' },
   diff: { label: 'Changes' },
   pipeline: { label: 'CI/CD pipeline' },
+  scope: { label: 'Rules & scope' },
+  lab: { label: 'The lab' },
+  drafts: { label: 'Findings' },
   sources: { label: 'Sources & reports' },
   claims: { label: 'Fact or assumption' },
   graph: { label: 'Indicator graph' },
@@ -277,7 +290,7 @@ function setView(v) {
 function renderView() {
   const keep = document.activeElement && document.activeElement.dataset ? document.activeElement.dataset.key : null;
   const stage = $('view');
-  const fn = { config: viewConfig, arch: viewArch, diff: viewDiff, pipeline: viewPipeline, inbox: viewInbox, sources: viewSources, claims: viewClaims, graph: viewGraph, assess: viewAssess, register: viewRegister, controls: viewControls, heatmap: viewHeatmap, queue: viewQueue, assets: viewAssets, findings: viewFindings, estate: viewEstate, changes: viewChanges, topology: viewTopology, firewall: viewFirewall, alerts: viewAlerts, brief: viewBrief, logs: viewLogs, entities: viewEntities, tree: viewTree, map: viewMap, respond: viewRespond, case: scn.vm ? viewPlan : scn.grc ? viewPlanGrc : scn.se ? viewShift : viewCase, report: viewReport }[ui.view];
+  const fn = { config: viewConfig, arch: viewArch, diff: viewDiff, pipeline: viewPipeline, scope: viewScope, lab: viewLab, drafts: viewDrafts, inbox: viewInbox, sources: viewSources, claims: viewClaims, graph: viewGraph, assess: viewAssess, register: viewRegister, controls: viewControls, heatmap: viewHeatmap, queue: viewQueue, assets: viewAssets, findings: viewFindings, estate: viewEstate, changes: viewChanges, topology: viewTopology, firewall: viewFirewall, alerts: viewAlerts, brief: viewBrief, logs: viewLogs, entities: viewEntities, tree: viewTree, map: viewMap, respond: viewRespond, case: scn.vm ? viewPlan : scn.grc ? viewPlanGrc : scn.se ? viewShift : viewCase, report: viewReport }[ui.view];
   stage.replaceChildren(fn());
   if (keep) {
     const again = stage.querySelector(`[data-key="${CSS.escape(keep)}"]`);
@@ -616,9 +629,9 @@ function renderCaseFile(box) {
     h('header', {}, h('strong', { text: 'Case file' }), h('small', { text: `${E.clockText(st.clock)}` })),
     h('dl', { class: 'cstat' }, scn.alerts.length ? h('dt', { text: 'Alerts' }) : null, scn.alerts.length ? h('dd', { text: `${openAlerts().length} open · ${esc} escalated · ${closed} closed` }) : null, h('dt', { text: 'Searches' }), h('dd', { text: String(st.searches) }), h('dt', { text: 'Actions' }), h('dd', { text: String(st.actions.length) })),
     scn.net || scn.cloud ? servicesBlock() : null,
-    scn.vm ? vmSide() : scn.grc ? grcSide() : scn.se ? seSide() : scn.eng ? engSide() : null,
-    scn.vm || scn.grc || scn.se || scn.eng ? null : h('h3', { text: 'Pinned timeline' }),
-    scn.vm || scn.grc || scn.se || scn.eng ? null : pins.length
+    scn.vm ? vmSide() : scn.grc ? grcSide() : scn.se ? seSide() : scn.eng ? engSide() : scn.pt ? ptSide() : null,
+    scn.vm || scn.grc || scn.se || scn.eng || scn.pt ? null : h('h3', { text: 'Pinned timeline' }),
+    scn.vm || scn.grc || scn.se || scn.eng || scn.pt ? null : pins.length
       ? h('ol', { class: 'pintl' }, pins.map((e) => h('li', {}, h('time', { text: timeText(e.t) }), h('span', { text: e.summary }), h('button', { class: 'x', type: 'button', 'aria-label': 'Unpin', onclick: () => { E.unpin(st, e.id); refresh(); }, text: '×' }))))
       : h('p', { class: 'empty', text: 'Nothing pinned yet. Pin the events that prove what happened.' }),
   ].filter(Boolean));
@@ -761,6 +774,154 @@ function viewPipeline() {
     ui.engMsg ? h('div', { class: `result ${ui.engMsg.ok ? 'ok' : 'bad'}`, role: 'status' }, h('p', { text: ui.engMsg.text })) : null,
     h('h3', { text: last ? `Last run (${timeText(last.at)})` : 'No run yet' }), last ? h('ol', { class: 'stages' }, last.stages.map(stage)) : h('p', { class: 'empty', text: 'Run the pipeline to see what it finds.' }),
     h('h3', { text: 'In production' }), h('p', { class: 'dim', text: e.releases ? `${e.releases} release${e.releases === 1 ? '' : 's'}; the latest at ${timeText(e.prod[e.prod.length - 1].at)}${e.prod[e.prod.length - 1].forced ? ' (forced)' : ''}.` : 'Nothing has been released yet. Production still has the original configuration.' }));
+}
+
+// ── Penetration testing: the rules, the lab and the findings ────
+const GENERIC_IMPACTS = [{ id: 'x-abuse', text: 'An attacker could use this to get in or to take something' }, { id: 'x-none', text: 'It has no security impact on its own' }];
+const GENERIC_FIXES = [{ id: 'x-change', text: 'Change the setting' }, { id: 'x-none', text: 'No change is needed' }];
+const ptLog = (line) => { ui.ptLog.push(line); if (ui.ptLog.length > 60) ui.ptLog.shift(); };
+const ptEvidenceLabel = (id) => (scn.pt.evidence.find((e) => e.id === id) || {}).label || id;
+const ptObservations = () => [...scn.pt.truths, ...scn.pt.decoys].filter((x) => x.seen.some((e) => PT.hasEvidence(st, e)));
+
+function ptSide() {
+  const listed = scn.pt.hosts.filter((x) => x.listed);
+  const scanned = listed.filter((x) => st.pt.scanned[x.id]).length;
+  return h('div', {}, h('h3', { text: 'The test' }),
+    h('p', { class: 'dim', text: `${scanned} of ${listed.length} listed systems scanned. ${st.pt.evidence.length} pieces of evidence. ${st.pt.findings.length} finding${st.pt.findings.length === 1 ? '' : 's'} written.` }),
+    st.pt.violations.length ? h('p', { class: 'svc-bad', text: `${st.pt.violations.length} breach${st.pt.violations.length === 1 ? '' : 'es'} of the rules logged against you.` }) : h('p', { class: 'svc-ok', text: 'No breaches of the rules so far.' }),
+    st.pt.crashed.length ? h('p', { class: 'svc-bad', text: `${st.pt.crashed.length} system${st.pt.crashed.length === 1 ? '' : 's'} knocked over by a scan.` }) : null);
+}
+
+function viewScope() {
+  const topicBtn = (t) => {
+    const done = st.pt.notified.find((x) => x.topic === t.id);
+    return h('li', { class: 'fixrow' }, h('div', {}, h('strong', { text: t.label }), done ? h('small', { class: done.valid ? 'svc-ok' : 'svc-bad', text: done.valid ? ` Told them at ${timeText(done.at)}.` : ` Told them at ${timeText(done.at)}, but there was nothing to act on.` }) : null),
+      h('div', { class: 'fixbtns' }, h('button', { class: 'btn small', type: 'button', 'data-key': `tell-${t.id}`, disabled: done ? true : null, onclick: () => { const r = E.ptNotify(scn, st, t.id); ui.ptTell = { ok: r.valid, text: r.text }; ptLog(`> tell the client: ${t.label}`); refresh(); }, text: done ? 'Told' : 'Tell the client (5 min)' })));
+  };
+  return h('div', { class: 'estate-view' }, tipFor('scope', 'The rules of engagement.'),
+    h('h3', { text: 'Rules of engagement' }),
+    h('ul', { class: 'facts' }, scn.pt.roe.map((x) => h('li', { text: x }))),
+    h('h3', { text: 'Systems on the list' }),
+    h('ul', { class: 'facts' }, scn.pt.hosts.filter((x) => x.listed).map((x) => h('li', { text: `${x.name} (${x.address})${x.fragile ? ', fragile: gentle scans only' : ''}` }))),
+    h('h3', { text: 'Tell the client' }),
+    h('p', { class: 'dim', text: 'Use this when the rules say to stop and tell them. Telling them about something you have not actually seen helps nobody.' }),
+    ui.ptTell ? h('div', { class: `result ${ui.ptTell.ok ? 'ok' : 'note'}`, role: 'status' }, h('p', { text: ui.ptTell.text })) : null,
+    h('ul', { class: 'fixes' }, scn.pt.topics.map(topicBtn)));
+}
+
+function viewLab() {
+  const known = PT.discovered(scn, st);
+  const sel = known.find((x) => x.id === ui.ptHost) || known[0];
+  const list = h('ul', { class: 'queue' }, known.map((x) => {
+    const down = st.pt.crashed.includes(x.id);
+    const mode = st.pt.scanned[x.id];
+    return h('li', {}, h('button', { class: `acard fcard${sel.id === x.id ? ' sel' : ''}`, type: 'button', 'data-key': `host-${x.id}`, 'aria-pressed': sel.id === x.id ? 'true' : 'false', onclick: () => { ui.ptHost = x.id; ui.ptNode = null; ui.ptMsg = null; renderView(); toDetail(); } },
+      h('strong', { text: x.name }), h('small', { class: 'mono', text: x.address }),
+      h('small', { class: `astate ${down ? 'st-new' : mode ? 'st-closed' : 'st-new'}`, text: down ? 'Not responding' : mode ? `Scanned (${mode})` : x.listed ? 'Not scanned yet' : 'Not on the list' })));
+  }));
+  const console_ = h('pre', { class: 'console', 'aria-label': 'Console', tabindex: 0 }, ui.ptLog.length ? ui.ptLog.join('\n') : '(nothing run yet)');
+  queueMicrotask(() => { console_.scrollTop = console_.scrollHeight; });
+  return h('div', { class: 'queue-view' }, tipFor('lab', 'Scan, browse, check.'),
+    h('div', { class: 'two-col' }, h('div', { class: 'col-list' }, list), h('div', { class: 'col-detail' }, labDetail(sel))),
+    h('h3', { text: 'Console' }), console_);
+}
+
+function labDetail(x) {
+  const mode = st.pt.scanned[x.id];
+  const down = st.pt.crashed.includes(x.id);
+  const scan = (m) => {
+    ptLog(`> scan ${x.address} (${m})`);
+    const r = E.ptScan(scn, st, x.id, m);
+    if (!r.ok) ptLog(`  ${r.text}`);
+    else if (r.text) ptLog(`  ${r.text}`);
+    else for (const v of r.services) ptLog(`  open: ${v}`);
+    ui.ptMsg = r.ok && (r.violation || r.crashed) ? { ok: false, text: r.text } : null;
+    refresh();
+  };
+  const nodes = x.nodes.filter((n) => st.pt.visited.includes(n.id) || PT.reachable(scn, st, x, n));
+  const openNode = (n) => {
+    ptLog(`> open ${n.title} on ${x.address}`);
+    const r = E.ptBrowse(scn, st, n.id);
+    if (!r.ok) ptLog(`  ${r.text}`);
+    else ptLog(`  ${n.text}`);
+    ui.ptNode = r.ok ? n.id : ui.ptNode;
+    ui.ptMsg = r.violation ? { ok: false, text: r.violation === 'data' ? 'You opened real customer data. The rules said not to.' : 'That is not on the list. The rules said not to.' } : null;
+    refresh();
+  };
+  const check = (c) => {
+    ptLog(`> ${c.label}`);
+    const r = E.ptCheck(scn, st, x.id, c.id);
+    ptLog(`  ${r.ok ? c.result : r.text}`);
+    ui.ptMsg = r.ok && r.violation ? { ok: false, text: c.result } : null;
+    refresh();
+  };
+  const ask = () => {
+    ptLog(`> ask the client about ${x.name}`);
+    const r = E.ptAsk(scn, st, x.id);
+    ptLog(`  ${r.text}`);
+    refresh();
+  };
+  const shown = x.nodes.find((n) => n.id === ui.ptNode && st.pt.visited.includes(n.id));
+  return h('div', {},
+    h('h3', { text: x.name }), h('p', { class: 'mono dim', text: x.address }),
+    !x.listed ? h('p', { class: 'svc-bad', text: 'This system is not on the list in the rules of engagement. Ask the client before you touch it.' }) : null,
+    x.fragile ? h('p', { class: 'dim', text: 'The client says this device is fragile: gentle scans only.' }) : null,
+    ui.ptMsg ? h('div', { class: `result ${ui.ptMsg.ok ? 'ok' : 'bad'}`, role: 'status' }, h('p', { text: ui.ptMsg.text })) : null,
+    down ? h('p', { class: 'svc-bad', text: 'Not responding.' }) : null,
+    !mode && !down ? h('div', { class: 'quick' },
+      h('button', { class: 'btn primary', type: 'button', 'data-key': 'scan-gentle', onclick: () => scan('gentle'), text: 'Gentle scan (8 min)' }),
+      h('button', { class: 'btn', type: 'button', 'data-key': 'scan-fast', onclick: () => scan('fast'), text: 'Fast scan (4 min)' })) : null,
+    mode && !down ? h('div', {}, h('h4', { text: `Services seen (${mode} scan)` }), x.scan.services.length ? h('ul', { class: 'facts' }, x.scan.services.map((v) => h('li', { text: v }))) : h('p', { class: 'dim', text: 'Nothing useful came back.' })) : null,
+    nodes.length && !down ? h('div', {}, h('h4', { text: 'Pages' }), h('div', { class: 'fixbtns' }, nodes.map((n) => h('button', { class: `chip-btn${ui.ptNode === n.id ? ' on' : ''}`, type: 'button', 'data-key': `node-${n.id}`, onclick: () => openNode(n), text: n.title }))),
+      shown ? h('p', { class: 'ptpage', text: shown.text }) : null) : null,
+    mode && !down && x.checks.length ? h('div', {}, h('h4', { text: 'Checks' }), h('ul', { class: 'fixes' }, x.checks.map((c) => {
+      const done = st.pt.checks.includes(`${x.id}:${c.id}`);
+      return h('li', { class: 'fixrow' }, h('div', {}, h('strong', { text: c.label }), done ? h('small', { text: ` ${c.result}` }) : null), h('div', { class: 'fixbtns' }, h('button', { class: 'btn small', type: 'button', 'data-key': `check-${c.id}`, disabled: done ? true : null, onclick: () => check(c), text: done ? 'Done' : `Run (${c.cost} min)` })));
+    }))) : null,
+    h('h4', { text: 'The client' }),
+    st.pt.asked.includes(x.id) ? h('p', { class: 'dim', text: x.ask }) : h('button', { class: 'btn small', type: 'button', 'data-key': 'ask', onclick: ask, text: 'Ask the client about this system (10 min)' }));
+}
+
+function viewDrafts() {
+  const obs = ptObservations();
+  const sel = obs.find((x) => x.id === ui.draftId) || null;
+  const pick = (x) => {
+    ui.draftId = x.id;
+    ui.ptDraftMsg = null;
+    const f = st.pt.findings.find((y) => y.vuln === x.id);
+    ui.draft = f ? { ...f, evidence: [...f.evidence] } : { vuln: x.id, severity: '', impact: '', fix: '', evidence: [] };
+    renderView();
+    toDetail();
+  };
+  const list = h('ul', { class: 'queue' }, obs.length ? obs.map((x) => {
+    const f = st.pt.findings.find((y) => y.vuln === x.id);
+    return h('li', {}, h('button', { class: `acard fcard${ui.draftId === x.id ? ' sel' : ''}${f ? ' done-closed' : ''}`, type: 'button', 'data-key': `obs-${x.id}`, 'aria-pressed': ui.draftId === x.id ? 'true' : 'false', onclick: () => pick(x) },
+      h('strong', { text: x.title }), h('small', { class: 'mono', text: scn.pt.hosts.find((y) => y.id === x.host).name }), h('small', { class: `astate ${f ? 'st-closed' : 'st-new'}`, text: f ? `Written up (${PT.label(PT.SEVERITIES, f.severity)})` : 'Not written up' })));
+  }) : [h('li', { class: 'empty', text: 'You have not seen anything worth writing up yet. Scan and look around.' })]);
+  const detail = sel && ui.draft ? draftForm(sel) : h('p', { class: 'empty', text: 'Choose an observation to write up. Only things you have really seen appear here, and not everything here is a vulnerability.' });
+  return h('div', { class: 'queue-view' }, tipFor('drafts', 'Write up what you can prove.'),
+    h('div', { class: 'two-col' }, h('div', { class: 'col-list' }, list), h('div', { class: 'col-detail' }, detail)),
+    h('h3', { text: 'Evidence collected' }),
+    st.pt.evidence.length ? h('ul', { class: 'facts' }, st.pt.evidence.map((e) => h('li', { text: ptEvidenceLabel(e) }))) : h('p', { class: 'empty', text: 'Nothing yet.' }));
+}
+
+function draftForm(x) {
+  const d = ui.draft;
+  const impacts = x.impacts || GENERIC_IMPACTS;
+  const fixes = x.fixes || GENERIC_FIXES;
+  const radio = (name, list, key) => h('div', { class: 'opts' }, list.map((o) => h('label', { class: 'opt' }, h('input', { type: 'radio', name, value: o.id, checked: d[key] === o.id ? true : null, onchange: () => { d[key] = o.id; } }), h('span', { text: o.text }))));
+  const sevs = h('div', { class: 'fixbtns' }, PT.SEVERITIES.map(([k, l]) => h('button', { class: `chip-btn${d.severity === k ? ' on' : ''}`, type: 'button', 'data-key': `sev-${k}`, 'aria-pressed': d.severity === k ? 'true' : 'false', onclick: () => { d.severity = k; renderView(); }, text: l })));
+  const ev = h('div', { class: 'opts cols' }, st.pt.evidence.map((e) => h('label', { class: 'opt' }, h('input', { type: 'checkbox', 'data-key': `ev-${e}`, checked: d.evidence.includes(e) ? true : null, onchange: (ev2) => { d.evidence = ev2.target.checked ? [...d.evidence, e] : d.evidence.filter((y) => y !== e); } }), h('span', { text: ptEvidenceLabel(e) }))));
+  const exists = st.pt.findings.some((y) => y.vuln === x.id);
+  return h('div', {}, h('h3', { text: x.title }),
+    ui.ptDraftMsg ? h('div', { class: `result ${ui.ptDraftMsg.ok ? 'ok' : 'note'}`, role: 'status' }, h('p', { text: ui.ptDraftMsg.text })) : null,
+    h('fieldset', {}, h('legend', { text: 'Severity' }), sevs),
+    h('fieldset', {}, h('legend', { text: 'What could happen' }), radio('impact', impacts, 'impact')),
+    h('fieldset', {}, h('legend', { text: 'Recommended fix' }), radio('fix', fixes, 'fix')),
+    h('fieldset', {}, h('legend', { text: 'Evidence that supports it' }), st.pt.evidence.length ? ev : h('p', { class: 'dim', text: 'None collected.' })),
+    h('div', { class: 'btn-row' },
+      h('button', { class: 'btn primary', type: 'button', 'data-key': 'save-finding', onclick: () => { if (!d.severity || !d.impact || !d.fix) { ui.ptDraftMsg = { ok: false, text: 'Choose a severity, an impact and a fix.' }; renderView(); return; } const r = E.ptFinding(scn, st, d); ui.ptDraftMsg = { ok: r.ok, text: r.ok ? 'Saved.' : r.text }; refresh(); }, text: exists ? 'Update finding (3 min)' : 'Save finding (3 min)' }),
+      exists ? h('button', { class: 'btn', type: 'button', 'data-key': 'drop-finding', onclick: () => { E.ptRemoveFinding(scn, st, x.id); ui.draft = { vuln: x.id, severity: '', impact: '', fix: '', evidence: [] }; ui.ptDraftMsg = { ok: true, text: 'Removed.' }; refresh(); }, text: 'Remove' }) : null));
 }
 
 // ── Social engineering: the service desk ────────────────────────
@@ -1538,7 +1699,7 @@ function renderEnd(g) {
     h('div', {}, h('span', { text: String(g.total) }), h('small', { text: 'score out of 100' })),
     h('div', {}, h('span', { text: String(g.minutes) }), h('small', { text: 'minutes used' })),
     h('div', {}, h('span', { text: String(g.disruption) }), h('small', { text: 'business disruption' })),
-    h('div', {}, h('span', { text: String(st.pins.length) }), h('small', { text: 'events pinned' })));
+    h('div', {}, h('span', { text: String(scn.pt ? st.pt.findings.length : st.pins.length) }), h('small', { text: scn.pt ? 'findings written' : 'events pinned' })));
   const bars = h('div', { class: 'parts' }, GROUPS.map(([, k, l]) => h('div', { class: 'part' }, h('div', { class: 'part-top' }, h('span', { text: l }), h('span', { class: 'mono', text: `${Math.round(g.parts[k] * 10) / 10} / ${g.max[k]}` })), h('div', { class: 'pbar' }, h('div', { style: `width:${Math.round((g.parts[k] / g.max[k]) * 100)}%` })))));
   const breakdown = GROUPS.map(([name, , l]) => h('section', { class: 'bgroup' }, h('h3', { text: l }), h('ul', { class: 'lines' }, g.lines.filter((x) => x.group === name).map((x) => h('li', { class: x.points > 0 || (x.max === 0 && x.points === 0 && !/not|missed|wrong|capped|left/i.test(x.label)) ? 'got' : x.points < 0 ? 'cost' : 'miss' }, h('strong', { text: x.label }), x.max || x.points ? h('span', { class: 'mono pts', text: x.points < 0 ? String(x.points) : `${x.points}${x.max ? ' / ' + x.max : ''}` }) : null, x.note ? h('small', { text: x.note }) : null)))));
   const stopped = E.preventedEvents(scn, st);

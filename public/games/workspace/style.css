@@ -489,3 +489,8 @@ button.fcard { text-align: left; }
 .i-pass { background: var(--good); } .i-fail { background: var(--bad); } .i-skipped { background: #555; }
 .diff td, .diff th { font-size: 13px; }
 @media (max-width: 759px) { .setrow { grid-template-columns: 1fr; } .setctl { justify-items: start; } }
+
+/* Penetration testing: the lab console and page preview */
+.console { margin: 0; padding: 12px 14px; max-height: 240px; overflow: auto; background: #0d1117; color: #c9d1d9; border: 1px solid var(--border); border-radius: 8px; font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
+.console:focus-visible { outline: 2px solid var(--accent, #3ddc97); outline-offset: 2px; }
+.ptpage { margin: 10px 0 0; padding: 10px 12px; border-left: 3px solid var(--accent, #3ddc97); background: rgba(127, 127, 127, 0.1); border-radius: 0 6px 6px 0; }

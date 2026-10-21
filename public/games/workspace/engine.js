@@ -19,6 +19,7 @@ import * as GRC from './grc.js';
 import * as TI from './ti.js';
 import * as SE from './se.js';
 import * as Eng from './eng.js';
+import * as PT from './pt.js';
 
 export const COSTS = { search: 1, entity: 1, tree: 1, map: 1, action: 3, alert: 1, rule: 3, tweak: 1 };
 
@@ -51,6 +52,7 @@ export function newRun(scn) {
   if (scn.grc) st.grc = GRC.newState();
   if (scn.ti) st.ti = TI.newState(scn);
   if (scn.se) st.se = SE.newState();
+  if (scn.pt) st.pt = PT.newState();
   if (scn.eng) {
     const init = Eng.initialState(scn);
     st.eng = { working: Eng.cloneState(init), prod: [{ at: -1, state: init, forced: false }], runs: [], lastPass: null, forced: 0, releases: 0, harm: [] };
@@ -610,6 +612,100 @@ export function seWait(scn, st) {
   return { minutes: by, next: !!next };
 }
 
+// ── Penetration testing (a simulated lab, judgement level) ──────
+function ptViolation(scn, st, kind, text) {
+  if (st.pt.violations.some((v) => v.kind === kind)) return;
+  st.pt.violations.push({ kind, text, at: st.clock });
+  if (st.flags[`violation:${kind}`] === undefined) st.flags[`violation:${kind}`] = st.clock;
+}
+export function ptScan(scn, st, hid, mode) {
+  const h = PT.hostOf(scn, hid);
+  if (!h || !PT.discovered(scn, st).includes(h)) return { ok: false, text: 'There is no such host in the lab that you know of.' };
+  if (!PT.SCAN_MODES.some((x) => x[0] === mode)) return { ok: false, text: 'Choose a gentle or a fast scan.' };
+  if (st.pt.scanned[hid]) return { ok: true, again: true, host: h, mode: st.pt.scanned[hid] };
+  advance(st, mode === 'gentle' ? 8 : 4, `Scanned ${h.name} (${mode})`);
+  st.pt.scanned[hid] = mode;
+  if (!h.inScope) {
+    ptViolation(scn, st, 'scope', `You scanned ${h.name}, which is not in the rules of engagement.`);
+    return { ok: true, host: h, mode, violation: 'scope', text: `You were not authorised to scan ${h.name}. Nothing useful comes back, and the scan has been logged against you.` };
+  }
+  if (h.fragile && mode === 'fast') {
+    st.pt.crashed.push(hid);
+    if (st.flags[`crash:${hid}`] === undefined) st.flags[`crash:${hid}`] = st.clock;
+    return { ok: true, host: h, mode, crashed: true, text: `${h.name} stops responding partway through the scan. The rules of engagement said fragile devices get gentle scans only.` };
+  }
+  for (const e of h.scan.evidence) if (!st.pt.evidence.includes(e)) st.pt.evidence.push(e);
+  return { ok: true, host: h, mode, services: h.scan.services };
+}
+export function ptBrowse(scn, st, nid) {
+  const n = PT.nodeOf(scn, nid);
+  const h = n && PT.hostOf(scn, n.host);
+  if (!n || !PT.discovered(scn, st).includes(h) || !PT.reachable(scn, st, h, n)) return { ok: false, text: 'You cannot get to that page yet. Scan the host first, or follow a link from a page you have seen.' };
+  if (st.pt.crashed.includes(h.id)) return { ok: false, text: `${h.name} is not responding.` };
+  if (!h.inScope) {
+    ptViolation(scn, st, 'scope', `You browsed ${h.name}, which is not in the rules of engagement.`);
+    return { ok: true, node: n, violation: 'scope' };
+  }
+  const first = !st.pt.visited.includes(nid);
+  if (first) {
+    st.pt.visited.push(nid);
+    advance(st, 2, `Opened ${n.title}`);
+    for (const e of n.evidence || []) if (!st.pt.evidence.includes(e)) st.pt.evidence.push(e);
+    if (n.trigger && !st.pt.triggers.includes(n.trigger)) st.pt.triggers.push(n.trigger);
+    if (n.real) ptViolation(scn, st, 'data', 'You opened a file containing real personal data.');
+  }
+  return { ok: true, node: n, first, violation: n.real ? 'data' : null };
+}
+export function ptCheck(scn, st, hid, cid) {
+  const h = PT.hostOf(scn, hid);
+  const c = h && h.checks.find((x) => x.id === cid);
+  if (!c || !PT.discovered(scn, st).includes(h)) return { ok: false, text: 'That check does not exist.' };
+  if (!st.pt.scanned[hid]) return { ok: false, text: 'Scan the host before you check anything on it.' };
+  if (st.pt.crashed.includes(hid)) return { ok: false, text: `${h.name} is not responding.` };
+  if (st.pt.checks.includes(`${hid}:${cid}`)) return { ok: true, again: true, check: c };
+  st.pt.checks.push(`${hid}:${cid}`);
+  advance(st, c.cost ?? 3, `${h.name}: ${c.label}`);
+  if (c.prohibited) {
+    ptViolation(scn, st, c.prohibited, `The rules of engagement forbid it: ${c.label}.`);
+    return { ok: true, check: c, violation: c.prohibited };
+  }
+  for (const e of c.evidence || []) if (!st.pt.evidence.includes(e)) st.pt.evidence.push(e);
+  return { ok: true, check: c };
+}
+export function ptAsk(scn, st, hid) {
+  const h = PT.hostOf(scn, hid);
+  if (!h || !PT.discovered(scn, st).includes(h)) return { ok: false, text: 'No such host.' };
+  if (!st.pt.asked.includes(hid)) {
+    st.pt.asked.push(hid);
+    advance(st, 10, `Asked the client about ${h.name}`);
+  }
+  return { ok: true, text: h.ask, host: h };
+}
+export function ptNotify(scn, st, topic) {
+  const t = scn.pt.topics.find((x) => x.id === topic);
+  if (!t) return { ok: false, text: 'Choose what you are reporting.' };
+  if (st.pt.notified.some((x) => x.topic === topic)) return { ok: false, text: 'You have already told them that.' };
+  const valid = !t.fake && (!t.trigger || st.pt.triggers.includes(t.trigger));
+  st.pt.notified.push({ topic, valid, at: st.clock });
+  advance(st, 5, `Told the client: ${t.label}`);
+  return { ok: true, valid, text: valid ? t.reply : 'The client thanks you but there is nothing to act on yet. Report what you have actually seen.' };
+}
+export function ptFinding(scn, st, d) {
+  const known = [...scn.pt.truths, ...scn.pt.decoys].find((x) => x.id === d.vuln);
+  if (!known) return { ok: false, text: 'Choose what the finding is about.' };
+  if (!PT.SEVERITIES.some((x) => x[0] === d.severity)) return { ok: false, text: 'Choose a severity.' };
+  const rec = { vuln: d.vuln, host: known.host, severity: d.severity, impact: d.impact || '', fix: d.fix || '', evidence: (d.evidence || []).filter((e) => st.pt.evidence.includes(e)) };
+  const i = st.pt.findings.findIndex((x) => x.vuln === d.vuln);
+  if (i >= 0) st.pt.findings[i] = rec;
+  else st.pt.findings.push(rec);
+  advance(st, 3, `Wrote up: ${known.title}`);
+  return { ok: true };
+}
+export function ptRemoveFinding(scn, st, vuln) {
+  st.pt.findings = st.pt.findings.filter((x) => x.vuln !== vuln);
+  return { ok: true };
+}
+
 // ── Security engineering ────────────────────────────────────────
 // Edits change the working copy only. A pipeline run tests it, and a release puts it into production.
 export function engSet(scn, st, id, value) {
@@ -803,6 +899,24 @@ export function grade(scn, st, report) {
     add('Triage', `${e.runs.length} pipeline run${e.runs.length === 1 ? '' : 's'}`, pts, 3, over ? `More than ${scn.eng.runBudget} runs means guessing rather than reading the failures.` : '');
     tri += pts;
   }
+  if (scn.pt) {
+    const P = scn.pt.points;
+    const v = (k) => st.pt.violations.some((x) => x.kind === k);
+    const add1 = (label, pts, max, note) => { tri += pts; add('Triage', label, pts, max, note || ''); };
+    add1(v('scope') ? 'Went outside the rules of engagement' : 'Stayed inside the rules of engagement', v('scope') ? 0 : P.scope, P.scope, v('scope') ? 'Anything not listed is out of scope. Testing it, even briefly, is a breach of the engagement and can be a crime.' : '');
+    const unlisted = scn.pt.hosts.filter((x) => !x.listed && PT.discovered(scn, st).includes(x));
+    const askedAll = unlisted.every((x) => st.pt.asked.includes(x.id));
+    add1(unlisted.length ? (askedAll ? 'Asked the client about the host that was not listed' : 'Did not ask about the host that was not listed') : 'No unlisted host came up', unlisted.length && !askedAll ? 0 : P.asked, P.asked, unlisted.length && !askedAll ? 'When something appears that the rules do not mention, ask before you touch it.' : '');
+    add1(st.pt.crashed.length ? 'A fast scan crashed a fragile device' : 'Used proportionate scans on the fragile device', st.pt.crashed.length ? 0 : P.fragile, P.fragile, st.pt.crashed.length ? 'The rules said gentle scans only for the printer. A test that breaks the client\'s systems is not a good test.' : '');
+    const banned = st.pt.violations.filter((x) => x.kind !== 'scope');
+    add1(banned.length ? 'Broke a rule about what you may do' : 'Did only what the rules allow', banned.length ? 0 : P.prohibited, P.prohibited, banned.map((x) => x.text).join(' '));
+    for (const t of scn.pt.topics.filter((x) => x.trigger)) {
+      const seen = st.pt.triggers.includes(t.trigger);
+      const told = st.pt.notified.some((x) => x.topic === t.id && x.valid);
+      const per = P.stop / scn.pt.topics.filter((x) => x.trigger).length;
+      add1(!seen ? `Did not come across: ${t.label}` : told ? `Stopped and reported: ${t.label}` : `Did not report: ${t.label}`, seen && told ? per : 0, per, !seen ? t.why : told ? '' : `The rules say to stop and tell the client straight away. ${t.why}`);
+    }
+  }
   const triMax = g.triage;
 
   // Evidence
@@ -859,6 +973,15 @@ export function grade(scn, st, report) {
       add('Evidence', `${p.ok ? 'Meets' : 'Fails'} the baseline: ${p.label}`, p.ok ? p.weight : 0, p.weight, p.ok ? '' : p.fix);
     }
   }
+  if (scn.pt) {
+    const per = scn.pt.points.perEvidence;
+    for (const t of scn.pt.truths) {
+      const got = t.requires.filter((e) => PT.hasEvidence(st, e)).length;
+      const pts = per * (got / t.requires.length);
+      evi += pts;
+      add('Evidence', `${got} of ${t.requires.length} pieces of evidence collected for: ${t.title}`, pts, per, got < t.requires.length ? t.hint : '');
+    }
+  }
   const wrongPins = st.pins.map((id) => scn.events.find((e) => e.id === id)).filter((e) => e && !e.key).length;
   const penalty = Math.min(g.evidence * 0.2, wrongPins * 1.5);
   if (penalty > 0) add('Evidence', `Unrelated events pinned (${wrongPins})`, -penalty, 0, 'Only pin events that belong to the incident.');
@@ -877,6 +1000,19 @@ export function grade(scn, st, report) {
       hits.push(r);
       add('Response', `Done: ${r.label}`, r.points, r.points);
     } else add('Response', `Not done: ${r.label}`, 0, r.points, r.why || '');
+  }
+  if (scn.pt) {
+    for (const t of scn.pt.truths) {
+      const r = PT.scoreFinding(scn, st, t);
+      res += r.points;
+      const bits = r.parts.filter((x) => x.note).map((x) => x.note).join(' ');
+      add('Response', r.found ? `Finding written: ${t.title}` : `Not written up: ${t.title}`, r.points, r.max, r.found ? bits : t.hint);
+    }
+    const fps = PT.falsePositives(scn, st);
+    const base = scn.pt.points.noFalse;
+    const pts = Math.max(0, base - fps.length * (base / 2));
+    res += pts;
+    add('Response', fps.length ? `${fps.length} finding${fps.length === 1 ? '' : 's'} about something that is not a vulnerability` : 'No false findings', pts, base, fps.map((f) => { const x = [...scn.pt.decoys].find((d) => d.id === f.vuln); return x ? `${x.title}: ${x.why}` : ''; }).join(' '));
   }
   if (scn.eng) {
     const fin = prodNow(st);
@@ -1000,6 +1136,11 @@ export function grade(scn, st, report) {
   }
   // A report written without the evidence behind it is mostly a guess: it earns 40% plus a share of the rest for the evidence found.
   let grounded = g.evidence ? 0.4 + 0.6 * Math.min(1, evi / g.evidence) : 1;
+  if (scn.pt) {
+    const inScope = scn.pt.hosts.filter((x) => x.inScope);
+    const done = inScope.filter((x) => st.pt.scanned[x.id]).length;
+    grounded = 0.4 + 0.6 * (done / inScope.length);
+  }
   if (scn.ti) {
     const read = scn.ti.reports.filter((r) => TI.reportRead(st, r.id)).length;
     grounded = 0.4 + 0.6 * (read / scn.ti.reports.length);
@@ -1013,7 +1154,7 @@ export function grade(scn, st, report) {
     const opened = scn.vm.findings.filter((f) => st.seen.has(`finding:${f.id}`)).length;
     grounded = 0.4 + 0.6 * (opened / scn.vm.findings.length);
   }
-  if (grounded < 1) add('Report', scn.vm || scn.grc || scn.ti ? `Report not fully backed by looking (${Math.round(grounded * 100)}% credit)` : `Report not fully backed by pinned evidence (${Math.round(grounded * 100)}% credit)`, -(rep - rep * grounded), 0, scn.ti ? 'Read every report before you brief the defender: the one you skipped may be the one that changes the answer.' : scn.vm || scn.grc ? 'Read the evidence for every finding before you report on it: it changes the answer.' : 'Pin the events that prove each part of your report.');
+  if (grounded < 1) add('Report', scn.vm || scn.grc || scn.ti || scn.pt ? `Report not fully backed by looking (${Math.round(grounded * 100)}% credit)` : `Report not fully backed by pinned evidence (${Math.round(grounded * 100)}% credit)`, -(rep - rep * grounded), 0, scn.pt ? 'Test every system in scope before you write the summary: a conclusion about hosts you did not look at is a guess.' : scn.ti ? 'Read every report before you brief the defender: the one you skipped may be the one that changes the answer.' : scn.vm || scn.grc ? 'Read the evidence for every finding before you report on it: it changes the answer.' : 'Pin the events that prove each part of your report.');
   rep = Math.max(0, rep * grounded - lateToReport);
   const parts = { triage: Math.min(tri, triMax), evidence: Math.min(evi, g.evidence), response: Math.min(res, g.response), report: Math.min(rep, g.reportTotal) };
   const total = Math.round(parts.triage + parts.evidence + parts.response + parts.report);
@@ -1067,7 +1208,7 @@ export function problems(scn) {
     const [action, target] = f.split(':');
     if (!scn.responses.some((r) => (r.action === action && r.target === target) || (r.sets || []).includes(f)) && !(scn.vm && scn.vm.findings.some((x) => x.options.some((o) => (o.sets || []).includes(f)))) && !(scn.grc && scn.grc.findings.some((x) => x.options.some((o) => (o.sets || []).includes(f)) || (x.challenge && f === `plan:${x.id}`)))) out.push(`event ${e.id}: nothing the player can do sets ${f}`);
   }
-  const goodSum = scn.responses.filter((r) => r.good).reduce((n, r) => n + r.points, 0) + ((scn.net || scn.cloud) ? (scn.net || scn.cloud).threats.reduce((n, th) => n + th.points, 0) : 0) + (scn.vm ? scn.vm.riskPoints : 0) + (scn.grc ? scn.grc.riskPoints : 0) + (scn.se ? scn.se.outcomePoints : 0) + (scn.eng ? scn.eng.features.reduce((n, f) => n + f.weight, 0) : 0);
+  const goodSum = scn.responses.filter((r) => r.good).reduce((n, r) => n + r.points, 0) + ((scn.net || scn.cloud) ? (scn.net || scn.cloud).threats.reduce((n, th) => n + th.points, 0) : 0) + (scn.vm ? scn.vm.riskPoints : 0) + (scn.grc ? scn.grc.riskPoints : 0) + (scn.se ? scn.se.outcomePoints : 0) + (scn.eng ? scn.eng.features.reduce((n, f) => n + f.weight, 0) : 0) + (scn.pt ? scn.pt.truths.length * scn.pt.points.perFinding + scn.pt.points.noFalse : 0);
   if (goodSum !== scn.grading.response) out.push(`good responses are worth ${goodSum}, the response score is ${scn.grading.response}`);
   const roles = new Set(scn.events.filter((e) => e.key && e.keyWeight !== 0).map((e) => e.key));
   for (const r of roles) if (!scn.roleLabels[r] || !scn.roleHints[r]) out.push(`evidence role ${r} needs a label and a hint`);
@@ -1105,6 +1246,34 @@ export function problems(scn) {
     const cost = v.findings.flatMap((f) => f.options.filter((o) => !o.breaks)).reduce((n, o) => n + o.cost, 0);
     if (cost <= v.budget * 1.5) out.push('the budget is too generous: the whole backlog nearly fits');
     if (!opt.value) out.push('nothing can be removed within the budget');
+  }
+  if (scn.pt) {
+    const q = scn.pt;
+    const ids = new Set();
+    const evIds = new Set(q.evidence.map((e) => e.id));
+    const gettable = new Set();
+    for (const h of q.hosts) {
+      if (ids.has(h.id)) out.push(`duplicate host ${h.id}`);
+      ids.add(h.id);
+      for (const e of (h.scan || { evidence: [] }).evidence) gettable.add(e);
+      for (const c of h.checks) for (const e of c.evidence || []) gettable.add(e);
+      for (const n of h.nodes) for (const e of n.evidence || []) gettable.add(e);
+      for (const n of h.nodes) for (const l of n.links || []) if (!q.hosts.some((y) => y.nodes.some((z) => z.id === l))) out.push(`node ${n.id}: link to unknown node ${l}`);
+    }
+    for (const e of evIds) if (!gettable.has(e)) out.push(`evidence ${e} cannot be collected`);
+    for (const t of q.truths) {
+      if (!t.requires.every((e) => evIds.has(e))) out.push(`finding ${t.id}: unknown evidence`);
+      if (!t.fixes.some((f) => f.rating === 'good')) out.push(`finding ${t.id} has no good fix`);
+      if (!t.impacts.some((i) => i.id === t.impact)) out.push(`finding ${t.id}: the true impact is not offered`);
+      if (!ids.has(t.host)) out.push(`finding ${t.id}: unknown host`);
+    }
+    for (const x of [...q.truths, ...q.decoys]) if (!x.seen.length || !x.seen.every((e) => evIds.has(e))) out.push(`${x.id}: needs a list of known evidence it is seen from`);
+    for (const h of q.hosts.filter((y) => !y.inScope && y.listed)) out.push(`host ${h.id} is out of scope but listed`);
+    const P = q.points;
+    if (P.scope + P.asked + P.fragile + P.prohibited + P.stop !== scn.grading.triage) out.push('conduct points must add up to the triage score');
+    if (P.perEvidence * q.truths.length !== scn.grading.evidence) out.push('evidence points must add up to the evidence score');
+    if (P.perFinding * q.truths.length + P.noFalse !== scn.grading.response) out.push('findings points must add up to the response score');
+    for (const e of scn.events) for (const f of e.when || []) if (!/^(violation|crash):/.test(f)) out.push(`event ${e.id}: unknown flag ${f}`);
   }
   if (scn.eng) {
     const x = scn.eng;

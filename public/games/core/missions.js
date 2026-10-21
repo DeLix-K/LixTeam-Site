@@ -712,6 +712,12 @@ export const MISSIONS = [
     competencies: { scope: 0.5, findings: 0.3, reporting: 0.2 },
     unlock: { passedTier: { 'pt-found': 2 } },
   },
+  {
+    id: 'pt12-bench', title: 'Four hours, five systems, one rulebook', tier: 'pt-prac', kind: 'workspace', mode: 'workspace', ref: 'pt-lab', minutes: 30, par: 0, access: 'plus',
+    blurb: 'A live, simulated test for a small insurer: scan, browse and check five systems inside a rulebook, prove each problem with the least you can do, and report what the evidence supports. One system on the network is not yours to touch.',
+    competencies: { scope: 0.4, recon: 0.2, findings: 0.3, reporting: 0.1 },
+    unlock: { passedTier: { 'pt-found': 2 } },
+  },
   // ── Network Security path
   {
     id: 'nw01-flat', title: 'The flat network', tier: 'net-found', kind: 'simulation', mode: 'simulation', ref: 'flat-network', minutes: 18, par: 0, access: 'free',
