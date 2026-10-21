@@ -417,3 +417,33 @@ div.acard { cursor: default; }
 .dbar.budget div { background: linear-gradient(90deg, #a3e635, #65a30d); }
 .dbar.budget { height: 12px; margin: 0 0 6px; }
 button.fcard { text-align: left; }
+
+/* ── GRC workspace: register, controls matrix and heatmap ────── */
+.rt-Major { color: #fca5a5; border-color: #f8717188; }
+.rt-Minor { color: #fcd34d; border-color: #fbbf2466; }
+.rt-Observation { color: #7dd3fc; border-color: #38bdf855; }
+.doc { margin: 8px 0 12px; padding: 12px 14px; border-left: 3px solid var(--accent); background: #0f0f0f; border-radius: 0 10px 10px 0; color: #d4d4d4; }
+.matrix { border-collapse: collapse; font-size: 12.5px; min-width: 980px; }
+.matrix th, .matrix td { border: 1px solid #262626; padding: 6px 8px; }
+.matrix .fw { background: #141414; color: var(--accent); font: 700 11px var(--mono); text-align: center; }
+.matrix .rq { writing-mode: vertical-rl; transform: rotate(180deg); height: 130px; font-weight: 600; color: #d4d4d4; background: #101010; text-align: left; }
+.matrix .ctl-name { text-align: left; min-width: 250px; background: #101010; }
+.matrix .ctl-name small { display: block; color: var(--muted); font-weight: 400; margin-top: 2px; }
+.matrix td { text-align: center; }
+.matrix input { width: 18px; height: 18px; accent-color: var(--accent); cursor: pointer; }
+.matrix .cov th, .matrix .cov td { background: #0f0f0f; font: 700 12px var(--mono); }
+.matrix td.ok { color: #86efac; } .matrix td.none { color: #fca5a5; background: rgba(248, 113, 113, 0.1); }
+.heatwrap { display: grid; grid-template-columns: 24px minmax(0, 1fr); grid-template-rows: auto 22px; gap: 4px; max-width: 640px; }
+.yax { grid-row: 1; writing-mode: vertical-rl; transform: rotate(180deg); text-align: center; color: var(--muted); font: 700 11px var(--mono); }
+.hgrid { grid-row: 1; grid-column: 2; display: grid; grid-template-columns: repeat(5, 1fr); gap: 3px; }
+.xax { grid-row: 2; grid-column: 2; text-align: center; color: var(--muted); font: 700 11px var(--mono); }
+.hcell { min-height: 76px; padding: 4px; border-radius: 8px; border: 1px solid #2a2a2a; display: flex; flex-direction: column; gap: 4px; }
+.hcell small { color: rgba(255, 255, 255, 0.35); font: 700 10px var(--mono); }
+.hc-treat { background: rgba(248, 113, 113, 0.16); }
+.hc-own { background: rgba(251, 191, 36, 0.1); }
+.hc-tol { background: rgba(74, 222, 128, 0.09); }
+.chips { display: flex; flex-wrap: wrap; gap: 3px; }
+.hchip { border: 1px solid var(--accent); background: #0f0f0f; color: var(--accent); border-radius: 999px; font: 800 11px var(--mono); padding: 2px 7px; cursor: pointer; }
+.hl { font: 700 12px var(--mono); padding: 2px 8px; border-radius: 6px; }
+.hl.treat { background: rgba(248, 113, 113, 0.16); } .hl.own { background: rgba(251, 191, 36, 0.12); } .hl.tol { background: rgba(74, 222, 128, 0.1); }
+@media (max-width: 759px) { .hcell { min-height: 56px; } }

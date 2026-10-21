@@ -5,17 +5,19 @@ import * as E from './engine.js';
 import * as Net from './net.js';
 import * as Cloud from './cloud.js';
 import * as VM from './vm.js';
+import * as GRC from './grc.js';
 import { SOC_INVOICE } from './scenarios/soc-invoice.js';
 import { DFIR_LAPTOP } from './scenarios/dfir-laptop.js';
 import { NET_FLAT } from './scenarios/net-flat.js';
 import { CLOUD_BUCKET } from './scenarios/cloud-bucket.js';
 import { VM_PATCH } from './scenarios/vm-patch.js';
+import { GRC_AUDIT } from './scenarios/grc-audit.js';
 import { medalIcon } from '../core/art.js';
 import { MEDALS } from '../core/missions.js';
 import * as streak from '../core/streak.js';
 import * as missionLink from '../core/mission-link.js';
 
-const SCENARIOS = [SOC_INVOICE, DFIR_LAPTOP, NET_FLAT, CLOUD_BUCKET, VM_PATCH];
+const SCENARIOS = [SOC_INVOICE, DFIR_LAPTOP, NET_FLAT, CLOUD_BUCKET, VM_PATCH, GRC_AUDIT];
 const MISSION = missionLink.current('workspace');
 const BEST_KEY = 'lixteam.workspace.best.v1';
 const $ = (id) => document.getElementById(id);
@@ -91,6 +93,10 @@ const freshUi = () => ({
   vmFilter: 'all',
   vmMsg: null,
   assetId: null,
+  docId: null,
+  rateDraft: {},
+  grcSort: 'rating',
+  grcMsg: null,
   fwForm: { action: 'deny', src: '*', dst: '*', port: '*', proto: '*', where: 'top' },
   fwTest: scn.net ? { ...scn.net.test, port: String(scn.net.test.port) } : {},
   fwMsg: null,
@@ -111,6 +117,9 @@ const NAV_ALL = {
   changes: { label: 'Changes' },
   queue: { label: 'Findings' },
   assets: { label: 'Assets' },
+  register: { label: 'Risk register' },
+  controls: { label: 'Controls' },
+  heatmap: { label: 'Heatmap' },
   firewall: { label: 'Firewall' },
   respond: { label: 'Respond' },
   case: { label: 'Case file', narrow: true },
@@ -185,8 +194,8 @@ function updateChrome() {
   $('ws-open').textContent = String(open);
   $('ws-open').parentElement.hidden = scn.alerts.length === 0;
   $('ws-pins').textContent = String(st.pins.length);
-  $('ws-budget-wrap').hidden = !scn.vm;
-  if (scn.vm) $('ws-budget').textContent = `${E.budgetLeft(scn, st)} h`;
+  $('ws-budget-wrap').hidden = !(scn.vm || scn.grc);
+  if (scn.vm || scn.grc) $('ws-budget').textContent = E.budgetText(scn, st);
   const dis = Math.min(40, E.disruptionNow(scn, st));
   $('ws-dis').style.width = `${(dis / 40) * 100}%`;
   $('ws-dis').parentElement.setAttribute('aria-valuenow', String(dis));
@@ -239,7 +248,7 @@ function setView(v) {
 function renderView() {
   const keep = document.activeElement && document.activeElement.dataset ? document.activeElement.dataset.key : null;
   const stage = $('view');
-  const fn = { queue: viewQueue, assets: viewAssets, findings: viewFindings, estate: viewEstate, changes: viewChanges, topology: viewTopology, firewall: viewFirewall, alerts: viewAlerts, brief: viewBrief, logs: viewLogs, entities: viewEntities, tree: viewTree, map: viewMap, respond: viewRespond, case: scn.vm ? viewPlan : viewCase, report: viewReport }[ui.view];
+  const fn = { register: viewRegister, controls: viewControls, heatmap: viewHeatmap, queue: viewQueue, assets: viewAssets, findings: viewFindings, estate: viewEstate, changes: viewChanges, topology: viewTopology, firewall: viewFirewall, alerts: viewAlerts, brief: viewBrief, logs: viewLogs, entities: viewEntities, tree: viewTree, map: viewMap, respond: viewRespond, case: scn.vm ? viewPlan : scn.grc ? viewPlanGrc : viewCase, report: viewReport }[ui.view];
   stage.replaceChildren(fn());
   if (keep) {
     const again = stage.querySelector(`[data-key="${CSS.escape(keep)}"]`);
@@ -578,9 +587,9 @@ function renderCaseFile(box) {
     h('header', {}, h('strong', { text: 'Case file' }), h('small', { text: `${E.clockText(st.clock)}` })),
     h('dl', { class: 'cstat' }, scn.alerts.length ? h('dt', { text: 'Alerts' }) : null, scn.alerts.length ? h('dd', { text: `${openAlerts().length} open · ${esc} escalated · ${closed} closed` }) : null, h('dt', { text: 'Searches' }), h('dd', { text: String(st.searches) }), h('dt', { text: 'Actions' }), h('dd', { text: String(st.actions.length) })),
     scn.net || scn.cloud ? servicesBlock() : null,
-    scn.vm ? vmSide() : null,
-    scn.vm ? null : h('h3', { text: 'Pinned timeline' }),
-    scn.vm ? null : pins.length
+    scn.vm ? vmSide() : scn.grc ? grcSide() : null,
+    scn.vm || scn.grc ? null : h('h3', { text: 'Pinned timeline' }),
+    scn.vm || scn.grc ? null : pins.length
       ? h('ol', { class: 'pintl' }, pins.map((e) => h('li', {}, h('time', { text: timeText(e.t) }), h('span', { text: e.summary }), h('button', { class: 'x', type: 'button', 'aria-label': 'Unpin', onclick: () => { E.unpin(st, e.id); refresh(); }, text: '×' }))))
       : h('p', { class: 'empty', text: 'Nothing pinned yet. Pin the events that prove what happened.' }),
   ].filter(Boolean));
@@ -589,6 +598,137 @@ function viewCase() {
   const box = h('div', { class: 'casefile-inline' });
   renderCaseFile(box);
   return h('div', {}, tipFor('case', 'This is your evidence timeline, in time order. A good one tells the story of the attack from the first email to the data staged for removal.'), box);
+}
+
+// ── Governance, risk and compliance: register, controls, heatmap and plan ──
+const LIKE = ['Rare', 'Unlikely', 'Possible', 'Likely', 'Almost certain'];
+const IMPACT = ['Minor', 'Moderate', 'Serious', 'Major', 'Severe'];
+const grcStatus = (f) => {
+  const d = st.grc.treat[f.id];
+  if (!d) return 'Open';
+  if (d.kind === 'failed') return 'Open (challenge rejected)';
+  if (d.kind === 'accept') return 'Accepted';
+  const o = GRC.findOption(f, d.option);
+  return d.option === 'challenge' ? 'Challenge accepted' : o.kind === 'transfer' ? 'Transferred' : 'Treated';
+};
+const myScore = (f) => { const r = st.grc.rate[f.id]; return r ? r.L * r.I : null; };
+
+function grcSide() {
+  const majors = scn.grc.findings.filter((f) => f.rating === 'Major');
+  const unplanned = majors.filter((f) => st.flags[`plan:${f.id}`] === undefined).length;
+  const owned = scn.grc.findings.filter((f) => st.grc.owner[f.id]).length;
+  const pct = Math.round((GRC.remaining(scn, st) / scn.grc.budget) * 100);
+  return h('div', {}, h('h3', { text: 'Budget' }), h('div', { class: 'dbar budget', role: 'progressbar', 'aria-label': 'Budget left', 'aria-valuemin': '0', 'aria-valuemax': String(scn.grc.budget), 'aria-valuenow': String(GRC.remaining(scn, st)) }, h('div', { style: `width:${pct}%` })),
+    h('p', { class: 'dim', text: `£${GRC.remaining(scn, st)}k of £${scn.grc.budget}k left.` }),
+    h('p', { class: unplanned ? 'svc-bad' : 'svc-ok', text: unplanned ? `${unplanned} of ${majors.length} major findings have no plan or accepted challenge. The closing meeting is at 15:00.` : 'Every major finding has a plan or an accepted challenge.' }),
+    h('p', { class: 'dim', text: `${owned} of ${scn.grc.findings.length} findings have an owner.` }));
+}
+
+function viewRegister() {
+  const sorters = {
+    rating: (a, b) => ['Major', 'Minor', 'Observation'].indexOf(a.rating) - ['Major', 'Minor', 'Observation'].indexOf(b.rating) || a.id.localeCompare(b.id),
+    mine: (a, b) => (myScore(b) ?? -1) - (myScore(a) ?? -1),
+    status: (a, b) => grcStatus(a).localeCompare(grcStatus(b)),
+    id: (a, b) => a.id.localeCompare(b.id),
+  };
+  const rows = scn.grc.findings.slice().sort(sorters[ui.grcSort]);
+  const sortBtn = (key, label) => h('button', { class: `chip-btn${ui.grcSort === key ? ' on' : ''}`, type: 'button', 'data-key': `gsort-${key}`, 'aria-pressed': ui.grcSort === key ? 'true' : 'false', onclick: () => { ui.grcSort = key; renderView(); }, text: label });
+  const list = h('ul', { class: 'queue' }, rows.map((f) => {
+    const sc = myScore(f);
+    const status = grcStatus(f);
+    const done = st.grc.treat[f.id] && st.grc.treat[f.id].kind !== 'failed';
+    return h('li', {}, h('button', { class: `acard fcard${ui.findingId === f.id ? ' sel' : ''}${done ? ' done-closed' : ''}`, type: 'button', 'data-key': `g-${f.id}`, 'aria-pressed': ui.findingId === f.id ? 'true' : 'false', onclick: () => { ui.findingId = f.id; ui.docId = null; ui.grcMsg = null; renderView(); toDetail(); } },
+      h('div', { class: 'acard-top' }, h('span', { class: `cvss rt-${f.rating}`, text: f.rating }), sc !== null ? h('span', { class: `band b-${GRC.bandOf(sc) === 'Treat' ? 'Critical' : GRC.bandOf(sc) === 'Tolerable' ? 'Low' : 'Medium'}`, text: `Your score ${sc}` }) : h('span', { class: 'band b-unk', text: 'Not rated' })),
+      h('strong', { text: f.title }), h('small', { class: 'mono', text: `${f.id} · ${st.grc.owner[f.id] || 'no owner'}` }), h('small', { class: `astate ${done ? 'st-closed' : 'st-new'}`, text: status })));
+  }));
+  const sel = scn.grc.findings.find((f) => f.id === ui.findingId);
+  return h('div', { class: 'queue-view' }, tipFor('register', 'Open a finding.'),
+    h('div', { class: 'sortbar' }, h('span', { class: 'dim', text: 'Sort ' }), sortBtn('rating', 'Auditor rating'), sortBtn('mine', 'My score'), sortBtn('status', 'Status'), sortBtn('id', 'ID')),
+    h('div', { class: 'two-col' }, h('div', { class: 'col-list' }, list), h('div', { class: 'col-detail' }, sel ? grcDetail(sel) : h('p', { class: 'empty', text: 'Choose a finding. Reading its evidence takes a few minutes per document.' }))));
+}
+
+function setRate(fid, axis, v) {
+  const rt = st.grc.rate[fid] || { L: 0, I: 0 };
+  const dr = (ui.rateDraft[fid] = ui.rateDraft[fid] || {});
+  dr[axis] = v || undefined;
+  const L = dr.L ?? rt.L;
+  const I = dr.I ?? rt.I;
+  if (L && I && (L !== rt.L || I !== rt.I)) E.grcRate(scn, st, fid, L, I);
+  refresh();
+}
+
+function grcOption(f, o) {
+  const d = st.grc.treat[f.id];
+  const done = d && d.kind === 'done';
+  const chosen = d && d.option === o.id && d.kind !== 'failed';
+  const failed = (st.grc.failed[f.id] || []).includes(o.id);
+  const tooDear = o.cost > GRC.remaining(scn, st);
+  const sub = o.kind === 'accept' ? 'No cost. The risk stays, with the owner\'s sign-off.' : o.kind === 'challenge' ? 'No cost if the evidence supports it. Challenging something sound costs credibility.' : `£${o.cost}k · ${o.effect >= 0.9 ? 'Largely removes the risk' : o.effect >= 0.6 ? 'Greatly reduces the risk' : o.effect >= 0.4 ? 'Reduces the risk' : 'Reduces the cost of an incident, not its likelihood'}${o.kind === 'transfer' ? ' (transfer)' : ''}`;
+  return h('li', { class: `fixrow${chosen ? ' on' : ''}${failed ? ' failed' : ''}` }, h('div', {}, h('strong', { text: o.label }), h('small', { text: sub }), failed ? h('small', { class: 'dry bad', text: 'Rejected. This cannot be tried again.' }) : null),
+    h('div', { class: 'fixbtns' }, chosen ? h('span', { class: 'astate st-closed', text: 'Chosen' }) : h('button', { class: `btn small ${o.cost ? 'danger' : ''}`, type: 'button', 'data-key': `gdo-${f.id}-${o.id}`, disabled: done || failed || tooDear ? true : null, title: tooDear ? 'Not enough budget' : null, onclick: () => { const r = E.grcTreat(scn, st, f.id, o.id); ui.grcMsg = { ok: r.ok && !r.failed, text: r.text }; refresh(); }, text: o.cost ? `Commit (£${o.cost}k)` : o.kind === 'challenge' ? 'Challenge' : 'Accept' })));
+}
+
+function grcDetail(f) {
+  const opened = st.grc.docs[f.id] || [];
+  const rt = st.grc.rate[f.id] || { L: 0, I: 0 };
+  const dr = ui.rateDraft[f.id] || {};
+  const cur = { L: dr.L ?? rt.L, I: dr.I ?? rt.I };
+  const sel = (key, list, cur, onset) => h('select', { 'data-key': key, 'aria-label': key.includes('L') ? 'Likelihood' : 'Impact', onchange: (ev) => onset(Number(ev.target.value)) }, h('option', { value: '0', text: 'Choose…' }), list.map((l, i) => h('option', { value: String(i + 1), selected: cur === i + 1 ? true : null, text: `${i + 1} · ${l}` })));
+  const owner = st.grc.owner[f.id] || '';
+  const doc = ui.docId && f.docs.find((x) => x.id === ui.docId && opened.includes(x.id));
+  return h('div', { class: 'fdetail' },
+    h('header', {}, h('span', { class: `cvss rt-${f.rating}`, text: `Auditor: ${f.rating}` }), h('span', { class: 'mono dim', text: ` ${f.id} · ${f.area} · ${grcStatus(f)}` }), h('h2', { text: f.title })),
+    h('h3', { text: 'Evidence' }),
+    h('ul', { class: 'fixes' }, f.docs.map((d) => h('li', { class: `fixrow${opened.includes(d.id) ? ' on' : ''}` }, h('div', {}, h('strong', { text: d.title }), h('small', { text: opened.includes(d.id) ? 'Read' : 'Takes 4 minutes to read' })), h('div', { class: 'fixbtns' }, h('button', { class: 'btn small', type: 'button', 'data-key': `doc-${f.id}-${d.id}`, onclick: () => { E.grcOpenDoc(scn, st, f.id, d.id); ui.docId = d.id; refresh(); }, text: opened.includes(d.id) ? 'View' : 'Read' }))))),
+    doc ? h('blockquote', { class: 'doc', text: doc.text }) : null,
+    h('h3', { text: 'Your rating' }),
+    h('div', { class: 'ruleform' }, h('label', {}, 'Likelihood ', sel(`rate-L-${f.id}`, LIKE, cur.L, (v) => setRate(f.id, 'L', v))), h('label', {}, 'Impact ', sel(`rate-I-${f.id}`, IMPACT, cur.I, (v) => setRate(f.id, 'I', v))),
+      cur.L && cur.I ? h('p', { class: 'dim', text: `Score ${cur.L * cur.I}: ${GRC.bandOf(cur.L * cur.I) === 'Treat' ? 'must be treated' : GRC.bandOf(cur.L * cur.I) === 'Tolerable' ? 'may be tolerated with sign-off' : "the owner's decision"}.` }) : h('p', { class: 'dim', text: 'Choose both to record a rating (one minute).' })),
+    h('h3', { text: 'Owner' }),
+    h('select', { 'data-key': `own-${f.id}`, 'aria-label': 'Risk owner', onchange: (ev) => { if (ev.target.value) E.grcOwner(scn, st, f.id, ev.target.value); refresh(); } }, h('option', { value: '', text: 'Choose an owner…' }), scn.grc.owners.map((o) => h('option', { value: o, selected: o === owner ? true : null, text: o }))),
+    ui.grcMsg ? h('div', { class: `result ${ui.grcMsg.ok ? 'ok' : 'bad'}`, role: 'status' }, h('p', { text: ui.grcMsg.text })) : null,
+    h('h3', { text: 'Treatment' }), h('ul', { class: 'fixes' }, GRC.allOptions(f).map((o) => grcOption(f, o))));
+}
+
+function viewControls() {
+  const reqs = scn.grc.requirements;
+  const fws = [...new Set(reqs.map((r) => r.framework))];
+  const cov = GRC.coverage(scn, st);
+  const head1 = h('tr', {}, h('th', { rowSpan: 2, text: 'Control and its evidence' }), fws.map((fw) => h('th', { colSpan: reqs.filter((r) => r.framework === fw).length, class: 'fw', text: fw })));
+  const head2 = h('tr', {}, reqs.map((r) => h('th', { class: 'rq', title: r.label }, h('span', { text: r.label }))));
+  const body = scn.grc.controls.map((c) => h('tr', {}, h('th', { class: 'ctl-name' }, h('strong', { text: c.name }), h('small', { text: c.evidence })), reqs.map((r) => h('td', {}, h('input', { type: 'checkbox', 'data-key': `m-${c.id}-${r.id}`, 'aria-label': `${c.name} satisfies ${r.label}`, checked: GRC.mapped(st, c.id, r.id) ? true : null, onchange: (ev) => { E.grcMap(scn, st, c.id, r.id, ev.target.checked); refresh({ keepView: true }); updateCover(); } })))));
+  const foot = h('tr', { class: 'cov' }, h('th', { text: 'Controls mapped' }), cov.map((r) => h('td', { class: r.controls.length ? 'ok' : 'none', 'data-cov': r.id, text: String(r.controls.length) })));
+  const updateCover = () => { for (const r of GRC.coverage(scn, st)) { const td = document.querySelector(`[data-cov="${r.id}"]`); if (td) { td.textContent = String(r.controls.length); td.className = r.controls.length ? 'ok' : 'none'; } } };
+  return h('div', { class: 'controls-view' }, tipFor('controls', 'Tick what each control satisfies.'), h('div', { class: 'tablewrap' }, h('table', { class: 'matrix' }, h('thead', {}, head1, head2), h('tbody', {}, body), h('tfoot', {}, foot))), h('p', { class: 'dim', text: 'A zero under a requirement means no control you have ticked addresses it. Check the evidence column before you decide it does.' }));
+}
+
+function viewHeatmap() {
+  const cells = [];
+  for (let L = 5; L >= 1; L--) for (let I = 1; I <= 5; I++) {
+    const sc = L * I;
+    const here = scn.grc.findings.filter((f) => st.grc.rate[f.id] && st.grc.rate[f.id].L === L && st.grc.rate[f.id].I === I);
+    cells.push(h('div', { class: `hcell hc-${GRC.bandOf(sc) === 'Treat' ? 'treat' : GRC.bandOf(sc) === 'Tolerable' ? 'tol' : 'own'}`, role: 'group', 'aria-label': `Likelihood ${L}, impact ${I}, score ${sc}` }, h('small', { text: String(sc) }), h('div', { class: 'chips' }, here.map((f) => h('button', { class: 'hchip', type: 'button', onclick: () => { ui.findingId = f.id; setView('register'); }, title: f.title, text: f.id.replace('AF-', '') })))));
+  }
+  const unrated = scn.grc.findings.filter((f) => !st.grc.rate[f.id]);
+  const treated = scn.grc.findings.filter((f) => st.grc.rate[f.id] && st.grc.treat[f.id] && st.grc.treat[f.id].kind === 'done');
+  return h('div', { class: 'heat-view' }, tipFor('heatmap', 'Your own ratings.'),
+    h('div', { class: 'heatwrap' }, h('div', { class: 'yax', text: 'Likelihood →' }), h('div', { class: 'hgrid' }, cells), h('div', { class: 'xax', text: 'Impact →' })),
+    h('p', { class: 'legend dim' }, h('span', { class: 'hl treat', text: '12 or more: must be treated' }), ' ', h('span', { class: 'hl own', text: '7 to 11: the owner decides' }), ' ', h('span', { class: 'hl tol', text: '6 or less: may be tolerated with sign-off' })),
+    unrated.length ? h('p', { class: 'dim', text: `Not rated yet: ${unrated.map((f) => f.id).join(', ')}.` }) : null,
+    treated.length ? h('div', {}, h('h3', { text: 'What your plan does (estimated)' }), h('ul', { class: 'facts' }, treated.map((f) => { const sc = myScore(f); const eff = GRC.effectOf(scn, st, f); return h('li', { text: `${f.id}: ${sc} → about ${Math.max(1, Math.round(sc * (1 - eff)))}` }); }))) : null);
+}
+
+function viewPlanGrc() {
+  const byOwner = new Map();
+  for (const f of scn.grc.findings) {
+    const o = st.grc.owner[f.id] || '(no owner)';
+    if (!byOwner.has(o)) byOwner.set(o, []);
+    byOwner.get(o).push(f);
+  }
+  const money = (f) => { const d = st.grc.treat[f.id]; if (!d || d.kind !== 'done' || d.option === 'challenge') return 0; return f.options.find((o) => o.id === d.option).cost; };
+  return h('div', { class: 'plan-view' }, tipFor('case', 'Your decisions, owners and budget.'), grcSide(),
+    h('h3', { text: 'The plan by owner' }),
+    byOwner.size ? [...byOwner.entries()].map(([owner, fs]) => h('div', { class: 'fixsec' }, h('h4', { text: owner }), h('ul', { class: 'facts' }, fs.map((f) => h('li', { text: `${f.id} ${f.title}: ${grcStatus(f)}${money(f) ? ` (£${money(f)}k)` : ''}` }))))) : h('p', { class: 'empty', text: 'Nothing assigned yet.' }));
 }
 
 // ── Vulnerability management: findings queue, assets and plan ───

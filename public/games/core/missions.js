@@ -418,6 +418,12 @@ export const MISSIONS = [
     competencies: { evidence: 0.4, timeline: 0.3, response: 0.3 },
     unlock: { passedTier: { 'dr-found': 2 } },
   },
+  {
+    id: 'gr12-bench', title: 'The audit with twelve findings', tier: 'gr-prac', kind: 'workspace', mode: 'workspace', ref: 'grc-audit', minutes: 28, par: 0, access: 'plus',
+    blurb: 'Twelve audit findings and £40k. Read the evidence, challenge what is wrong, rate the real risks, name the owners, map the controls and give the board a plan.',
+    competencies: { risk: 0.4, policy: 0.3, reporting: 0.3 },
+    unlock: { passedTier: { 'gr-found': 2 } },
+  },
   // ── Governance, Risk and Compliance path
   {
     id: 'gr01-register', title: "The risk register nobody reads", tier: 'gr-found', kind: 'simulation', mode: 'simulation', ref: 'register-review', minutes: 20, par: 0, access: 'free',

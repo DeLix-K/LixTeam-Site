@@ -15,6 +15,7 @@
 import * as Net from './net.js';
 import * as Cloud from './cloud.js';
 import * as VM from './vm.js';
+import * as GRC from './grc.js';
 
 export const COSTS = { search: 1, entity: 1, tree: 1, map: 1, action: 3, alert: 1, rule: 3, tweak: 1 };
 
@@ -44,6 +45,7 @@ export function newRun(scn) {
     submitted: false,
   };
   if (scn.vm) st.vm = VM.newState(scn);
+  if (scn.grc) st.grc = GRC.newState();
   if (scn.cloud) st.cloud = { history: [{ at: -1, applied: [] }] };
   if (scn.net) st.fw = { history: [{ at: -1, policy: Net.initialPolicy(scn) }], next: scn.net.rules.length + 1 };
   return st;
@@ -417,6 +419,74 @@ export function vmDecide(scn, st, id, optionId) {
   return { ok: true, text: o.done || 'Done.', harm: o.harm || 0 };
 }
 
+// ── Governance, risk and compliance ─────────────────────────────
+export function grcOpenDoc(scn, st, fid, did) {
+  const f = scn.grc.findings.find((x) => x.id === fid);
+  const d = f && f.docs.find((x) => x.id === did);
+  if (!d) return null;
+  const list = (st.grc.docs[fid] = st.grc.docs[fid] || []);
+  const first = !list.includes(did);
+  if (first) {
+    list.push(did);
+    advance(st, 4, `Read ${fid}: ${d.title}`);
+  }
+  return { doc: d, first };
+}
+export function grcRate(scn, st, fid, L, I) {
+  const f = scn.grc.findings.find((x) => x.id === fid);
+  if (!f || ![L, I].every((v) => Number.isInteger(v) && v >= 1 && v <= 5)) return { ok: false, text: 'Likelihood and impact are each from 1 to 5.' };
+  st.grc.rate[fid] = { L, I };
+  advance(st, 1, `Rated ${fid}: ${L} x ${I}`);
+  return { ok: true };
+}
+export function grcOwner(scn, st, fid, role) {
+  if (!scn.grc.findings.some((x) => x.id === fid) || !scn.grc.owners.includes(role)) return { ok: false, text: 'Choose an owner from the list.' };
+  st.grc.owner[fid] = role;
+  advance(st, 1, `Assigned ${fid} to ${role}`);
+  return { ok: true };
+}
+export function grcMap(scn, st, control, req, on) {
+  if (!scn.grc.controls.some((c) => c.id === control) || !scn.grc.requirements.some((r) => r.id === req)) return { ok: false };
+  GRC.toggleMap(st, control, req, on);
+  return { ok: true };
+}
+export function grcTreat(scn, st, fid, optionId) {
+  const f = scn.grc.findings.find((x) => x.id === fid);
+  const o = f && GRC.findOption(f, optionId);
+  if (!o) return { ok: false, text: 'No such option.' };
+  const cur = st.grc.treat[fid];
+  if (cur && cur.kind === 'done') return { ok: false, text: 'This finding has already been dealt with.' };
+  if ((st.grc.failed[fid] || []).includes(optionId)) return { ok: false, text: 'That has already been tried and rejected.' };
+  if (o.cost > GRC.remaining(scn, st)) return { ok: false, text: `Not enough budget: that costs £${o.cost}k and £${GRC.remaining(scn, st)}k is left.` };
+  const reject = (harm, text) => {
+    st.grc.failed[fid] = [...(st.grc.failed[fid] || []), optionId];
+    st.grc.treat[fid] = { kind: 'failed', option: optionId, at: st.clock };
+    st.disruption += harm;
+    st.grc.harm.push({ label: `${f.id}: the auditor rejected your challenge`, harm, text });
+    advance(st, 5, `${fid}: challenge rejected`);
+    return { ok: true, failed: true, text };
+  };
+  if (o.kind === 'accept') {
+    st.grc.treat[fid] = { kind: 'accept', option: o.id, at: st.clock };
+    advance(st, 1, `${fid}: accepted`);
+    return { ok: true, text: 'Recorded. The owner signs the risk off and it is reviewed next cycle.' };
+  }
+  if (o.kind === 'challenge') {
+    if (!f.challenge) return reject(2, 'The auditor looks at the evidence and rejects the challenge: the finding is sound. Challenging something real costs you credibility with the audit team.');
+    if (!f.challenge.valid) return reject(2, f.challenge.rejected || 'The auditor rejects the challenge.');
+    if (!GRC.hasDoc(st, fid, f.challenge.proof)) return { ok: false, text: 'You have no evidence in hand. Open the documents for this finding first: the auditor will only accept evidence you can show them.' };
+    st.grc.treat[fid] = { kind: 'done', option: 'challenge', at: st.clock };
+    if (st.flags[`plan:${fid}`] === undefined) st.flags[`plan:${fid}`] = st.clock;
+    advance(st, 5, `${fid}: challenge accepted`);
+    return { ok: true, text: f.challenge.accepted };
+  }
+  st.grc.spent += o.cost;
+  advance(st, o.cost * 2, `${fid}: ${o.label}`);
+  st.grc.treat[fid] = { kind: 'done', option: o.id, at: st.clock };
+  for (const fl of o.sets || []) if (st.flags[fl] === undefined) st.flags[fl] = st.clock;
+  return { ok: true, text: o.done || 'Done.' };
+}
+
 // What the state of the estate says about the scenario's threats and the services that must keep working.
 export function stateChecks(scn, st) {
   if (scn.net) {
@@ -431,7 +501,8 @@ export function stateChecks(scn, st) {
 }
 
 // Harm the business suffers right now: what the player's actions cost plus every service the firewall now blocks.
-export const budgetLeft = (scn, st) => (scn.vm ? VM.remaining(scn, st) : null);
+export const budgetLeft = (scn, st) => (scn.vm ? VM.remaining(scn, st) : scn.grc ? GRC.remaining(scn, st) : null);
+export const budgetText = (scn, st) => (scn.vm ? `${VM.remaining(scn, st)} h` : scn.grc ? `£${GRC.remaining(scn, st)}k` : '');
 export const disruptionNow = (scn, st) => st.disruption + (stateChecks(scn, st) || { services: [] }).services.reduce((n, x) => n + (x.ok ? 0 : x.weight), 0);
 
 // ── What happened that the player did not stop ──────────────────
@@ -489,6 +560,27 @@ export function grade(scn, st, report) {
       } else add('Triage', `${o.label}: ${label}`, 0, per, f.why);
     }
   }
+  if (scn.grc) {
+    const per = g.triage / scn.grc.findings.length;
+    for (const f of scn.grc.findings) {
+      const d = st.grc.treat[f.id];
+      const label = `${f.id} ${f.title}`;
+      const o = d && d.kind !== 'failed' ? GRC.findOption(f, d.option) : null;
+      const treat = !o ? 0 : f.good.includes(d.option) ? 1 : (f.fine || []).includes(d.option) ? 0.5 : 0;
+      const rt = st.grc.rate[f.id];
+      const axis = (a, b) => (a === b ? 1 : Math.abs(a - b) === 1 ? 0.5 : 0);
+      const rate = rt ? (axis(rt.L, f.L) + axis(rt.I, f.I)) / 2 : 0;
+      const ow = st.grc.owner[f.id];
+      const owner = ow ? (f.ownerGood.includes(ow) ? 1 : (f.ownerFine || []).includes(ow) ? 0.5 : 0) : 0;
+      const pts = per * (0.6 * treat + 0.2 * rate + 0.2 * owner);
+      tri += pts;
+      const bits = [];
+      bits.push(o ? o.label : 'no treatment');
+      bits.push(rt ? `rated ${rt.L} x ${rt.I} (true ${f.L} x ${f.I})` : 'not rated');
+      bits.push(ow ? `owner ${ow}` : 'no owner');
+      add('Triage', `${f.id}: ${bits.join(' · ')}`, pts, per, `${f.title}. ${f.why}`);
+    }
+  }
   const triMax = g.triage;
 
   // Evidence
@@ -510,6 +602,17 @@ export function grade(scn, st, report) {
       add('Evidence', `Pinned: ${label}`, perRole, perRole);
     } else add('Evidence', `Not on your timeline: ${label}`, 0, perRole, scn.roleHints[r] || '');
   }
+  if (scn.grc) {
+    const ms = GRC.mapScore(scn, st);
+    const pts = g.evidence * ms.ratio;
+    evi += pts;
+    const bad = ms.detail.filter((x) => x.kind === 'false').slice(0, 3).map((x) => `${x.control} does not really satisfy ${x.req}`);
+    const missed = ms.detail.filter((x) => x.kind === 'missed').slice(0, 3).map((x) => `${x.control} satisfies ${x.req}`);
+    add('Evidence', `Controls mapped to the frameworks: ${Math.round(ms.ratio * 100)}% right`, pts, g.evidence, [...bad.map((b) => `Over-claimed: ${b}.`), ...missed.map((b) => `Missed: ${b}.`)].join(' '));
+    const gaps = GRC.coverage(scn, st).filter((r) => !r.controls.length).map((r) => r.id);
+    const real = scn.grc.requirements.filter((r) => !scn.grc.controls.some((c) => (c.fits || {})[r.id])).map((r) => r.id);
+    if (real.some((id) => gaps.includes(id)) === false && real.length) add('Evidence', `Real gap with no control: ${real.join(', ')}`, 0, 0, 'A requirement that no control addresses is a gap the audit did not list.');
+  }
   const wrongPins = st.pins.map((id) => scn.events.find((e) => e.id === id)).filter((e) => e && !e.key).length;
   const penalty = Math.min(g.evidence * 0.2, wrongPins * 1.5);
   if (penalty > 0) add('Evidence', `Unrelated events pinned (${wrongPins})`, -penalty, 0, 'Only pin events that belong to the incident.');
@@ -527,6 +630,20 @@ export function grade(scn, st, report) {
       hits.push(r);
       add('Response', `Done: ${r.label}`, r.points, r.points);
     } else add('Response', `Not done: ${r.label}`, 0, r.points, r.why || '');
+  }
+  if (scn.grc) {
+    const best = GRC.optimum(scn).value;
+    const got = GRC.removed(scn, st);
+    const ratio = best ? Math.min(1, got / best) : 0;
+    const pts = scn.grc.riskPoints * Math.max(0, (ratio - 0.35) / 0.65);
+    res += pts;
+    add('Response', `Risk removed: ${Math.round(got)} of the ${Math.round(best)} that was achievable (${Math.round(ratio * 100)}%)`, pts, scn.grc.riskPoints, ratio < 0.85 ? 'The best use of the budget would have removed more. Look at what each pound buys, and at the findings that cost nothing to resolve.' : '');
+    for (const hm of st.grc.harm) {
+      harmNet += hm.harm * g.harmScale;
+      add('Response', `Cost to your credibility: ${hm.label}`, -hm.harm * g.harmScale, 0, hm.text);
+    }
+    const left = GRC.remaining(scn, st);
+    if (left > 0) add('Response', `Budget left unspent: £${left}k`, 0, 0, 'Unspent budget is risk left in place.');
   }
   if (scn.vm) {
     const best = VM.optimum(scn).value;
@@ -611,12 +728,16 @@ export function grade(scn, st, report) {
 
   // A report written without the evidence behind it is mostly a guess: it earns 40% plus a share of the rest for the evidence found.
   let grounded = g.evidence ? 0.4 + 0.6 * Math.min(1, evi / g.evidence) : 1;
+  if (scn.grc) {
+    const opened = scn.grc.findings.filter((f) => GRC.docsOpened(st, f.id) > 0).length;
+    grounded = 0.4 + 0.6 * (opened / scn.grc.findings.length);
+  }
   if (scn.vm) {
     // A report is only as good as the looking behind it: how many findings did the player actually open?
     const opened = scn.vm.findings.filter((f) => st.seen.has(`finding:${f.id}`)).length;
     grounded = 0.4 + 0.6 * (opened / scn.vm.findings.length);
   }
-  if (grounded < 1) add('Report', scn.vm ? `Report not fully backed by looking (${Math.round(grounded * 100)}% credit)` : `Report not fully backed by pinned evidence (${Math.round(grounded * 100)}% credit)`, -(rep - rep * grounded), 0, scn.vm ? 'Open every finding before you report on it: the asset and the threat feed change the answer.' : 'Pin the events that prove each part of your report.');
+  if (grounded < 1) add('Report', scn.vm || scn.grc ? `Report not fully backed by looking (${Math.round(grounded * 100)}% credit)` : `Report not fully backed by pinned evidence (${Math.round(grounded * 100)}% credit)`, -(rep - rep * grounded), 0, scn.vm || scn.grc ? 'Read the evidence for every finding before you report on it: it changes the answer.' : 'Pin the events that prove each part of your report.');
   rep *= grounded;
   const parts = { triage: Math.min(tri, triMax), evidence: Math.min(evi, g.evidence), response: Math.min(res, g.response), report: Math.min(rep, g.reportTotal) };
   const total = Math.round(parts.triage + parts.evidence + parts.response + parts.report);
@@ -667,9 +788,9 @@ export function problems(scn) {
   }
   for (const e of scn.events) for (const f of e.unless || []) {
     const [action, target] = f.split(':');
-    if (!scn.responses.some((r) => (r.action === action && r.target === target) || (r.sets || []).includes(f)) && !(scn.vm && scn.vm.findings.some((x) => x.options.some((o) => (o.sets || []).includes(f))))) out.push(`event ${e.id}: nothing the player can do sets ${f}`);
+    if (!scn.responses.some((r) => (r.action === action && r.target === target) || (r.sets || []).includes(f)) && !(scn.vm && scn.vm.findings.some((x) => x.options.some((o) => (o.sets || []).includes(f)))) && !(scn.grc && scn.grc.findings.some((x) => x.options.some((o) => (o.sets || []).includes(f)) || (x.challenge && f === `plan:${x.id}`)))) out.push(`event ${e.id}: nothing the player can do sets ${f}`);
   }
-  const goodSum = scn.responses.filter((r) => r.good).reduce((n, r) => n + r.points, 0) + ((scn.net || scn.cloud) ? (scn.net || scn.cloud).threats.reduce((n, th) => n + th.points, 0) : 0) + (scn.vm ? scn.vm.riskPoints : 0);
+  const goodSum = scn.responses.filter((r) => r.good).reduce((n, r) => n + r.points, 0) + ((scn.net || scn.cloud) ? (scn.net || scn.cloud).threats.reduce((n, th) => n + th.points, 0) : 0) + (scn.vm ? scn.vm.riskPoints : 0) + (scn.grc ? scn.grc.riskPoints : 0);
   if (goodSum !== scn.grading.response) out.push(`good responses are worth ${goodSum}, the response score is ${scn.grading.response}`);
   const roles = new Set(scn.events.filter((e) => e.key && e.keyWeight !== 0).map((e) => e.key));
   for (const r of roles) if (!scn.roleLabels[r] || !scn.roleHints[r]) out.push(`evidence role ${r} needs a label and a hint`);
@@ -707,6 +828,31 @@ export function problems(scn) {
     const cost = v.findings.flatMap((f) => f.options.filter((o) => !o.breaks)).reduce((n, o) => n + o.cost, 0);
     if (cost <= v.budget * 1.5) out.push('the budget is too generous: the whole backlog nearly fits');
     if (!opt.value) out.push('nothing can be removed within the budget');
+  }
+  if (scn.grc) {
+    const gr = scn.grc;
+    const ids = new Set();
+    const req = new Set(gr.requirements.map((r) => r.id));
+    for (const f of gr.findings) {
+      if (ids.has(f.id)) out.push(`duplicate finding ${f.id}`);
+      ids.add(f.id);
+      for (const v of [f.L, f.I]) if (!(Number.isInteger(v) && v >= 1 && v <= 5)) out.push(`finding ${f.id}: bad rating`);
+      const opts = new Set(GRC.allOptions(f).map((o) => o.id));
+      for (const id of [...f.good, ...(f.fine || [])]) if (!opts.has(id)) out.push(`finding ${f.id}: unknown option ${id}`);
+      for (const r of [...f.ownerGood, ...(f.ownerFine || [])]) if (!gr.owners.includes(r)) out.push(`finding ${f.id}: unknown owner ${r}`);
+      if (!f.ownerGood.length || !f.good.length) out.push(`finding ${f.id} needs a good owner and a good treatment`);
+      if (f.challenge && !f.docs.some((d) => d.id === f.challenge.proof)) out.push(`finding ${f.id}: the proof document does not exist`);
+      for (const o of f.options) if (!(Number.isInteger(o.cost) && o.cost > 0) || !(o.effect > 0 && o.effect <= 1)) out.push(`finding ${f.id}: option ${o.id} needs a whole-pound cost and an effect between 0 and 1`);
+    }
+    for (const c of gr.controls) for (const r of Object.keys(c.fits || {})) if (!req.has(r)) out.push(`control ${c.id}: unknown requirement ${r}`);
+    for (const e of scn.events) for (const fl of e.unless || []) {
+      const m = /^plan:(.+)$/.exec(fl);
+      if (m && !ids.has(m[1])) out.push(`event ${e.id}: unknown finding in ${fl}`);
+    }
+    if (GRC.optimum(scn).value <= 0) out.push('nothing can be removed within the budget');
+    const cost = gr.findings.flatMap((f) => f.options).reduce((n, o) => n + o.cost, 0);
+    if (cost <= gr.budget * 1.5) out.push('the budget is too generous');
+    if (gr.riskPoints + scn.grading.triage + scn.grading.evidence + scn.grading.reportTotal !== 100) out.push('the grc risk points do not make the scores add up to 100');
   }
   if (scn.cloud) {
     const c = scn.cloud;
