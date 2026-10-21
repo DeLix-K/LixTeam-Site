@@ -20,6 +20,7 @@ import * as TI from './ti.js';
 import * as SE from './se.js';
 import * as Eng from './eng.js';
 import * as PT from './pt.js';
+import * as OT from './ot.js';
 
 export const COSTS = { search: 1, entity: 1, tree: 1, map: 1, action: 3, alert: 1, rule: 3, tweak: 1 };
 
@@ -53,6 +54,7 @@ export function newRun(scn) {
   if (scn.ti) st.ti = TI.newState(scn);
   if (scn.se) st.se = SE.newState();
   if (scn.pt) st.pt = PT.newState();
+  if (scn.ot) st.ot = OT.newState();
   if (scn.eng) {
     const init = Eng.initialState(scn);
     st.eng = { working: Eng.cloneState(init), prod: [{ at: -1, state: init, forced: false }], runs: [], lastPass: null, forced: 0, releases: 0, harm: [] };
@@ -68,6 +70,8 @@ const flagName = (action, target) => `${action}:${target}`;
 function suppressed(e, st, scn) {
   if (scn && scn.net && e.flow && Net.decide(scn, Net.policyAt(st, e.t), e.flow).action === 'deny') return true;
   if (scn && scn.cloud && e.access && !Cloud.can(scn, Cloud.stateAtTime(scn, st, e.t), e.access.who, e.access.resource, e.access.action)) return true;
+  // A route into the plant that the player had closed by the time of the event.
+  if (scn && scn.ot && e.unlessClosed && OT.threatClosedAt(scn, st, e.unlessClosed, e.t)) return true;
   // Aftermath: an event that only happens if the player did something earlier (for example, helped an attacker).
   if (e.when && !e.when.some((f) => st.flags[f] !== undefined && st.flags[f] <= e.t)) return true;
   if (scn && scn.eng && e.unlessProd && e.unlessProd.some((c) => Eng.holds(c, prodAt(st, e.t)))) return true;
@@ -706,6 +710,66 @@ export function ptRemoveFinding(scn, st, vuln) {
   return { ok: true };
 }
 
+// ── Operational technology: the change board, windows and process trips ──
+export function otApply(scn, st, id, o = {}) {
+  const c = OT.controlOf(scn, id);
+  if (!c) return { ok: false, text: 'There is no such control.' };
+  if (OT.isApplied(st, id)) return { ok: false, text: 'That is already in place or scheduled.' };
+  for (const n of c.needs || []) if (!OT.isApplied(st, n)) return { ok: false, text: `This needs "${OT.controlOf(scn, n).label}" first.` };
+  const left = OT.remaining(scn, st);
+  if (c.cost > left) return { ok: false, text: `That costs £${c.cost}k and only £${left}k is left.` };
+  const inWin = OT.inWindow(scn, st.clock);
+  let eff;
+  let scheduled = false;
+  let trip = false;
+  if (c.window && !inWin) {
+    if (o.mode === 'window') {
+      const w = OT.nextWindow(scn, st.clock);
+      if (!w) return { ok: false, text: 'There is no maintenance window left today.' };
+      scheduled = true;
+      eff = w[0] + c.minutes;
+      advance(st, 5, `Scheduled for the maintenance window: ${c.label}`);
+    } else if (o.emergency) {
+      trip = true;
+      advance(st, c.minutes, `Emergency change outside a window: ${c.label}`);
+      eff = st.clock;
+    } else return { ok: false, text: 'This goes inside the control network, so it needs a maintenance window. Schedule it for the next one.' };
+  } else {
+    if (c.window) {
+      const end = scn.ot.windows.find(([a, b]) => st.clock >= a && st.clock < b)[1];
+      if (st.clock + c.minutes > end) return { ok: false, text: 'There is not enough of this window left to finish it. Schedule it for the next one.' };
+    }
+    advance(st, c.minutes, `Applied: ${c.label}`);
+    eff = st.clock;
+  }
+  st.ot.applied.push({ id, at: st.clock, eff, mode: scheduled ? 'window' : trip ? 'emergency' : 'now', seq: st.ot.seq++ });
+  if (trip) {
+    const cost = c.trip ?? 8;
+    st.disruption += cost;
+    st.ot.trips.push({ id, at: eff, cost, label: c.label });
+    st.flags[`trip:${id}`] = eff;
+    st.extra.push({ id: `trip-${id}`, t: eff, type: 'incident', sev: 'high', host: 'scada', summary: `A process tripped: the change "${c.label}" was made live, outside a maintenance window`, fields: { source: 'plant' }, synthetic: true });
+  }
+  return { ok: true, scheduled, trip, eff, text: c.result || (scheduled ? `Scheduled. It goes in at ${clockText(eff)}, in the maintenance window.` : trip ? 'The change went in live and a process tripped. Operators had to step in.' : 'Done.') };
+}
+export function otCancel(scn, st, id) {
+  const a = st.ot.applied.find((x) => x.id === id);
+  if (!a) return { ok: false, text: 'That is not scheduled.' };
+  if (a.eff <= st.clock) return { ok: false, text: 'That has already gone in.' };
+  for (const x of st.ot.applied) if (x !== a && (OT.controlOf(scn, x.id).needs || []).includes(id)) return { ok: false, text: 'Something else depends on it. Cancel that first.' };
+  st.ot.applied = st.ot.applied.filter((x) => x !== a);
+  advance(st, 1, `Cancelled: ${OT.controlOf(scn, id).label}`);
+  return { ok: true };
+}
+export function otWait(scn, st) {
+  if (OT.inWindow(scn, st.clock)) return { ok: true, minutes: 0 };
+  const w = OT.nextWindow(scn, st.clock);
+  if (!w) return { ok: false, minutes: 0 };
+  const n = w[0] - st.clock;
+  advance(st, n, 'Waited for the maintenance window');
+  return { ok: true, minutes: n };
+}
+
 // ── Security engineering ────────────────────────────────────────
 // Edits change the working copy only. A pipeline run tests it, and a release puts it into production.
 export function engSet(scn, st, id, value) {
@@ -767,7 +831,11 @@ export function engRelease(scn, st, force = false) {
 }
 
 // What the state of the estate says about the scenario's threats and the services that must keep working.
-export function stateChecks(scn, st) {
+export function stateChecks(scn, st, final = false) {
+  if (scn.ot) {
+    const g = final ? OT.graphFinal(scn, st) : OT.graphNow(scn, st);
+    return { threats: OT.threatStatus(scn, g), services: OT.opStatus(scn, g) };
+  }
   if (scn.net) {
     const pol = Net.currentPolicy(st);
     return { threats: Net.threatStatus(scn, pol), services: Net.serviceStatus(scn, pol) };
@@ -780,8 +848,8 @@ export function stateChecks(scn, st) {
 }
 
 // Harm the business suffers right now: what the player's actions cost plus every service the firewall now blocks.
-export const budgetLeft = (scn, st) => (scn.vm ? VM.remaining(scn, st) : scn.grc ? GRC.remaining(scn, st) : null);
-export const budgetText = (scn, st) => (scn.vm ? `${VM.remaining(scn, st)} h` : scn.grc ? `£${GRC.remaining(scn, st)}k` : '');
+export const budgetLeft = (scn, st) => (scn.vm ? VM.remaining(scn, st) : scn.grc ? GRC.remaining(scn, st) : scn.ot ? OT.remaining(scn, st) : null);
+export const budgetText = (scn, st) => (scn.vm ? `${VM.remaining(scn, st)} h` : scn.grc ? `£${GRC.remaining(scn, st)}k` : scn.ot ? `£${OT.remaining(scn, st)}k` : '');
 export const disruptionNow = (scn, st) => st.disruption + (stateChecks(scn, st) || { services: [] }).services.reduce((n, x) => n + (x.ok ? 0 : x.weight), 0);
 
 // ── What happened that the player did not stop ──────────────────
@@ -1062,7 +1130,7 @@ export function grade(scn, st, report) {
     const left = VM.remaining(scn, st);
     if (left > 0) add('Response', `Budget left unspent: ${left} h`, 0, 0, 'Unused budget is wasted effort: every hour could have removed risk.');
   }
-  const ck = stateChecks(scn, st);
+  const ck = stateChecks(scn, st, true);
   if (ck) {
     for (const th of ck.threats) {
       if (th.blocked) {
@@ -1074,6 +1142,17 @@ export function grade(scn, st, report) {
       if (sv.ok) continue;
       harmNet += sv.weight * g.harmScale;
       add('Response', `Broken: ${sv.label}`, -sv.weight * g.harmScale, 0, sv.note);
+    }
+  }
+  if (scn.ot) {
+    for (const c of OT.monitored(scn, st)) {
+      res += 2;
+      add('Response', `Watching the plant: ${c.label}`, 2, 2);
+    }
+    for (const c of scn.ot.controls.filter((x) => x.monitors && !OT.isApplied(st, x.id))) add('Response', `Not watching: ${c.label}`, 0, 2, 'A closed door still needs a camera. Monitoring tells you when something tries it.');
+    for (const tr of st.ot.trips) {
+      res -= tr.cost * g.harmScale;
+      add('Response', `A process tripped: ${tr.label}`, -tr.cost * g.harmScale, 0, 'A change was made live in the control network outside a maintenance window. Wait for the window, or tell the operators first.');
     }
   }
   const harmful = st.actions.filter((a) => a.rule.harm);
@@ -1160,7 +1239,7 @@ export function grade(scn, st, report) {
   const total = Math.round(parts.triage + parts.evidence + parts.response + parts.report);
   let tier = total >= g.gold ? 3 : total >= g.silver ? 2 : total >= g.bronze ? 1 : 0;
   // However well the rest went, a breach you could have stopped caps the medal.
-  const capped = !!g.cap && late.length >= (g.capAt ?? 1) && tier > 1;
+  const capped = !!g.cap && late.length + (st.ot ? st.ot.trips.length : 0) >= (g.capAt ?? 1) && tier > 1;
   if (capped) {
     tier = 1;
     add('Response', 'Medal capped at bronze', 0, 0, g.cap);
@@ -1208,7 +1287,7 @@ export function problems(scn) {
     const [action, target] = f.split(':');
     if (!scn.responses.some((r) => (r.action === action && r.target === target) || (r.sets || []).includes(f)) && !(scn.vm && scn.vm.findings.some((x) => x.options.some((o) => (o.sets || []).includes(f)))) && !(scn.grc && scn.grc.findings.some((x) => x.options.some((o) => (o.sets || []).includes(f)) || (x.challenge && f === `plan:${x.id}`)))) out.push(`event ${e.id}: nothing the player can do sets ${f}`);
   }
-  const goodSum = scn.responses.filter((r) => r.good).reduce((n, r) => n + r.points, 0) + ((scn.net || scn.cloud) ? (scn.net || scn.cloud).threats.reduce((n, th) => n + th.points, 0) : 0) + (scn.vm ? scn.vm.riskPoints : 0) + (scn.grc ? scn.grc.riskPoints : 0) + (scn.se ? scn.se.outcomePoints : 0) + (scn.eng ? scn.eng.features.reduce((n, f) => n + f.weight, 0) : 0) + (scn.pt ? scn.pt.truths.length * scn.pt.points.perFinding + scn.pt.points.noFalse : 0);
+  const goodSum = scn.responses.filter((r) => r.good).reduce((n, r) => n + r.points, 0) + ((scn.net || scn.cloud) ? (scn.net || scn.cloud).threats.reduce((n, th) => n + th.points, 0) : 0) + (scn.vm ? scn.vm.riskPoints : 0) + (scn.grc ? scn.grc.riskPoints : 0) + (scn.se ? scn.se.outcomePoints : 0) + (scn.eng ? scn.eng.features.reduce((n, f) => n + f.weight, 0) : 0) + (scn.pt ? scn.pt.truths.length * scn.pt.points.perFinding + scn.pt.points.noFalse : 0) + (scn.ot ? scn.ot.threats.reduce((n, x) => n + x.points, 0) + scn.ot.points.monitor : 0);
   if (goodSum !== scn.grading.response) out.push(`good responses are worth ${goodSum}, the response score is ${scn.grading.response}`);
   const roles = new Set(scn.events.filter((e) => e.key && e.keyWeight !== 0).map((e) => e.key));
   for (const r of roles) if (!scn.roleLabels[r] || !scn.roleHints[r]) out.push(`evidence role ${r} needs a label and a hint`);
@@ -1274,6 +1353,31 @@ export function problems(scn) {
     if (P.perEvidence * q.truths.length !== scn.grading.evidence) out.push('evidence points must add up to the evidence score');
     if (P.perFinding * q.truths.length + P.noFalse !== scn.grading.response) out.push('findings points must add up to the response score');
     for (const e of scn.events) for (const f of e.when || []) if (!/^(violation|crash):/.test(f)) out.push(`event ${e.id}: unknown flag ${f}`);
+  }
+  if (scn.ot) {
+    const q = scn.ot;
+    const aIds = new Set([...q.assets.map((x) => x.id), ...q.controls.flatMap((c) => (c.effect.addAssets || []).map((x) => x.id))]);
+    const lIds = new Set([...q.links.map((x) => x.id), ...q.controls.flatMap((c) => (c.effect.add || []).map((x) => x.id))]);
+    const baseLinks = new Set(q.links.map((x) => x.id));
+    for (const l of [...q.links, ...q.controls.flatMap((c) => c.effect.add || [])]) if (!aIds.has(l.a) || !aIds.has(l.b)) out.push(`link ${l.id}: unknown asset`);
+    for (const c of q.controls) {
+      for (const id of [...(c.effect.remove || []), ...(c.effect.oneway || []), ...(c.effect.guard || [])]) if (!baseLinks.has(id) && !lIds.has(id)) out.push(`control ${c.id}: unknown link ${id}`);
+      for (const n of c.needs || []) if (!q.controls.some((x) => x.id === n)) out.push(`control ${c.id}: unknown need ${n}`);
+      if (!(c.cost > 0) || !(c.minutes > 0)) out.push(`control ${c.id} needs a cost and a time`);
+    }
+    for (const o of q.ops) for (const r of o.routes) for (const id of r) if (!lIds.has(id)) out.push(`operation ${o.id}: unknown link ${id}`);
+    for (const th of q.threats) if (!baseLinks.has(th.entry)) out.push(`threat ${th.id}: the entry link ${th.entry} is not in the plant at the start`);
+    for (const e of scn.events) if (e.unlessClosed && !q.threats.some((x) => x.id === e.unlessClosed)) out.push(`event ${e.id}: unknown threat ${e.unlessClosed}`);
+    const g0 = OT.graphAt(scn, { ot: OT.newState() }, 0);
+    for (const t of OT.threatStatus(scn, g0)) if (t.blocked) out.push(`threat ${t.id} is already closed at the start`);
+    for (const o of OT.opStatus(scn, g0)) if (!o.ok && !o.routes.every((r) => r.some((id) => !baseLinks.has(id)))) out.push(`operation ${o.id} is not running at the start`);
+    if (q.points.monitor !== q.controls.filter((c) => c.monitors).length * 2) out.push('monitoring points must be 2 for each monitoring control');
+    const ref = { ot: OT.newState() };
+    for (const id of q.reference) ref.ot.applied.push({ id, at: 0, eff: 0, mode: 'now', seq: ref.ot.seq++ });
+    const gr = OT.graphFinal(scn, ref);
+    for (const t of OT.threatStatus(scn, gr)) if (!t.blocked) out.push(`the reference plan leaves ${t.id} open`);
+    for (const o of OT.opStatus(scn, gr)) if (!o.ok) out.push(`the reference plan breaks ${o.id}`);
+    if (q.reference.reduce((n, id) => n + OT.controlOf(scn, id).cost, 0) > q.budget) out.push('the reference plan is over budget');
   }
   if (scn.eng) {
     const x = scn.eng;

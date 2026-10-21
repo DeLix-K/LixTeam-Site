@@ -494,3 +494,30 @@ button.fcard { text-align: left; }
 .console { margin: 0; padding: 12px 14px; max-height: 240px; overflow: auto; background: #0d1117; color: #c9d1d9; border: 1px solid var(--border); border-radius: 8px; font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
 .console:focus-visible { outline: 2px solid var(--accent, #3ddc97); outline-offset: 2px; }
 .ptpage { margin: 10px 0 0; padding: 10px 12px; border-left: 3px solid var(--accent, #3ddc97); background: rgba(127, 127, 127, 0.1); border-radius: 0 6px 6px 0; }
+
+/* OT/IoT: the plant map and the change board */
+.otmap .zone { fill: rgba(255, 255, 255, 0.025); stroke: #333; stroke-width: 1.5; }
+.otmap .zn-INTERNET { stroke: #6b728088; stroke-dasharray: 6 5; }
+.otmap .zn-CORP { stroke: #38bdf855; fill: rgba(56, 189, 248, 0.03); }
+.otmap .zn-DMZ { stroke: #fbbf2466; fill: rgba(251, 191, 36, 0.04); }
+.otmap .zn-CTRL { stroke: #a3e63566; fill: rgba(163, 230, 53, 0.035); }
+.otmap .zn-FIELD { stroke: #f8717166; fill: rgba(248, 113, 113, 0.035); }
+.otmap .zlabel { fill: var(--muted); font: 700 11px var(--mono); text-transform: uppercase; letter-spacing: 0.05em; }
+.otmap .plink { stroke: #6b7280; stroke-width: 1.6; fill: none; }
+.otmap .plink.guarded { stroke: var(--good); stroke-dasharray: 5 4; }
+.otmap .plink.exposed { stroke: var(--bad); stroke-width: 2.4; }
+.otmap .plink.route { stroke-width: 4.5; }
+.otmap .plink.sel { stroke: var(--accent); stroke-width: 3.5; }
+.otmap .hit { stroke: transparent; cursor: pointer; fill: none; }
+.otmap .hit:focus-visible { stroke: var(--accent); stroke-opacity: 0.4; outline: none; }
+.otmap .otarrow { fill: #9ca3af; }
+.otmap .otnode.critical rect { stroke: var(--bad); stroke-width: 2.2; }
+.otmap .otnode.route rect { fill: #2a1212; }
+.otmap .otnode.ok-external rect { stroke-dasharray: 3 3; }
+.ctls { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.ctl { border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; background: var(--surface); }
+.ctl.done { border-color: color-mix(in srgb, var(--good) 55%, transparent); }
+.ctl p { margin: 6px 0; }
+.ctl-h { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.ctl-pv { display: flex; gap: 6px; flex-wrap: wrap; margin: 6px 0 8px; font-size: 0.92rem; }
+.ctl .fixbtns { display: flex; gap: 8px; flex-wrap: wrap; }

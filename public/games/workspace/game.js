@@ -10,6 +10,7 @@ import * as TI from './ti.js';
 import * as SE from './se.js';
 import * as X from './eng.js';
 import * as PT from './pt.js';
+import * as OT from './ot.js';
 import { SOC_INVOICE } from './scenarios/soc-invoice.js';
 import { DFIR_LAPTOP } from './scenarios/dfir-laptop.js';
 import { NET_FLAT } from './scenarios/net-flat.js';
@@ -20,12 +21,13 @@ import { TI_PAPERTRAIL } from './scenarios/ti-papertrail.js';
 import { SE_SERVICEDESK } from './scenarios/se-servicedesk.js';
 import { ENG_TICKETS } from './scenarios/eng-tickets.js';
 import { PT_LAB } from './scenarios/pt-lab.js';
+import { OT_PLANT } from './scenarios/ot-plant.js';
 import { medalIcon } from '../core/art.js';
 import { MEDALS } from '../core/missions.js';
 import * as streak from '../core/streak.js';
 import * as missionLink from '../core/mission-link.js';
 
-const SCENARIOS = [SOC_INVOICE, DFIR_LAPTOP, NET_FLAT, CLOUD_BUCKET, VM_PATCH, GRC_AUDIT, TI_PAPERTRAIL, SE_SERVICEDESK, ENG_TICKETS, PT_LAB];
+const SCENARIOS = [SOC_INVOICE, DFIR_LAPTOP, NET_FLAT, CLOUD_BUCKET, VM_PATCH, GRC_AUDIT, TI_PAPERTRAIL, SE_SERVICEDESK, ENG_TICKETS, PT_LAB, OT_PLANT];
 const MISSION = missionLink.current('workspace');
 const BEST_KEY = 'lixteam.workspace.best.v1';
 const $ = (id) => document.getElementById(id);
@@ -92,6 +94,10 @@ const freshUi = () => ({
   lastResult: null,
   seenAlerts: new Set(),
   ptNode: null,
+  otThreat: null,
+  otLink: null,
+  otMsg: null,
+  otArm: null,
   ptDraftMsg: null,
   ptMsg: null,
   ptLog: [],
@@ -150,6 +156,9 @@ const NAV_ALL = {
   diff: { label: 'Changes' },
   pipeline: { label: 'CI/CD pipeline' },
   scope: { label: 'Rules & scope' },
+  plant: { label: 'Plant map' },
+  inventory: { label: 'Asset inventory' },
+  board: { label: 'Change board' },
   lab: { label: 'The lab' },
   drafts: { label: 'Findings' },
   sources: { label: 'Sources & reports' },
@@ -232,8 +241,8 @@ function updateChrome() {
   $('ws-open').textContent = String(open);
   $('ws-open').parentElement.hidden = scn.alerts.length === 0;
   $('ws-pins').textContent = String(st.pins.length);
-  $('ws-budget-wrap').hidden = !(scn.vm || scn.grc);
-  if (scn.vm || scn.grc) $('ws-budget').textContent = E.budgetText(scn, st);
+  $('ws-budget-wrap').hidden = !(scn.vm || scn.grc || scn.ot);
+  if (scn.vm || scn.grc || scn.ot) $('ws-budget').textContent = E.budgetText(scn, st);
   const dis = Math.min(40, E.disruptionNow(scn, st));
   $('ws-dis').style.width = `${(dis / 40) * 100}%`;
   $('ws-dis').parentElement.setAttribute('aria-valuenow', String(dis));
@@ -290,7 +299,7 @@ function setView(v) {
 function renderView() {
   const keep = document.activeElement && document.activeElement.dataset ? document.activeElement.dataset.key : null;
   const stage = $('view');
-  const fn = { config: viewConfig, arch: viewArch, diff: viewDiff, pipeline: viewPipeline, scope: viewScope, lab: viewLab, drafts: viewDrafts, inbox: viewInbox, sources: viewSources, claims: viewClaims, graph: viewGraph, assess: viewAssess, register: viewRegister, controls: viewControls, heatmap: viewHeatmap, queue: viewQueue, assets: viewAssets, findings: viewFindings, estate: viewEstate, changes: viewChanges, topology: viewTopology, firewall: viewFirewall, alerts: viewAlerts, brief: viewBrief, logs: viewLogs, entities: viewEntities, tree: viewTree, map: viewMap, respond: viewRespond, case: scn.vm ? viewPlan : scn.grc ? viewPlanGrc : scn.se ? viewShift : viewCase, report: viewReport }[ui.view];
+  const fn = { config: viewConfig, arch: viewArch, diff: viewDiff, pipeline: viewPipeline, scope: viewScope, plant: viewPlant, inventory: viewInventory, board: viewBoard, lab: viewLab, drafts: viewDrafts, inbox: viewInbox, sources: viewSources, claims: viewClaims, graph: viewGraph, assess: viewAssess, register: viewRegister, controls: viewControls, heatmap: viewHeatmap, queue: viewQueue, assets: viewAssets, findings: viewFindings, estate: viewEstate, changes: viewChanges, topology: viewTopology, firewall: viewFirewall, alerts: viewAlerts, brief: viewBrief, logs: viewLogs, entities: viewEntities, tree: viewTree, map: viewMap, respond: viewRespond, case: scn.vm ? viewPlan : scn.grc ? viewPlanGrc : scn.se ? viewShift : viewCase, report: viewReport }[ui.view];
   stage.replaceChildren(fn());
   if (keep) {
     const again = stage.querySelector(`[data-key="${CSS.escape(keep)}"]`);
@@ -629,7 +638,7 @@ function renderCaseFile(box) {
     h('header', {}, h('strong', { text: 'Case file' }), h('small', { text: `${E.clockText(st.clock)}` })),
     h('dl', { class: 'cstat' }, scn.alerts.length ? h('dt', { text: 'Alerts' }) : null, scn.alerts.length ? h('dd', { text: `${openAlerts().length} open · ${esc} escalated · ${closed} closed` }) : null, h('dt', { text: 'Searches' }), h('dd', { text: String(st.searches) }), h('dt', { text: 'Actions' }), h('dd', { text: String(st.actions.length) })),
     scn.net || scn.cloud ? servicesBlock() : null,
-    scn.vm ? vmSide() : scn.grc ? grcSide() : scn.se ? seSide() : scn.eng ? engSide() : scn.pt ? ptSide() : null,
+    scn.vm ? vmSide() : scn.grc ? grcSide() : scn.se ? seSide() : scn.eng ? engSide() : scn.pt ? ptSide() : scn.ot ? otSide() : null,
     scn.vm || scn.grc || scn.se || scn.eng || scn.pt ? null : h('h3', { text: 'Pinned timeline' }),
     scn.vm || scn.grc || scn.se || scn.eng || scn.pt ? null : pins.length
       ? h('ol', { class: 'pintl' }, pins.map((e) => h('li', {}, h('time', { text: timeText(e.t) }), h('span', { text: e.summary }), h('button', { class: 'x', type: 'button', 'aria-label': 'Unpin', onclick: () => { E.unpin(st, e.id); refresh(); }, text: '×' }))))
@@ -922,6 +931,129 @@ function draftForm(x) {
     h('div', { class: 'btn-row' },
       h('button', { class: 'btn primary', type: 'button', 'data-key': 'save-finding', onclick: () => { if (!d.severity || !d.impact || !d.fix) { ui.ptDraftMsg = { ok: false, text: 'Choose a severity, an impact and a fix.' }; renderView(); return; } const r = E.ptFinding(scn, st, d); ui.ptDraftMsg = { ok: r.ok, text: r.ok ? 'Saved.' : r.text }; refresh(); }, text: exists ? 'Update finding (3 min)' : 'Save finding (3 min)' }),
       exists ? h('button', { class: 'btn', type: 'button', 'data-key': 'drop-finding', onclick: () => { E.ptRemoveFinding(scn, st, x.id); ui.draft = { vuln: x.id, severity: '', impact: '', fix: '', evidence: [] }; ui.ptDraftMsg = { ok: true, text: 'Removed.' }; refresh(); }, text: 'Remove' }) : null));
+}
+
+// ── OT/IoT: the plant map, the inventory and the change board ───
+const ZONE_FILL = { INTERNET: 'zn-INTERNET', CORP: 'zn-CORP', DMZ: 'zn-DMZ', CTRL: 'zn-CTRL', FIELD: 'zn-FIELD' };
+const otName = (g, id) => (g.assets.find((a) => a.id === id) || {}).name || id;
+const otTaps = () => OT.monitored(scn, st).map((c) => c.monitors);
+const otWatched = (th) => otTaps().includes('inner') || (otTaps().includes('edge') && th.source === 'INTERNET');
+function otSide() {
+  const g = OT.graphNow(scn, st);
+  const open = OT.threatStatus(scn, g).filter((x) => !x.blocked).length;
+  const down = OT.opStatus(scn, g).filter((x) => !x.ok).length;
+  const win = OT.inWindow(scn, st.clock);
+  const next = OT.nextWindow(scn, st.clock);
+  const sched = st.ot.applied.filter((a) => a.eff > st.clock);
+  return h('div', {}, h('h3', { text: 'The plant' }),
+    h('p', { class: open ? 'svc-bad' : 'svc-ok', text: open ? `${open} route${open === 1 ? '' : 's'} into the plant still open.` : 'No route into the plant is open.' }),
+    h('p', { class: down ? 'svc-bad' : 'svc-ok', text: down ? `${down} operation${down === 1 ? '' : 's'} broken.` : 'Every operation is running.' }),
+    h('p', { class: 'dim', text: win ? 'A maintenance window is open now.' : next ? `Next maintenance window: ${timeText(next[0])} to ${timeText(next[1])}.` : 'No maintenance window left today.' }),
+    sched.length ? h('p', { class: 'dim', text: `${sched.length} change${sched.length === 1 ? '' : 's'} scheduled.` }) : null,
+    st.ot.trips.length ? h('p', { class: 'svc-bad', text: `${st.ot.trips.length} process trip${st.ot.trips.length === 1 ? '' : 's'}.` }) : null);
+}
+
+function viewPlant() {
+  const W = 800;
+  const H = 520;
+  const px = (x) => (x / 100) * W;
+  const py = (y) => (y / 100) * H;
+  const g = OT.graphNow(scn, st);
+  const threats = OT.threatStatus(scn, g);
+  const sel = threats.find((x) => x.id === ui.otThreat) || null;
+  const route = sel && !sel.blocked ? OT.route(scn, g, sel) : [];
+  const onRoute = (l) => route.some((id, i) => route[i + 1] && ((l.a === id && l.b === route[i + 1]) || (l.both && l.b === id && l.a === route[i + 1])));
+  const openEntry = new Set(threats.filter((x) => !x.blocked).map((x) => x.entry));
+  const svg = sv('svg', { viewBox: `0 0 ${W} ${H}`, class: 'netmap otmap', role: 'group', 'aria-label': 'Plant map. The same information is listed below.' });
+  svg.append(sv('defs', {}, sv('marker', { id: 'ot-arrow', viewBox: '0 0 10 10', refX: 9, refY: 5, markerWidth: 6, markerHeight: 6, orient: 'auto-start-reverse' }, sv('path', { d: 'M 0 0 L 10 5 L 0 10 z', class: 'otarrow' }))));
+  for (const z of scn.ot.zones) svg.append(sv('rect', { x: 6, y: py(z.y), width: W - 12, height: py(z.h), rx: 10, class: `zone ${ZONE_FILL[z.id] || ''}` }), sv('text', { x: 16, y: py(z.y) + 16, class: 'zlabel' }, z.label));
+  const at = (id) => { const a = g.assets.find((x) => x.id === id); return a ? { x: px(a.x), y: py(a.y) } : null; };
+  for (const l of g.links) {
+    const a = at(l.a);
+    const b = at(l.b);
+    if (!a || !b) continue;
+    const cls = `plink${l.guarded ? ' guarded' : ''}${openEntry.has(l.id) ? ' exposed' : ''}${onRoute(l) ? ' route' : ''}${ui.otLink === l.id ? ' sel' : ''}`;
+    svg.append(sv('line', { x1: a.x, y1: a.y, x2: b.x, y2: b.y, class: cls, 'marker-end': l.both ? null : 'url(#ot-arrow)', 'marker-start': l.both ? 'url(#ot-arrow)' : null }));
+    svg.append(sv('line', { x1: a.x, y1: a.y, x2: b.x, y2: b.y, class: 'hit', 'stroke-width': 14, tabindex: 0, role: 'button', 'aria-label': l.label, onclick: () => { ui.otLink = l.id; renderView(); }, onkeydown: (ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); ui.otLink = l.id; renderView(); } } }));
+  }
+  for (const a of g.assets) {
+    const p = at(a.id);
+    const w = Math.max(70, Math.min(150, a.name.length * 6.2 + 16));
+    svg.append(sv('g', { class: `node otnode ok-${a.kind}${a.critical ? ' critical' : ''}${route.includes(a.id) ? ' route' : ''}`, tabindex: 0, role: 'button', 'aria-label': a.name, onclick: () => { ui.entityId = a.id; setView('inventory'); }, onkeydown: (ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); ui.entityId = a.id; setView('inventory'); } } }, sv('rect', { x: p.x - w / 2, y: p.y - 13, width: w, height: 26, rx: 6 }), sv('text', { x: p.x, y: p.y + 4, 'text-anchor': 'middle' }, a.name)));
+  }
+  const link = g.links.find((l) => l.id === ui.otLink);
+  const linkBox = link ? h('div', { class: 'edge-detail' }, h('h3', { text: link.label }), h('p', { class: 'dim', text: `${otName(g, link.a)} ${link.both ? 'and' : 'can start a connection to'} ${otName(g, link.b)}${link.both ? ' can each start a connection to the other' : ''}.${link.guarded ? ' This link is guarded: a second factor or an industrial firewall stands in front of it.' : ''}${openEntry.has(link.id) ? ' This is the way in for an open exposure path.' : ''}` })) : null;
+  const rows = threats.map((th) => h('li', { class: 'fixrow' },
+    h('div', {}, h('strong', { text: `${th.id}: ${th.label}` }), h('small', { class: th.blocked ? 'svc-ok' : 'svc-bad', text: ` ${th.blocked ? 'Closed' : 'Open'}${otWatched(th) ? ', watched' : ''}` }),
+      !th.blocked ? h('p', { class: 'dim', text: OT.route(scn, g, th).map((id) => otName(g, id)).join(' → ') }) : null),
+    h('div', { class: 'fixbtns' }, h('button', { class: `chip-btn${ui.otThreat === th.id ? ' on' : ''}`, type: 'button', 'data-key': `path-${th.id}`, 'aria-pressed': ui.otThreat === th.id ? 'true' : 'false', disabled: th.blocked ? true : null, onclick: () => { ui.otThreat = ui.otThreat === th.id ? null : th.id; renderView(); }, text: ui.otThreat === th.id ? 'Hide route' : 'Show route' }))));
+  const ops = OT.opStatus(scn, g).map((o) => h('li', { class: o.ok ? 'svc-ok' : 'svc-bad', text: `${o.ok ? 'Running' : 'Broken'}: ${o.label}${o.ok ? '' : `. ${o.note}`}` }));
+  return h('div', { class: 'map-view' }, tipFor('plant', 'Select a route.'),
+    h('div', { class: 'mapwrap' }, svg), linkBox,
+    h('h3', { text: 'Routes into the plant' }), h('ul', { class: 'fixes' }, rows),
+    h('h3', { text: 'What the plant needs' }), h('ul', { class: 'facts' }, ops));
+}
+
+function viewInventory() {
+  const g = OT.graphNow(scn, st);
+  const out = new Set();
+  for (const a of g.assets.filter((x) => x.zone === 'INTERNET')) for (const id of OT.reachable(g, a.id)) out.add(id);
+  const corp = OT.reachable(g, 'office-pc');
+  const list = g.assets.filter((a) => a.zone !== 'INTERNET');
+  const sel = list.find((a) => a.id === ui.entityId) || null;
+  const row = (a) => h('tr', { class: sel && sel.id === a.id ? 'sel' : '' },
+    h('td', {}, h('button', { class: 'linkbtn', type: 'button', 'data-key': `inv-${a.id}`, onclick: () => { ui.entityId = a.id; renderView(); }, text: a.name })),
+    h('td', { text: scn.ot.zones.find((z) => z.id === a.zone).label.replace(/ \(.*\)/, '') }),
+    h('td', { text: a.age !== undefined ? `${a.age} yr` : '' }),
+    h('td', { text: a.patch === undefined ? '' : a.patch ? 'Yes' : 'No' }),
+    h('td', { class: out.has(a.id) ? 'noc' : 'okc', text: out.has(a.id) ? 'Yes' : 'No' }),
+    h('td', { class: corp.has(a.id) && a.id !== 'office-pc' ? 'noc' : 'okc', text: corp.has(a.id) && a.id !== 'office-pc' ? 'Yes' : 'No' }));
+  const detail = sel ? h('div', { class: 'edge-detail' }, h('h3', { text: sel.name }), h('ul', { class: 'facts' }, [...(sel.facts || []), ...(sel.age !== undefined ? [`${sel.age} years old. ${sel.patch ? 'Can be patched.' : 'Cannot be patched: the manufacturer no longer supports it.'}`] : []), ...(sel.stops ? [`If it stops: ${sel.stops}`] : [])].map((f) => h('li', { text: f })))) : null;
+  return h('div', { class: 'estate-view' }, tipFor('inventory', 'Each device and what it means.'),
+    h('div', { class: 'tablewrap' }, h('table', { class: 'links' }, h('thead', {}, h('tr', {}, ['Device', 'Zone', 'Age', 'Can be patched', 'Reachable from the internet', 'Reachable from an office PC'].map((c) => h('th', { text: c })))), h('tbody', {}, list.map(row)))),
+    detail || h('p', { class: 'dim', text: 'Choose a device to see what happens if it stops.' }));
+}
+
+function viewBoard() {
+  const g = OT.graphFinal(scn, st);
+  const win = OT.inWindow(scn, st.clock);
+  const next = OT.nextWindow(scn, st.clock);
+  const apply = (c, o) => {
+    const r = E.otApply(scn, st, c.id, o);
+    ui.otMsg = { ok: r.ok, text: r.text };
+    ui.otArm = null;
+    refresh();
+  };
+  const card = (c) => {
+    const a = st.ot.applied.find((x) => x.id === c.id);
+    const pv = a ? null : OT.preview(scn, st, c.id);
+    const needMiss = (c.needs || []).filter((n) => !OT.isApplied(st, n));
+    const state = a ? (a.eff > st.clock ? `Scheduled: goes in at ${timeText(a.eff)}` : a.mode === 'emergency' ? 'In place (applied live, a process tripped)' : 'In place') : '';
+    const needsWin = c.window && !win;
+    return h('li', { class: `ctl${a ? ' done' : ''}` },
+      h('div', { class: 'ctl-h' }, h('strong', { text: c.label }), h('span', { class: 'mono dim', text: `£${c.cost}k · ${c.minutes} min` })),
+      h('p', { text: c.text }),
+      h('p', { class: 'dim', text: `Safety: ${c.impact.safety} Availability: ${c.impact.availability}` }),
+      c.window ? h('p', { class: 'svc-bad', text: 'Needs a maintenance window.' }) : null,
+      needMiss.length ? h('p', { class: 'dim', text: `Needs first: ${needMiss.map((n) => OT.controlOf(scn, n).label).join('; ')}.` }) : null,
+      pv ? h('div', { class: 'ctl-pv' },
+        pv.closes.length ? h('span', { class: 'svc-ok', text: `Closes: ${pv.closes.map((x) => x.id).join(', ')}` }) : h('span', { class: 'dim', text: c.monitors ? 'Watches only: closes nothing' : 'Closes no route by itself' }),
+        pv.breaks.length ? h('span', { class: 'svc-bad', text: ` Breaks: ${pv.breaks.map((x) => x.label).join('; ')}` }) : h('span', { class: 'dim', text: ' Breaks nothing' })) : null,
+      a ? h('p', { class: 'svc-ok', text: state }) : h('div', { class: 'fixbtns' },
+        needsWin
+          ? [h('button', { class: 'btn small primary', type: 'button', 'data-key': `sched-${c.id}`, disabled: next ? null : true, onclick: () => apply(c, { mode: 'window' }), text: next ? `Schedule for ${timeText(next[0])}` : 'No window left' },),
+            ui.otArm === c.id ? h('button', { class: 'btn small danger', type: 'button', 'data-key': `emerg-confirm-${c.id}`, onclick: () => apply(c, { emergency: true }), text: 'Confirm: apply live and risk a trip' }) : h('button', { class: 'btn small', type: 'button', 'data-key': `emerg-${c.id}`, onclick: () => { ui.otArm = c.id; renderView(); }, text: 'Emergency: apply now' })]
+          : h('button', { class: 'btn small primary', type: 'button', 'data-key': `apply-${c.id}`, onclick: () => apply(c, {}), text: 'Apply now' })),
+      a && a.eff > st.clock ? h('button', { class: 'btn small', type: 'button', 'data-key': `cancel-${c.id}`, onclick: () => { const r = E.otCancel(scn, st, c.id); ui.otMsg = { ok: r.ok, text: r.ok ? 'Cancelled.' : r.text }; refresh(); }, text: 'Cancel' }) : null);
+  };
+  return h('div', { class: 'estate-view' }, tipFor('board', 'Preview, then apply.'),
+    h('div', { class: 'quick' },
+      h('span', { class: win ? 'svc-ok' : 'dim', text: win ? 'A maintenance window is open now.' : next ? `Maintenance windows: ${scn.ot.windows.map(([a, b]) => `${timeText(a)} to ${timeText(b)}`).join(' and ')}.` : 'No maintenance window left today.' }),
+      !win && next ? h('button', { class: 'btn small', type: 'button', 'data-key': 'wait-window', onclick: () => { const r = E.otWait(scn, st); toast(`Waited ${r.minutes} minutes for the maintenance window.`, ''); refresh(); }, text: `Wait for the ${timeText(next[0])} window` }) : null),
+    h('p', { class: 'dim', text: `Budget left: £${OT.remaining(scn, st)}k of £${scn.ot.budget}k.` }),
+    ui.otArm ? h('p', { class: 'svc-bad', text: 'An emergency change inside the control network outside a window trips a process, and operators have to step in.' }) : null,
+    ui.otMsg ? h('div', { class: `result ${ui.otMsg.ok ? 'ok' : 'bad'}`, role: 'status' }, h('p', { text: ui.otMsg.text })) : null,
+    h('ul', { class: 'ctls' }, scn.ot.controls.map(card)));
 }
 
 // ── Social engineering: the service desk ────────────────────────

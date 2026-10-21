@@ -761,6 +761,12 @@ export const MISSIONS = [
     competencies: { fwrules: 0.4, nettraffic: 0.3, netdesign: 0.3 },
     unlock: { passedTier: { 'net-found': 2 } },
   },
+  {
+    id: 'nw13-plant', title: 'The plant behind the office', tier: 'net-prac', kind: 'workspace', mode: 'workspace', ref: 'ot-plant', minutes: 30, par: 0, access: 'plus',
+    blurb: 'A water plant\'s control network has five routes in from the office and the internet. Close them with the right controls, in the right maintenance window, without stopping the plant.',
+    competencies: { netdesign: 0.5, nettraffic: 0.2, response: 0.2, reporting: 0.1 },
+    unlock: { passedTier: { 'net-found': 2 } },
+  },
   // ── Vulnerability Management path
   {
     id: 'vm01-scan', title: 'Monday\'s scan', tier: 'vm-found', kind: 'simulation', mode: 'simulation', ref: 'scan-triage', minutes: 16, par: 0, access: 'free',
