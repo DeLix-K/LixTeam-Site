@@ -524,6 +524,12 @@ export const MISSIONS = [
     competencies: { nettraffic: 0.4, fwrules: 0.3, response: 0.3 },
     unlock: { rank: 'senior' },
   },
+  {
+    id: 'vm12-bench', title: 'Patch day with half the team', tier: 'vm-prac', kind: 'workspace', mode: 'workspace', ref: 'vm-patch', minutes: 25, par: 0, access: 'plus',
+    blurb: 'Sixteen findings, twenty hours and an attacker at the door. Spend the budget on real risk, not on the highest score, and tell management what you need.',
+    competencies: { vulnrisk: 0.4, remediate: 0.4, reporting: 0.2 },
+    unlock: { passedTier: { 'vm-found': 2 } },
+  },
   // ── Vulnerability Management path: lead tier
   {
     id: 'vm10-case', title: 'Making the case', tier: 'vm-arch', kind: 'simulation', mode: 'simulation', ref: 'programme-case', minutes: 24, par: 0, access: 'plus',

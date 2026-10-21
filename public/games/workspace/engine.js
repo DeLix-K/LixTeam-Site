@@ -14,6 +14,7 @@
 
 import * as Net from './net.js';
 import * as Cloud from './cloud.js';
+import * as VM from './vm.js';
 
 export const COSTS = { search: 1, entity: 1, tree: 1, map: 1, action: 3, alert: 1, rule: 3, tweak: 1 };
 
@@ -42,6 +43,7 @@ export function newRun(scn) {
     searches: 0,
     submitted: false,
   };
+  if (scn.vm) st.vm = VM.newState(scn);
   if (scn.cloud) st.cloud = { history: [{ at: -1, applied: [] }] };
   if (scn.net) st.fw = { history: [{ at: -1, policy: Net.initialPolicy(scn) }], next: scn.net.rules.length + 1 };
   return st;
@@ -350,6 +352,71 @@ export function cloudUndo(scn, st, id) {
   return { ok: true };
 }
 
+// ── Vulnerability management ────────────────────────────────────
+const hourMinutes = (scn) => scn.vm.hourMinutes || 6;
+export function vmInspect(scn, st, id) {
+  const f = scn.vm.findings.find((x) => x.id === id);
+  if (!f) return null;
+  const key = `finding:${id}`;
+  const first = !st.seen.has(key);
+  if (first) {
+    st.seen.add(key);
+    advance(st, COSTS.entity, `Opened finding ${id}`);
+  }
+  return { finding: f, first };
+}
+export const vmInspected = (st, id) => st.seen.has(`finding:${id}`);
+
+// A dry run in the test environment costs an hour of budget (once per option) and reveals whether the change works.
+export function vmDry(scn, st, id, optionId) {
+  const f = scn.vm.findings.find((x) => x.id === id);
+  const o = f && VM.optionOf(f, optionId);
+  if (!o) return { ok: false, text: 'No such option.' };
+  const key = `${id}:${optionId}`;
+  if (st.vm.dry[key]) return { ok: true, text: st.vm.dry[key], again: true };
+  if (VM.remaining(scn, st) < 1) return { ok: false, text: 'There is no budget left for a test run.' };
+  st.vm.spent += 1;
+  st.vm.dry[key] = o.dry || 'Test environment: the change applies cleanly and nothing else is affected.';
+  advance(st, 3, `Dry run: ${id} ${o.label}`);
+  return { ok: true, text: st.vm.dry[key] };
+}
+
+// Commit to a decision. Remediations spend budget and take time; accepting, deferring and marking a false positive
+// are free. A change that breaks something is rolled back, costs the rollback time and harms the business, and does
+// not fix the finding.
+export function vmDecide(scn, st, id, optionId) {
+  const f = scn.vm.findings.find((x) => x.id === id);
+  const o = f && VM.findOption(f, optionId);
+  if (!o) return { ok: false, text: 'No such option.' };
+  const cur = st.vm.decisions[id];
+  if (cur && cur.kind === 'done') return { ok: false, text: 'This finding has already been remediated.' };
+  if ((st.vm.failed[id] || []).includes(optionId)) return { ok: false, text: 'That change already failed and was rolled back.' };
+  if (o.cost > VM.remaining(scn, st)) return { ok: false, text: `Not enough budget: that costs ${o.cost} h and ${VM.remaining(scn, st)} h are left.` };
+  if (!o.cost) {
+    st.vm.decisions[id] = { kind: o.kind, option: o.id, at: st.clock };
+    advance(st, COSTS.alert, `${f.id}: ${o.label}`);
+    return { ok: true, text: o.kind === 'accept' ? 'Recorded. The risk is accepted: it will be reviewed at the next cycle.' : o.kind === 'defer' ? 'Recorded. It goes to the next patch window.' : 'Recorded as a false positive.' };
+  }
+  st.vm.spent += o.cost;
+  if (o.breaks) {
+    st.vm.spent += o.breaks.rollback || 0;
+    st.disruption += o.breaks.harm || 0;
+    st.vm.failed[id] = [...(st.vm.failed[id] || []), optionId];
+    st.vm.harm.push({ label: `${f.id}: ${o.label} broke something`, harm: o.breaks.harm || 0, text: o.breaks.text });
+    st.vm.decisions[id] = { kind: 'failed', option: o.id, at: st.clock };
+    advance(st, (o.cost + (o.breaks.rollback || 0)) * hourMinutes(scn), `${f.id}: ${o.label} (rolled back)`);
+    return { ok: true, failed: true, text: o.breaks.text };
+  }
+  advance(st, o.cost * hourMinutes(scn), `${f.id}: ${o.label}`);
+  st.vm.decisions[id] = { kind: 'done', option: o.id, at: st.clock };
+  for (const fl of o.sets || []) if (st.flags[fl] === undefined) st.flags[fl] = st.clock;
+  if (o.harm) {
+    st.disruption += o.harm;
+    st.vm.harm.push({ label: `${f.id}: ${o.label}`, harm: o.harm, text: o.harmText || 'The change has a side effect on the business.' });
+  }
+  return { ok: true, text: o.done || 'Done.', harm: o.harm || 0 };
+}
+
 // What the state of the estate says about the scenario's threats and the services that must keep working.
 export function stateChecks(scn, st) {
   if (scn.net) {
@@ -364,6 +431,7 @@ export function stateChecks(scn, st) {
 }
 
 // Harm the business suffers right now: what the player's actions cost plus every service the firewall now blocks.
+export const budgetLeft = (scn, st) => (scn.vm ? VM.remaining(scn, st) : null);
 export const disruptionNow = (scn, st) => st.disruption + (stateChecks(scn, st) || { services: [] }).services.reduce((n, x) => n + (x.ok ? 0 : x.weight), 0);
 
 // ── What happened that the player did not stop ──────────────────
@@ -402,6 +470,25 @@ export function grade(scn, st, report) {
       add('Triage', `Escalated a false alarm: ${a.title}`, each * 0.4, each, a.why || 'This had an innocent explanation.');
     }
   }
+  if (scn.vm) {
+    const per = g.triage / scn.vm.findings.length;
+    for (const f of scn.vm.findings) {
+      const d = st.vm.decisions[f.id];
+      const label = `${f.id} ${f.title}`;
+      if (!d || d.kind === 'failed') {
+        add('Triage', `Not dealt with: ${label}`, 0, per, f.why || 'Every finding needs a decision.');
+        continue;
+      }
+      const o = VM.findOption(f, d.option);
+      if (f.good.includes(d.option)) {
+        tri += per;
+        add('Triage', `${o.label}: ${label}`, per, per, f.why);
+      } else if ((f.fine || []).includes(d.option)) {
+        tri += per * 0.5;
+        add('Triage', `${o.label}: ${label}`, per * 0.5, per, f.why);
+      } else add('Triage', `${o.label}: ${label}`, 0, per, f.why);
+    }
+  }
   const triMax = g.triage;
 
   // Evidence
@@ -414,7 +501,7 @@ export function grade(scn, st, report) {
       .map((e) => e.key)
       .filter(Boolean)
   );
-  const perRole = g.evidence / roles.length;
+  const perRole = roles.length ? g.evidence / roles.length : 0;
   let evi = 0;
   for (const r of roles) {
     const label = scn.roleLabels[r] || r;
@@ -440,6 +527,21 @@ export function grade(scn, st, report) {
       hits.push(r);
       add('Response', `Done: ${r.label}`, r.points, r.points);
     } else add('Response', `Not done: ${r.label}`, 0, r.points, r.why || '');
+  }
+  if (scn.vm) {
+    const best = VM.optimum(scn).value;
+    const got = VM.removed(scn, st);
+    const ratio = best ? Math.min(1, got / best) : 0;
+    // The first third of the achievable risk is easy to get; the points are for the rest.
+    const pts = scn.vm.riskPoints * Math.max(0, (ratio - 0.35) / 0.65);
+    res += pts;
+    add('Response', `Risk removed: ${Math.round(got)} of the ${Math.round(best)} that was achievable (${Math.round(ratio * 100)}%)`, pts, scn.vm.riskPoints, ratio < 0.85 ? 'The best use of the budget would have removed more. Look at what each hour buys: a high CVSS on a low-value asset buys little.' : '');
+    for (const hm of st.vm.harm) {
+      harmNet += hm.harm * g.harmScale;
+      add('Response', `Cost to the business: ${hm.label}`, -hm.harm * g.harmScale, 0, hm.text);
+    }
+    const left = VM.remaining(scn, st);
+    if (left > 0) add('Response', `Budget left unspent: ${left} h`, 0, 0, 'Unused budget is wasted effort: every hour could have removed risk.');
   }
   const ck = stateChecks(scn, st);
   if (ck) {
@@ -508,8 +610,13 @@ export function grade(scn, st, report) {
   }
 
   // A report written without the evidence behind it is mostly a guess: it earns 40% plus a share of the rest for the evidence found.
-  const grounded = 0.4 + 0.6 * Math.min(1, evi / g.evidence);
-  if (grounded < 1) add('Report', `Report not fully backed by pinned evidence (${Math.round(grounded * 100)}% credit)`, -(rep - rep * grounded), 0, 'Pin the events that prove each part of your report.');
+  let grounded = g.evidence ? 0.4 + 0.6 * Math.min(1, evi / g.evidence) : 1;
+  if (scn.vm) {
+    // A report is only as good as the looking behind it: how many findings did the player actually open?
+    const opened = scn.vm.findings.filter((f) => st.seen.has(`finding:${f.id}`)).length;
+    grounded = 0.4 + 0.6 * (opened / scn.vm.findings.length);
+  }
+  if (grounded < 1) add('Report', scn.vm ? `Report not fully backed by looking (${Math.round(grounded * 100)}% credit)` : `Report not fully backed by pinned evidence (${Math.round(grounded * 100)}% credit)`, -(rep - rep * grounded), 0, scn.vm ? 'Open every finding before you report on it: the asset and the threat feed change the answer.' : 'Pin the events that prove each part of your report.');
   rep *= grounded;
   const parts = { triage: Math.min(tri, triMax), evidence: Math.min(evi, g.evidence), response: Math.min(res, g.response), report: Math.min(rep, g.reportTotal) };
   const total = Math.round(parts.triage + parts.evidence + parts.response + parts.report);
@@ -560,9 +667,9 @@ export function problems(scn) {
   }
   for (const e of scn.events) for (const f of e.unless || []) {
     const [action, target] = f.split(':');
-    if (!scn.responses.some((r) => (r.action === action && r.target === target) || (r.sets || []).includes(f))) out.push(`event ${e.id}: nothing the player can do sets ${f}`);
+    if (!scn.responses.some((r) => (r.action === action && r.target === target) || (r.sets || []).includes(f)) && !(scn.vm && scn.vm.findings.some((x) => x.options.some((o) => (o.sets || []).includes(f))))) out.push(`event ${e.id}: nothing the player can do sets ${f}`);
   }
-  const goodSum = scn.responses.filter((r) => r.good).reduce((n, r) => n + r.points, 0) + ((scn.net || scn.cloud) ? (scn.net || scn.cloud).threats.reduce((n, th) => n + th.points, 0) : 0);
+  const goodSum = scn.responses.filter((r) => r.good).reduce((n, r) => n + r.points, 0) + ((scn.net || scn.cloud) ? (scn.net || scn.cloud).threats.reduce((n, th) => n + th.points, 0) : 0) + (scn.vm ? scn.vm.riskPoints : 0);
   if (goodSum !== scn.grading.response) out.push(`good responses are worth ${goodSum}, the response score is ${scn.grading.response}`);
   const roles = new Set(scn.events.filter((e) => e.key && e.keyWeight !== 0).map((e) => e.key));
   for (const r of roles) if (!scn.roleLabels[r] || !scn.roleHints[r]) out.push(`evidence role ${r} needs a label and a hint`);
@@ -581,6 +688,25 @@ export function problems(scn) {
     const zones = new Set(scn.net.zones.map((z) => z.id));
     for (const x of scn.entities) if (x.kind === 'host' && x.id !== scn.net.fw && !zones.has(x.zone)) out.push(`host ${x.id} is in an unknown zone`);
     for (const e of scn.events) if (e.flow && (!scn.entities.some((x) => x.id === e.flow.src) || !scn.entities.some((x) => x.id === e.flow.dst))) out.push(`event ${e.id}: flow uses an unknown address`);
+  }
+  if (scn.vm) {
+    const v = scn.vm;
+    const ids = new Set();
+    for (const f of v.findings) {
+      if (ids.has(f.id)) out.push(`duplicate finding ${f.id}`);
+      ids.add(f.id);
+      if (!scn.entities.some((x) => x.id === f.asset)) out.push(`finding ${f.id}: unknown asset ${f.asset}`);
+      const optIds = new Set(VM.allOptions(f).map((o) => o.id));
+      for (const id of [...f.good, ...(f.fine || [])]) if (!optIds.has(id)) out.push(`finding ${f.id}: unknown option ${id} in good/fine`);
+      if (!f.good.length) out.push(`finding ${f.id} has no good decision`);
+      if (f.fp && f.risk) out.push(`finding ${f.id} is a false positive but has risk`);
+      for (const o of f.options) if (!(o.cost > 0) || !(o.effect > 0 && o.effect <= 1)) out.push(`finding ${f.id}: option ${o.id} needs a cost and an effect between 0 and 1`);
+    }
+    if (v.riskPoints + scn.grading.triage + scn.grading.evidence + scn.grading.reportTotal !== 100) out.push('the vm risk points do not make the scores add up to 100');
+    const opt = VM.optimum(scn);
+    const cost = v.findings.flatMap((f) => f.options.filter((o) => !o.breaks)).reduce((n, o) => n + o.cost, 0);
+    if (cost <= v.budget * 1.5) out.push('the budget is too generous: the whole backlog nearly fits');
+    if (!opt.value) out.push('nothing can be removed within the budget');
   }
   if (scn.cloud) {
     const c = scn.cloud;

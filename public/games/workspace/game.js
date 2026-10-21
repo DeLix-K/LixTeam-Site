@@ -4,16 +4,18 @@
 import * as E from './engine.js';
 import * as Net from './net.js';
 import * as Cloud from './cloud.js';
+import * as VM from './vm.js';
 import { SOC_INVOICE } from './scenarios/soc-invoice.js';
 import { DFIR_LAPTOP } from './scenarios/dfir-laptop.js';
 import { NET_FLAT } from './scenarios/net-flat.js';
 import { CLOUD_BUCKET } from './scenarios/cloud-bucket.js';
+import { VM_PATCH } from './scenarios/vm-patch.js';
 import { medalIcon } from '../core/art.js';
 import { MEDALS } from '../core/missions.js';
 import * as streak from '../core/streak.js';
 import * as missionLink from '../core/mission-link.js';
 
-const SCENARIOS = [SOC_INVOICE, DFIR_LAPTOP, NET_FLAT, CLOUD_BUCKET];
+const SCENARIOS = [SOC_INVOICE, DFIR_LAPTOP, NET_FLAT, CLOUD_BUCKET, VM_PATCH];
 const MISSION = missionLink.current('workspace');
 const BEST_KEY = 'lixteam.workspace.best.v1';
 const $ = (id) => document.getElementById(id);
@@ -84,12 +86,17 @@ const freshUi = () => ({
   traceFlow: null,
   nodeId: null,
   cloudMsg: null,
+  findingId: null,
+  vmSort: 'cvss',
+  vmFilter: 'all',
+  vmMsg: null,
+  assetId: null,
   fwForm: { action: 'deny', src: '*', dst: '*', port: '*', proto: '*', where: 'top' },
   fwTest: scn.net ? { ...scn.net.test, port: String(scn.net.test.port) } : {},
   fwMsg: null,
 });
 
-const KIND = { user: 'Account', host: 'Machine', file: 'File', ip: 'Address', domain: 'Domain', mail: 'Sender' };
+const KIND = { asset: 'Asset', user: 'Account', host: 'Machine', file: 'File', ip: 'Address', domain: 'Domain', mail: 'Sender' };
 const SEV_LABEL = { info: 'Info', low: 'Low', medium: 'Medium', high: 'High', critical: 'Critical' };
 const NAV_ALL = {
   alerts: { label: 'Alerts' },
@@ -102,6 +109,8 @@ const NAV_ALL = {
   findings: { label: 'Findings' },
   estate: { label: 'Estate' },
   changes: { label: 'Changes' },
+  queue: { label: 'Findings' },
+  assets: { label: 'Assets' },
   firewall: { label: 'Firewall' },
   respond: { label: 'Respond' },
   case: { label: 'Case file', narrow: true },
@@ -176,6 +185,8 @@ function updateChrome() {
   $('ws-open').textContent = String(open);
   $('ws-open').parentElement.hidden = scn.alerts.length === 0;
   $('ws-pins').textContent = String(st.pins.length);
+  $('ws-budget-wrap').hidden = !scn.vm;
+  if (scn.vm) $('ws-budget').textContent = `${E.budgetLeft(scn, st)} h`;
   const dis = Math.min(40, E.disruptionNow(scn, st));
   $('ws-dis').style.width = `${(dis / 40) * 100}%`;
   $('ws-dis').parentElement.setAttribute('aria-valuenow', String(dis));
@@ -228,7 +239,7 @@ function setView(v) {
 function renderView() {
   const keep = document.activeElement && document.activeElement.dataset ? document.activeElement.dataset.key : null;
   const stage = $('view');
-  const fn = { findings: viewFindings, estate: viewEstate, changes: viewChanges, topology: viewTopology, firewall: viewFirewall, alerts: viewAlerts, brief: viewBrief, logs: viewLogs, entities: viewEntities, tree: viewTree, map: viewMap, respond: viewRespond, case: viewCase, report: viewReport }[ui.view];
+  const fn = { queue: viewQueue, assets: viewAssets, findings: viewFindings, estate: viewEstate, changes: viewChanges, topology: viewTopology, firewall: viewFirewall, alerts: viewAlerts, brief: viewBrief, logs: viewLogs, entities: viewEntities, tree: viewTree, map: viewMap, respond: viewRespond, case: scn.vm ? viewPlan : viewCase, report: viewReport }[ui.view];
   stage.replaceChildren(fn());
   if (keep) {
     const again = stage.querySelector(`[data-key="${CSS.escape(keep)}"]`);
@@ -322,7 +333,7 @@ function inspector() {
     h('p', { class: 'ins-sum', text: e.summary }),
     h('dl', { class: 'ins-meta' }, h('dt', { text: 'Time' }), h('dd', { text: timeText(e.t) }), h('dt', { text: 'Severity' }), h('dd', {}, sevChip(e.sev)), h('dt', { text: 'Type' }), h('dd', { text: e.type }), e.host ? h('dt', { text: 'Machine' }) : null, e.host ? h('dd', { text: e.host }) : null, e.user ? h('dt', { text: 'Account' }) : null, e.user ? h('dd', { text: e.user }) : null),
     rows.length ? h('table', { class: 'fields' }, h('tbody', {}, rows)) : null,
-    e.synthetic ? null : h('button', { class: `btn small ${pinned ? '' : 'primary'}`, type: 'button', 'data-key': 'pin', onclick: () => { pinned ? E.unpin(st, e.id) : E.pin(st, e.id); refresh(); }, text: pinned ? 'Unpin from case file' : 'Pin to case file' }),
+    e.synthetic || scn.ui.noPins ? null : h('button', { class: `btn small ${pinned ? '' : 'primary'}`, type: 'button', 'data-key': 'pin', onclick: () => { pinned ? E.unpin(st, e.id) : E.pin(st, e.id); refresh(); }, text: pinned ? 'Unpin from case file' : 'Pin to case file' }),
     piv.length ? h('div', { class: 'pivots' }, h('small', { text: 'Pivot' }), h('div', { class: 'pivot-row' }, piv)) : null
   );
 }
@@ -563,19 +574,130 @@ function renderCaseFile(box) {
   const pins = st.pins.map((id) => scn.events.find((e) => e.id === id)).filter(Boolean).sort((a, b) => a.t - b.t);
   const esc = Object.values(st.alerts).filter((a) => a.status === 'escalated').length;
   const closed = Object.values(st.alerts).filter((a) => a.status === 'closed').length;
-  box.replaceChildren(
+  box.replaceChildren(...[
     h('header', {}, h('strong', { text: 'Case file' }), h('small', { text: `${E.clockText(st.clock)}` })),
     h('dl', { class: 'cstat' }, scn.alerts.length ? h('dt', { text: 'Alerts' }) : null, scn.alerts.length ? h('dd', { text: `${openAlerts().length} open · ${esc} escalated · ${closed} closed` }) : null, h('dt', { text: 'Searches' }), h('dd', { text: String(st.searches) }), h('dt', { text: 'Actions' }), h('dd', { text: String(st.actions.length) })),
     scn.net || scn.cloud ? servicesBlock() : null,
-    h('h3', { text: 'Pinned timeline' }),
-    pins.length
+    scn.vm ? vmSide() : null,
+    scn.vm ? null : h('h3', { text: 'Pinned timeline' }),
+    scn.vm ? null : pins.length
       ? h('ol', { class: 'pintl' }, pins.map((e) => h('li', {}, h('time', { text: timeText(e.t) }), h('span', { text: e.summary }), h('button', { class: 'x', type: 'button', 'aria-label': 'Unpin', onclick: () => { E.unpin(st, e.id); refresh(); }, text: '×' }))))
-      : h('p', { class: 'empty', text: 'Nothing pinned yet. Pin the events that prove what happened.' }));
+      : h('p', { class: 'empty', text: 'Nothing pinned yet. Pin the events that prove what happened.' }),
+  ].filter(Boolean));
 }
 function viewCase() {
   const box = h('div', { class: 'casefile-inline' });
   renderCaseFile(box);
   return h('div', {}, tipFor('case', 'This is your evidence timeline, in time order. A good one tells the story of the attack from the first email to the data staged for removal.'), box);
+}
+
+// ── Vulnerability management: findings queue, assets and plan ───
+const EXPO = { internet: 'Internet-facing', internal: 'Internal', isolated: 'Isolated' };
+const dots = (n) => '●'.repeat(n) + '○'.repeat(5 - n);
+const findingAsset = (f) => entity(f.asset).asset;
+function decisionText(f) {
+  const d = st.vm.decisions[f.id];
+  if (!d) return 'Open';
+  if (d.kind === 'failed') return 'Failed: open';
+  const o = VM.findOption(f, d.option);
+  return d.kind === 'done' ? (o.kind === 'mitigate' ? 'Mitigated' : 'Fixed') : d.kind === 'accept' ? 'Accepted' : d.kind === 'defer' ? 'Deferred' : 'False positive';
+}
+function bandOf(f) {
+  if (!E.vmInspected(st, f.id)) return null;
+  return VM.band(VM.riskAt(f, st.clock));
+}
+const BAND_RANK = { Critical: 4, High: 3, Medium: 2, Low: 1 };
+
+function vmSide() {
+  const done = Object.values(st.vm.decisions).filter((d) => d.kind === 'done').length;
+  const open = scn.vm.findings.filter((f) => !st.vm.decisions[f.id] || st.vm.decisions[f.id].kind === 'failed').length;
+  const looked = scn.vm.findings.filter((f) => E.vmInspected(st, f.id)).length;
+  const pct = Math.round((VM.remaining(scn, st) / scn.vm.budget) * 100);
+  return h('div', {}, h('h3', { text: 'Budget' }), h('div', { class: 'dbar budget', role: 'progressbar', 'aria-label': 'Budget left', 'aria-valuemin': '0', 'aria-valuemax': String(scn.vm.budget), 'aria-valuenow': String(VM.remaining(scn, st)) }, h('div', { style: `width:${pct}%` })),
+    h('p', { class: 'dim', text: `${VM.remaining(scn, st)} of ${scn.vm.budget} hours left. ${done} remediated, ${open} still open, ${looked} of ${scn.vm.findings.length} opened.` }));
+}
+
+function viewQueue() {
+  const f0 = scn.vm.findings;
+  const rows = f0.filter((f) => ui.vmFilter === 'all' || (ui.vmFilter === 'open' ? !st.vm.decisions[f.id] || st.vm.decisions[f.id].kind === 'failed' : st.vm.decisions[f.id] && st.vm.decisions[f.id].kind !== 'failed'));
+  const sorters = {
+    cvss: (a, b) => b.cvss - a.cvss,
+    priority: (a, b) => (BAND_RANK[bandOf(b)] || 0) - (BAND_RANK[bandOf(a)] || 0) || b.cvss - a.cvss,
+    asset: (a, b) => a.asset.localeCompare(b.asset),
+    status: (a, b) => decisionText(a).localeCompare(decisionText(b)),
+    id: (a, b) => a.id.localeCompare(b.id),
+  };
+  rows.sort(sorters[ui.vmSort]);
+  const sortBtn = (key, label) => h('button', { class: `chip-btn${ui.vmSort === key ? ' on' : ''}`, type: 'button', 'data-key': `sort-${key}`, 'aria-pressed': ui.vmSort === key ? 'true' : 'false', onclick: () => { ui.vmSort = key; renderView(); }, text: label });
+  const filBtn = (key, label) => h('button', { class: `chip-btn${ui.vmFilter === key ? ' on' : ''}`, type: 'button', 'data-key': `fil-${key}`, 'aria-pressed': ui.vmFilter === key ? 'true' : 'false', onclick: () => { ui.vmFilter = key; renderView(); }, text: label });
+  const list = h('ul', { class: 'queue' }, rows.map((f) => {
+    const band = bandOf(f);
+    const status = decisionText(f);
+    return h('li', {}, h('button', { class: `acard fcard${ui.findingId === f.id ? ' sel' : ''}${st.vm.decisions[f.id] && st.vm.decisions[f.id].kind !== 'failed' ? ' done-closed' : ''}`, type: 'button', 'data-key': `f-${f.id}`, 'aria-pressed': ui.findingId === f.id ? 'true' : 'false', onclick: () => { ui.findingId = f.id; ui.vmMsg = null; E.vmInspect(scn, st, f.id); refresh(); toDetail(); } },
+      h('div', { class: 'acard-top' }, h('span', { class: 'cvss', text: `CVSS ${f.cvss.toFixed(1)}` }), band ? h('span', { class: `band b-${band}`, text: band }) : h('span', { class: 'band b-unk', text: 'Not opened' })),
+      h('strong', { text: f.title }), h('small', { class: 'mono', text: `${f.id} · ${f.asset}` }), h('small', { class: `astate ${status === 'Open' || status === 'Failed: open' ? 'st-new' : 'st-closed'}`, text: status })));
+  }));
+  const sel = f0.find((f) => f.id === ui.findingId);
+  return h('div', { class: 'queue-view' }, tipFor('queue', 'Open a finding.'),
+    h('div', { class: 'sortbar' }, h('span', { class: 'dim', text: 'Sort ' }), sortBtn('cvss', 'CVSS'), sortBtn('priority', 'Priority'), sortBtn('asset', 'Asset'), sortBtn('status', 'Status'), h('span', { class: 'dim sep', text: 'Show ' }), filBtn('all', 'All'), filBtn('open', 'Open'), filBtn('done', 'Decided')),
+    h('div', { class: 'two-col' }, h('div', { class: 'col-list' }, list), h('div', { class: 'col-detail' }, sel ? findingDetail(sel) : h('p', { class: 'empty', text: 'Choose a finding. Opening it takes a minute and shows the asset behind it.' }))));
+}
+
+function optionRow(f, o) {
+  const d = st.vm.decisions[f.id];
+  const dry = st.vm.dry[`${f.id}:${o.id}`];
+  const failed = (st.vm.failed[f.id] || []).includes(o.id);
+  const done = d && d.kind === 'done';
+  const chosen = d && d.option === o.id && d.kind !== 'failed';
+  const tooDear = o.cost > VM.remaining(scn, st);
+  const effectText = !o.cost ? '' : o.effect >= 1 ? 'Fully fixes it' : o.effect >= 0.7 ? 'Greatly reduces the risk' : 'Reduces the risk';
+  return h('li', { class: `fixrow${chosen ? ' on' : ''}${failed ? ' failed' : ''}` },
+    h('div', {}, h('strong', { text: o.label }), h('small', { text: o.cost ? `${o.cost} h · ${effectText}${o.harm || o.breaks ? '' : ''}` : o.kind === 'fp' ? 'No cost. Only right if the finding is not real.' : o.kind === 'accept' ? 'No cost. The risk stays, with sign-off.' : 'No cost. Nothing is reduced yet.' }), dry ? h('small', { class: dry.includes('crashes') || dry.includes('stops working') ? 'dry bad' : 'dry', text: dry }) : null, failed ? h('small', { class: 'dry bad', text: 'This change failed and was rolled back.' }) : null),
+    h('div', { class: 'fixbtns' },
+      o.cost && !dry && !done ? h('button', { class: 'btn small', type: 'button', 'data-key': `dry-${f.id}-${o.id}`, disabled: VM.remaining(scn, st) < 1 ? true : null, onclick: () => { const r = E.vmDry(scn, st, f.id, o.id); ui.vmMsg = { ok: r.ok, text: r.text }; refresh(); }, text: 'Dry run (1 h)' }) : null,
+      chosen ? h('span', { class: 'astate st-closed', text: d.kind === 'done' ? 'Done' : 'Chosen' }) : h('button', { class: `btn small ${o.cost ? 'danger' : ''}`, type: 'button', 'data-key': `do-${f.id}-${o.id}`, disabled: done || failed || tooDear ? true : null, title: tooDear ? 'Not enough budget' : null, onclick: () => { const r = E.vmDecide(scn, st, f.id, o.id); ui.vmMsg = { ok: r.ok && !r.failed, text: r.text }; refresh(); }, text: o.cost ? `Commit (${o.cost} h)` : 'Choose' })));
+}
+
+function findingDetail(f) {
+  const a = findingAsset(f);
+  const ent = entity(f.asset);
+  const t = st.clock;
+  const exploited = VM.exploitedAt(f, t);
+  const band = VM.band(VM.riskAt(f, t));
+  const reasons = [`${ent.name} is worth ${a.crit} out of 5 to the business (${a.data.toLowerCase()})`, `${EXPO[a.exposure]}${a.exposure === 'internet' ? ': anyone can try it' : a.exposure === 'isolated' ? ': no route from outside' : ': an attacker needs a foothold first'}`, exploited ? 'Being exploited in the wild now' : 'No known exploitation yet', a.controls.length ? `Already protected: ${a.controls.join('; ').toLowerCase()}` : 'Nothing specific already protects it'];
+  if (f.fp) reasons.push('Check the verification note: is this finding real?');
+  return h('div', { class: 'fdetail' },
+    h('header', {}, h('span', { class: 'cvss', text: `CVSS ${f.cvss.toFixed(1)}` }), h('span', { class: `band b-${band}`, text: `Priority: ${band}` }), h('span', { class: 'mono dim', text: ` ${f.id} · ${decisionText(f)}` }), h('h2', { text: f.title })),
+    h('p', { text: f.desc }),
+    h('p', { class: 'dim', text: `Verification: ${f.verify}` }),
+    h('div', { class: 'acard-asset' }, h('h3', { text: 'The asset behind it' }), h('strong', { class: 'mono', text: ent.id }), h('span', { class: 'dim', text: ` ${ent.name} · ${ent.role}` }),
+      h('dl', { class: 'ins-meta' }, h('dt', { text: 'Value' }), h('dd', {}, h('span', { class: 'dots', text: dots(a.crit) }), ` ${a.crit} / 5`), h('dt', { text: 'Exposure' }), h('dd', { text: EXPO[a.exposure] }), h('dt', { text: 'Owner' }), h('dd', { text: a.owner }), h('dt', { text: 'Holds' }), h('dd', { text: a.data }), h('dt', { text: 'Protection' }), h('dd', { text: a.controls.length ? a.controls.join('; ') : 'None specific' }))),
+    h('h3', { text: 'Why this priority' }), h('ul', { class: 'facts' }, reasons.map((r) => h('li', { text: r }))),
+    ui.vmMsg ? h('div', { class: `result ${ui.vmMsg.ok ? 'ok' : 'bad'}`, role: 'status' }, h('p', { text: ui.vmMsg.text })) : null,
+    h('h3', { text: 'What to do' }), h('ul', { class: 'fixes' }, [...f.options, ...VM.FREE].map((o) => optionRow(f, o))));
+}
+
+function viewAssets() {
+  const list = scn.entities.filter((x) => x.kind === 'asset').slice().sort((a, b) => b.asset.crit - a.asset.crit || a.id.localeCompare(b.id));
+  const selId = ui.assetId;
+  const rows = list.map((x) => {
+    const fs = scn.vm.findings.filter((f) => f.asset === x.id);
+    return h('tr', { class: selId === x.id ? 'sel' : '' }, h('td', {}, h('button', { class: 'linkbtn', type: 'button', 'data-key': `as-${x.id}`, onclick: () => { ui.assetId = x.id; E.openEntity(scn, st, x.id); refresh(); }, text: x.id })), h('td', { text: x.role }), h('td', {}, h('span', { class: 'dots', text: dots(x.asset.crit) })), h('td', { text: EXPO[x.asset.exposure] }), h('td', { text: x.asset.owner }), h('td', { text: String(fs.length) }));
+  });
+  const x = selId && entity(selId);
+  const detail = x ? h('div', { class: 'acard-asset' }, h('h3', { text: x.id }), h('p', { class: 'dim', text: `${x.name} · ${x.role}` }), h('ul', { class: 'facts' }, x.facts.map((t) => h('li', { text: t }))), h('p', { class: 'dim', text: `Protection: ${x.asset.controls.length ? x.asset.controls.join('; ') : 'none specific'}. Holds: ${x.asset.data}.` }), h('div', { class: 'quick' }, scn.vm.findings.filter((f) => f.asset === x.id).map((f) => h('button', { class: 'btn small', type: 'button', onclick: () => { ui.findingId = f.id; E.vmInspect(scn, st, f.id); setView('queue'); }, text: `${f.id} · CVSS ${f.cvss.toFixed(1)}` })))) : null;
+  return h('div', { class: 'assets-view' }, tipFor('assets', 'What each asset is worth.'), h('div', { class: 'tablewrap' }, h('table', { class: 'links' }, h('thead', {}, h('tr', {}, ['Asset', 'What it is', 'Value', 'Exposure', 'Owner', 'Findings'].map((c) => h('th', { text: c })))), h('tbody', {}, rows))), detail);
+}
+
+function viewPlan() {
+  const decided = scn.vm.findings.filter((f) => st.vm.decisions[f.id]);
+  const pend = scn.vm.findings.filter((f) => !st.vm.decisions[f.id] || st.vm.decisions[f.id].kind === 'failed');
+  return h('div', { class: 'plan-view' }, tipFor('case', 'Your decisions and budget.'),
+    vmSide(),
+    h('h3', { text: `Decisions (${decided.length} of ${scn.vm.findings.length})` }),
+    decided.length ? h('ol', { class: 'did' }, decided.slice().sort((a, b) => st.vm.decisions[a.id].at - st.vm.decisions[b.id].at).map((f) => { const d = st.vm.decisions[f.id]; const o = VM.findOption(f, d.option); return h('li', {}, h('time', { text: timeText(d.at) }), ' ', `${f.id} ${o.label}`, d.kind === 'failed' ? ' (failed, rolled back)' : '', o.cost ? ` · ${o.cost} h` : ''); })) : h('p', { class: 'empty', text: 'Nothing decided yet.' }),
+    h('h3', { text: `Still open (${pend.length})` }),
+    pend.length ? h('div', { class: 'quick' }, pend.map((f) => h('button', { class: 'btn small', type: 'button', onclick: () => { ui.findingId = f.id; E.vmInspect(scn, st, f.id); setView('queue'); }, text: `${f.id} · ${f.asset}` }))) : h('p', { class: 'empty', text: 'Every finding has a decision.' }));
 }
 
 // ── Cloud: findings, estate and changes ─────────────────────────

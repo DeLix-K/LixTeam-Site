@@ -391,3 +391,29 @@ select:focus, input[type='text']:focus, textarea:focus { border-color: var(--acc
 .st-closed { color: #86efac; }
 div.acard { cursor: default; }
 @media (max-width: 759px) { .fixrow { flex-direction: column; align-items: stretch; } }
+
+/* ── Vulnerability workspace ─────────────────────────────────── */
+.sortbar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0 0 12px; font-size: 13px; }
+.sortbar .sep { margin-left: 10px; }
+.chip-btn { background: #141414; border: 1px solid #333; border-radius: 999px; color: #d4d4d4; font: 600 12.5px inherit; padding: 4px 12px; cursor: pointer; }
+.chip-btn.on { border-color: var(--accent); color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, #141414); }
+.cvss { font: 800 12px var(--mono); padding: 1px 8px; border-radius: 6px; border: 1px solid #555; color: #e5e5e5; }
+.band { font: 800 11px var(--mono); text-transform: uppercase; padding: 1px 8px; border-radius: 6px; border: 1px solid #444; margin-left: 6px; }
+.b-Critical { color: #fca5a5; border-color: #f8717188; background: rgba(248, 113, 113, 0.12); }
+.b-High { color: #fdba74; border-color: #fb923c88; background: rgba(251, 146, 60, 0.1); }
+.b-Medium { color: #fcd34d; border-color: #fbbf2466; }
+.b-Low { color: #7dd3fc; border-color: #38bdf855; }
+.b-unk { color: var(--muted); border-style: dashed; }
+.fcard .acard-top { justify-content: flex-start; align-items: center; }
+.fdetail header { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.fdetail header h2 { flex-basis: 100%; margin: 8px 0 4px; }
+.acard-asset { margin: 12px 0; padding: 12px 14px; background: #0f0f0f; border: 1px solid var(--border); border-radius: 12px; }
+.acard-asset h3 { margin-top: 0; }
+.dots { color: var(--accent); letter-spacing: 2px; font-size: 13px; }
+.fixbtns { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.fixrow.failed { border-color: rgba(248, 113, 113, 0.5); }
+.dry { display: block; margin-top: 4px; color: #86efac !important; }
+.dry.bad { color: #fca5a5 !important; }
+.dbar.budget div { background: linear-gradient(90deg, #a3e635, #65a30d); }
+.dbar.budget { height: 12px; margin: 0 0 6px; }
+button.fcard { text-align: left; }
