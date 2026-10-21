@@ -18,6 +18,7 @@ import * as VM from './vm.js';
 import * as GRC from './grc.js';
 import * as TI from './ti.js';
 import * as SE from './se.js';
+import * as Eng from './eng.js';
 
 export const COSTS = { search: 1, entity: 1, tree: 1, map: 1, action: 3, alert: 1, rule: 3, tweak: 1 };
 
@@ -50,6 +51,10 @@ export function newRun(scn) {
   if (scn.grc) st.grc = GRC.newState();
   if (scn.ti) st.ti = TI.newState(scn);
   if (scn.se) st.se = SE.newState();
+  if (scn.eng) {
+    const init = Eng.initialState(scn);
+    st.eng = { working: Eng.cloneState(init), prod: [{ at: -1, state: init, forced: false }], runs: [], lastPass: null, forced: 0, releases: 0, harm: [] };
+  }
   if (scn.cloud) st.cloud = { history: [{ at: -1, applied: [] }] };
   if (scn.net) st.fw = { history: [{ at: -1, policy: Net.initialPolicy(scn) }], next: scn.net.rules.length + 1 };
   return st;
@@ -63,9 +68,18 @@ function suppressed(e, st, scn) {
   if (scn && scn.cloud && e.access && !Cloud.can(scn, Cloud.stateAtTime(scn, st, e.t), e.access.who, e.access.resource, e.access.action)) return true;
   // Aftermath: an event that only happens if the player did something earlier (for example, helped an attacker).
   if (e.when && !e.when.some((f) => st.flags[f] !== undefined && st.flags[f] <= e.t)) return true;
+  if (scn && scn.eng && e.unlessProd && e.unlessProd.some((c) => Eng.holds(c, prodAt(st, e.t)))) return true;
   if (!e.unless) return false;
   return e.unless.some((f) => st.flags[f] !== undefined && st.flags[f] <= e.t);
 }
+
+// What is deployed to production at a given minute: the last release at or before it.
+export function prodAt(st, t) {
+  let cur = st.eng.prod[0].state;
+  for (const r of st.eng.prod) if (r.at <= t) cur = r.state;
+  return cur;
+}
+export const prodNow = (st) => st.eng.prod[st.eng.prod.length - 1].state;
 
 // Evidence that lives on a machine the attacker can still reach. Once the event named in `lostBy` has
 // happened, it can no longer be seen, unless something in `keptBy` was done before that moment.
@@ -596,6 +610,66 @@ export function seWait(scn, st) {
   return { minutes: by, next: !!next };
 }
 
+// ── Security engineering ────────────────────────────────────────
+// Edits change the working copy only. A pipeline run tests it, and a release puts it into production.
+export function engSet(scn, st, id, value) {
+  const found = Eng.settingOf(scn, id);
+  if (!found) return { ok: false, text: 'No such setting.' };
+  const s = found.setting;
+  let v = value;
+  if (s.type === 'toggle') v = value === true || value === 'true';
+  else if (s.type === 'number') {
+    v = Number(value);
+    if (!Number.isInteger(v) || v < 0) return { ok: false, text: 'Enter a whole number of 0 or more.' };
+  } else if (!s.options.includes(value)) return { ok: false, text: 'Choose one of the options.' };
+  if (st.eng.working.cfg[id] === v) return { ok: true, same: true };
+  st.eng.working.cfg[id] = v;
+  advance(st, 1, `Set ${id} to ${v}`);
+  return { ok: true };
+}
+export function engEdge(scn, st, id, allow) {
+  if (!scn.eng.edges.some((e) => e.id === id)) return { ok: false, text: 'No such connection.' };
+  if (st.eng.working.edges[id] === !!allow) return { ok: true, same: true };
+  st.eng.working.edges[id] = !!allow;
+  advance(st, 1, `${allow ? 'Allowed' : 'Blocked'} connection ${id}`);
+  return { ok: true };
+}
+export function engDiscard(scn, st) {
+  st.eng.working = Eng.cloneState(prodNow(st));
+  advance(st, 1, 'Discarded the working changes');
+  return { ok: true };
+}
+export function engRun(scn, st) {
+  const res = Eng.runPipeline(scn, st.eng.working);
+  const key = Eng.stateKey(st.eng.working);
+  advance(st, scn.eng.runMinutes, 'Ran the pipeline');
+  const run = { at: st.clock, key, passed: res.passed, stages: res.stages };
+  st.eng.runs.push(run);
+  st.eng.lastPass = res.passed ? key : null;
+  return { ok: true, run };
+}
+// A normal release needs a passing run on exactly this config. A forced release skips the pipeline entirely.
+export function engRelease(scn, st, force = false) {
+  const w = st.eng.working;
+  if (Eng.sameState(w, prodNow(st))) return { ok: false, text: 'Nothing has changed: production already has this configuration.' };
+  if (!force && st.eng.lastPass !== Eng.stateKey(w)) return { ok: false, text: 'The pipeline has not passed on this exact configuration. Run it again, or force the release in an emergency.' };
+  advance(st, scn.eng.releaseMinutes, force ? 'Forced release to production' : 'Released to production');
+  st.eng.prod.push({ at: st.clock, state: Eng.cloneState(w), forced: force });
+  st.eng.releases += 1;
+  let note = '';
+  if (force) {
+    st.eng.forced += 1;
+    const broken = Eng.featureResults(scn, w).filter((f) => !f.ok);
+    if (broken.length) {
+      const harm = broken.reduce((n, f) => n + f.weight, 0) / 2;
+      st.disruption += harm;
+      st.eng.harm.push({ label: `Forced release broke: ${broken.map((f) => f.label).join('; ')}`, harm, text: 'A release that skipped the pipeline put broken features into production.' });
+      note = ` It broke ${broken.length} feature${broken.length === 1 ? '' : 's'} that the integration tests would have caught.`;
+    }
+  }
+  return { ok: true, text: `Released.${note}`, forced: force };
+}
+
 // What the state of the estate says about the scenario's threats and the services that must keep working.
 export function stateChecks(scn, st) {
   if (scn.net) {
@@ -715,6 +789,20 @@ export function grade(scn, st, report) {
       add('Triage', `${c.from} (${c.channel}): ${what}`, per * sc, per, `${c.genuine ? 'A genuine request.' : 'An attack.'} ${c.why}`);
     }
   }
+  if (scn.eng) {
+    const e = st.eng;
+    const released = e.releases > 0;
+    const through = released && e.forced < e.releases;
+    add('Triage', through ? 'Released through a passing pipeline' : released ? 'Every release skipped the pipeline' : 'Nothing was released', through ? 8 : 0, 8, through ? '' : 'A change that is never released fixes nothing, and one that skips the pipeline is a gamble.');
+    if (through) tri += 8;
+    const clean = released && e.forced === 0;
+    add('Triage', clean ? 'No forced releases' : released ? `${e.forced} forced release${e.forced === 1 ? '' : 's'}` : 'No release', clean ? 4 : 0, 4, clean ? '' : 'An emergency release should be rare and followed by a proper one.');
+    if (clean) tri += 4;
+    const over = Math.max(0, e.runs.length - scn.eng.runBudget);
+    const pts = released ? Math.max(0, 3 - 0.5 * over) : 0;
+    add('Triage', `${e.runs.length} pipeline run${e.runs.length === 1 ? '' : 's'}`, pts, 3, over ? `More than ${scn.eng.runBudget} runs means guessing rather than reading the failures.` : '');
+    tri += pts;
+  }
   const triMax = g.triage;
 
   // Evidence
@@ -764,6 +852,13 @@ export function grade(scn, st, report) {
       add('Evidence', `${c.from}: ${how}`, perV * sh, perV, sh < 1 && c.needsVerify ? c.verifyNote || '' : '');
     }
   }
+  if (scn.eng) {
+    const fin = prodNow(st);
+    for (const p of Eng.policyResults(scn, fin)) {
+      if (p.ok) evi += p.weight;
+      add('Evidence', `${p.ok ? 'Meets' : 'Fails'} the baseline: ${p.label}`, p.ok ? p.weight : 0, p.weight, p.ok ? '' : p.fix);
+    }
+  }
   const wrongPins = st.pins.map((id) => scn.events.find((e) => e.id === id)).filter((e) => e && !e.key).length;
   const penalty = Math.min(g.evidence * 0.2, wrongPins * 1.5);
   if (penalty > 0) add('Evidence', `Unrelated events pinned (${wrongPins})`, -penalty, 0, 'Only pin events that belong to the incident.');
@@ -782,6 +877,17 @@ export function grade(scn, st, report) {
       hits.push(r);
       add('Response', `Done: ${r.label}`, r.points, r.points);
     } else add('Response', `Not done: ${r.label}`, 0, r.points, r.why || '');
+  }
+  if (scn.eng) {
+    const fin = prodNow(st);
+    for (const f of Eng.featureResults(scn, fin)) {
+      if (f.ok) res += f.weight;
+      add('Response', `${f.ok ? 'Still works' : 'Broken'}: ${f.label}`, f.ok ? f.weight : 0, f.weight, f.ok ? '' : f.why);
+    }
+    for (const hm of st.eng.harm) {
+      harmNet += hm.harm * g.harmScale;
+      add('Response', `Cost: ${hm.label}`, -hm.harm * g.harmScale, 0, hm.text);
+    }
   }
   if (scn.se) {
     res += scn.se.outcomePoints;
@@ -961,7 +1067,7 @@ export function problems(scn) {
     const [action, target] = f.split(':');
     if (!scn.responses.some((r) => (r.action === action && r.target === target) || (r.sets || []).includes(f)) && !(scn.vm && scn.vm.findings.some((x) => x.options.some((o) => (o.sets || []).includes(f)))) && !(scn.grc && scn.grc.findings.some((x) => x.options.some((o) => (o.sets || []).includes(f)) || (x.challenge && f === `plan:${x.id}`)))) out.push(`event ${e.id}: nothing the player can do sets ${f}`);
   }
-  const goodSum = scn.responses.filter((r) => r.good).reduce((n, r) => n + r.points, 0) + ((scn.net || scn.cloud) ? (scn.net || scn.cloud).threats.reduce((n, th) => n + th.points, 0) : 0) + (scn.vm ? scn.vm.riskPoints : 0) + (scn.grc ? scn.grc.riskPoints : 0) + (scn.se ? scn.se.outcomePoints : 0);
+  const goodSum = scn.responses.filter((r) => r.good).reduce((n, r) => n + r.points, 0) + ((scn.net || scn.cloud) ? (scn.net || scn.cloud).threats.reduce((n, th) => n + th.points, 0) : 0) + (scn.vm ? scn.vm.riskPoints : 0) + (scn.grc ? scn.grc.riskPoints : 0) + (scn.se ? scn.se.outcomePoints : 0) + (scn.eng ? scn.eng.features.reduce((n, f) => n + f.weight, 0) : 0);
   if (goodSum !== scn.grading.response) out.push(`good responses are worth ${goodSum}, the response score is ${scn.grading.response}`);
   const roles = new Set(scn.events.filter((e) => e.key && e.keyWeight !== 0).map((e) => e.key));
   for (const r of roles) if (!scn.roleLabels[r] || !scn.roleHints[r]) out.push(`evidence role ${r} needs a label and a hint`);
@@ -999,6 +1105,38 @@ export function problems(scn) {
     const cost = v.findings.flatMap((f) => f.options.filter((o) => !o.breaks)).reduce((n, o) => n + o.cost, 0);
     if (cost <= v.budget * 1.5) out.push('the budget is too generous: the whole backlog nearly fits');
     if (!opt.value) out.push('nothing can be removed within the budget');
+  }
+  if (scn.eng) {
+    const x = scn.eng;
+    const init = Eng.initialState(scn);
+    const settings = new Set(Object.keys(init.cfg));
+    const edges = new Set(x.edges.map((e) => e.id));
+    const check = (c, where) => {
+      if (c.all) return c.all.forEach((y) => check(y, where));
+      if (c.any) return c.any.forEach((y) => check(y, where));
+      if (c.e) {
+        if (!edges.has(c.e)) out.push(`${where}: unknown connection ${c.e}`);
+      } else if (!settings.has(c.s)) out.push(`${where}: unknown setting ${c.s}`);
+    };
+    for (const p of x.policy) check(p.test, `policy ${p.id}`);
+    for (const f of x.features) check(f.needs, `feature ${f.id}`);
+    for (const b of x.secretScan) check(b.when, 'secret scan');
+    for (const b of x.deployBlockers) check(b.when, 'deploy blocker');
+    for (const e of scn.events) for (const c of e.unlessProd || []) check(c, `event ${e.id}`);
+    if (x.policy.reduce((n, p) => n + p.weight, 0) !== scn.grading.evidence) out.push('policy weights must add up to the evidence score');
+    if (x.features.reduce((n, f) => n + f.weight, 0) !== scn.grading.response) out.push('feature weights must add up to the response score');
+    if (scn.grading.triage !== 15) out.push('the pipeline discipline score is 15');
+    if (Eng.featureResults(scn, init).some((f) => !f.ok)) out.push('a feature is already broken in the starting configuration');
+    if (!Eng.policyResults(scn, init).some((p) => !p.ok && p.sev === 'critical')) out.push('the starting configuration has no critical failure');
+    if (x.reference) {
+      const ref = Eng.cloneState(init);
+      Object.assign(ref.cfg, x.reference.cfg || {});
+      Object.assign(ref.edges, x.reference.edges || {});
+      const run = Eng.runPipeline(scn, ref);
+      if (!run.passed) out.push('the reference configuration does not pass the pipeline: ' + run.stages.filter((y) => y.status === 'fail').map((y) => y.lines.join(' ')).join(' '));
+      if (Eng.policyScore(scn, ref) !== scn.grading.evidence) out.push('the reference configuration does not meet the whole baseline');
+      if (Eng.featureScore(scn, ref) !== scn.grading.response) out.push('the reference configuration breaks a feature');
+    }
   }
   if (scn.se) {
     const q = scn.se;

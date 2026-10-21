@@ -468,3 +468,24 @@ button.fcard { text-align: left; }
 .kb-strong { color: #86efac; border-color: #4ade8066; }
 .kb-weak { color: #fcd34d; border-color: #fbbf2466; }
 .kb-context { color: var(--muted); }
+
+/* ── Security engineering workspace ──────────────────────────── */
+.setrow { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 14px; padding: 10px 12px; margin-bottom: 8px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; }
+.setrow.changed { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 6%, var(--surface)); }
+.setmain small { display: block; color: var(--muted); font-size: 12.5px; margin-top: 2px; }
+.setctl { display: grid; gap: 4px; justify-items: end; align-content: start; }
+.bl { grid-column: 1 / -1; list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 3px; font-size: 12.5px; }
+.bl li.ok { color: #86efac; } .bl li.no { color: #fca5a5; }
+.bl small { color: var(--muted); }
+.estate .eg.ae-on { stroke: #4ade80; stroke-width: 2; opacity: 0.85; }
+.estate .eg.ae-off { stroke: #f87171; stroke-width: 2; stroke-dasharray: 6 5; opacity: 0.6; }
+.estate .eg.ae-chg { stroke-width: 4; opacity: 1; }
+.ah-on { fill: #4ade80; } .ah-off { fill: #f87171; opacity: 0.6; }
+.stages { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.stage { padding: 10px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; border-left: 4px solid #555; }
+.stage.st-pass { border-left-color: var(--good); } .stage.st-fail { border-left-color: var(--bad); background: rgba(248, 113, 113, 0.06); } .stage.st-skipped { opacity: 0.55; }
+.stg-h { display: flex; align-items: center; gap: 10px; }
+.stg-i { width: 22px; height: 22px; display: inline-grid; place-items: center; border-radius: 50%; font-weight: 900; color: #0a0a0a; }
+.i-pass { background: var(--good); } .i-fail { background: var(--bad); } .i-skipped { background: #555; }
+.diff td, .diff th { font-size: 13px; }
+@media (max-width: 759px) { .setrow { grid-template-columns: 1fr; } .setctl { justify-items: start; } }

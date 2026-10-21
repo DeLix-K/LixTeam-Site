@@ -32,7 +32,8 @@ const { VM_PATCH } = await import(U('workspace/scenarios/vm-patch.js'));
 const { GRC_AUDIT } = await import(U('workspace/scenarios/grc-audit.js'));
 const { TI_PAPERTRAIL } = await import(U('workspace/scenarios/ti-papertrail.js'));
 const { SE_SERVICEDESK } = await import(U('workspace/scenarios/se-servicedesk.js'));
-const contentIds = { workspace: [SOC_INVOICE.id, DFIR_LAPTOP.id, NET_FLAT.id, CLOUD_BUCKET.id, VM_PATCH.id, GRC_AUDIT.id, TI_PAPERTRAIL.id, SE_SERVICEDESK.id], 'cyber-detective': DET.map((x) => x.id), 'breach-room': BR.map((x) => x.id), 'incident-commander': IC.map((x) => x.id), 'social-engineering': SE.map((x) => x.id), simulation: SIMS.map((x) => x.id) };
+const { ENG_TICKETS } = await import(U('workspace/scenarios/eng-tickets.js'));
+const contentIds = { workspace: [SOC_INVOICE.id, DFIR_LAPTOP.id, NET_FLAT.id, CLOUD_BUCKET.id, VM_PATCH.id, GRC_AUDIT.id, TI_PAPERTRAIL.id, SE_SERVICEDESK.id, ENG_TICKETS.id], 'cyber-detective': DET.map((x) => x.id), 'breach-room': BR.map((x) => x.id), 'incident-commander': IC.map((x) => x.id), 'social-engineering': SE.map((x) => x.id), simulation: SIMS.map((x) => x.id) };
 
 t('content integrity: every mission points at a case that exists in its mode', () => {
   for (const m of M.MISSIONS) {

@@ -368,6 +368,12 @@ export const MISSIONS = [
     competencies: { secretsiam: 0.4, hardening: 0.3, reporting: 0.3 },
     unlock: { passedTier: { 'se-found': 2 } },
   },
+  {
+    id: 'se12-bench', title: 'The booking app nobody hardened', tier: 'se-prac', kind: 'workspace', mode: 'workspace', ref: 'eng-tickets', minutes: 28, par: 0, access: 'plus',
+    blurb: 'Fix a poorly configured system to the security baseline through a CI/CD pipeline, without breaking what the business needs. Some of the obvious fixes are traps.',
+    competencies: { hardening: 0.4, pipeline: 0.4, secretsiam: 0.2 },
+    unlock: { passedTier: { 'se-found': 2 } },
+  },
   // ── Security Engineer path: architect tier
   {
     id: 'se10-roadmap', title: 'The twelve-month plan', tier: 'se-arch', kind: 'simulation', mode: 'simulation', ref: 'security-roadmap', minutes: 24, par: 0, access: 'plus',

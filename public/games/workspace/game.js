@@ -8,6 +8,7 @@ import * as VM from './vm.js';
 import * as GRC from './grc.js';
 import * as TI from './ti.js';
 import * as SE from './se.js';
+import * as X from './eng.js';
 import { SOC_INVOICE } from './scenarios/soc-invoice.js';
 import { DFIR_LAPTOP } from './scenarios/dfir-laptop.js';
 import { NET_FLAT } from './scenarios/net-flat.js';
@@ -16,12 +17,13 @@ import { VM_PATCH } from './scenarios/vm-patch.js';
 import { GRC_AUDIT } from './scenarios/grc-audit.js';
 import { TI_PAPERTRAIL } from './scenarios/ti-papertrail.js';
 import { SE_SERVICEDESK } from './scenarios/se-servicedesk.js';
+import { ENG_TICKETS } from './scenarios/eng-tickets.js';
 import { medalIcon } from '../core/art.js';
 import { MEDALS } from '../core/missions.js';
 import * as streak from '../core/streak.js';
 import * as missionLink from '../core/mission-link.js';
 
-const SCENARIOS = [SOC_INVOICE, DFIR_LAPTOP, NET_FLAT, CLOUD_BUCKET, VM_PATCH, GRC_AUDIT, TI_PAPERTRAIL, SE_SERVICEDESK];
+const SCENARIOS = [SOC_INVOICE, DFIR_LAPTOP, NET_FLAT, CLOUD_BUCKET, VM_PATCH, GRC_AUDIT, TI_PAPERTRAIL, SE_SERVICEDESK, ENG_TICKETS];
 const MISSION = missionLink.current('workspace');
 const BEST_KEY = 'lixteam.workspace.best.v1';
 const $ = (id) => document.getElementById(id);
@@ -102,6 +104,9 @@ const freshUi = () => ({
   tiBrief: { judge: {}, iocs: [], recs: [], decision: '', summary: '' },
   reportId: null,
   contactId: null,
+  compId: 'web',
+  forceArm: false,
+  engMsg: null,
   seMsg: null,
   seSeen: new Set(),
   linkFrom: null,
@@ -130,6 +135,10 @@ const NAV_ALL = {
   assets: { label: 'Assets' },
   register: { label: 'Risk register' },
   inbox: { label: 'Contacts' },
+  config: { label: 'Configuration' },
+  arch: { label: 'Architecture' },
+  diff: { label: 'Changes' },
+  pipeline: { label: 'CI/CD pipeline' },
   sources: { label: 'Sources & reports' },
   claims: { label: 'Fact or assumption' },
   graph: { label: 'Indicator graph' },
@@ -268,7 +277,7 @@ function setView(v) {
 function renderView() {
   const keep = document.activeElement && document.activeElement.dataset ? document.activeElement.dataset.key : null;
   const stage = $('view');
-  const fn = { inbox: viewInbox, sources: viewSources, claims: viewClaims, graph: viewGraph, assess: viewAssess, register: viewRegister, controls: viewControls, heatmap: viewHeatmap, queue: viewQueue, assets: viewAssets, findings: viewFindings, estate: viewEstate, changes: viewChanges, topology: viewTopology, firewall: viewFirewall, alerts: viewAlerts, brief: viewBrief, logs: viewLogs, entities: viewEntities, tree: viewTree, map: viewMap, respond: viewRespond, case: scn.vm ? viewPlan : scn.grc ? viewPlanGrc : scn.se ? viewShift : viewCase, report: viewReport }[ui.view];
+  const fn = { config: viewConfig, arch: viewArch, diff: viewDiff, pipeline: viewPipeline, inbox: viewInbox, sources: viewSources, claims: viewClaims, graph: viewGraph, assess: viewAssess, register: viewRegister, controls: viewControls, heatmap: viewHeatmap, queue: viewQueue, assets: viewAssets, findings: viewFindings, estate: viewEstate, changes: viewChanges, topology: viewTopology, firewall: viewFirewall, alerts: viewAlerts, brief: viewBrief, logs: viewLogs, entities: viewEntities, tree: viewTree, map: viewMap, respond: viewRespond, case: scn.vm ? viewPlan : scn.grc ? viewPlanGrc : scn.se ? viewShift : viewCase, report: viewReport }[ui.view];
   stage.replaceChildren(fn());
   if (keep) {
     const again = stage.querySelector(`[data-key="${CSS.escape(keep)}"]`);
@@ -607,9 +616,9 @@ function renderCaseFile(box) {
     h('header', {}, h('strong', { text: 'Case file' }), h('small', { text: `${E.clockText(st.clock)}` })),
     h('dl', { class: 'cstat' }, scn.alerts.length ? h('dt', { text: 'Alerts' }) : null, scn.alerts.length ? h('dd', { text: `${openAlerts().length} open · ${esc} escalated · ${closed} closed` }) : null, h('dt', { text: 'Searches' }), h('dd', { text: String(st.searches) }), h('dt', { text: 'Actions' }), h('dd', { text: String(st.actions.length) })),
     scn.net || scn.cloud ? servicesBlock() : null,
-    scn.vm ? vmSide() : scn.grc ? grcSide() : scn.se ? seSide() : null,
-    scn.vm || scn.grc || scn.se ? null : h('h3', { text: 'Pinned timeline' }),
-    scn.vm || scn.grc || scn.se ? null : pins.length
+    scn.vm ? vmSide() : scn.grc ? grcSide() : scn.se ? seSide() : scn.eng ? engSide() : null,
+    scn.vm || scn.grc || scn.se || scn.eng ? null : h('h3', { text: 'Pinned timeline' }),
+    scn.vm || scn.grc || scn.se || scn.eng ? null : pins.length
       ? h('ol', { class: 'pintl' }, pins.map((e) => h('li', {}, h('time', { text: timeText(e.t) }), h('span', { text: e.summary }), h('button', { class: 'x', type: 'button', 'aria-label': 'Unpin', onclick: () => { E.unpin(st, e.id); refresh(); }, text: '×' }))))
       : h('p', { class: 'empty', text: 'Nothing pinned yet. Pin the events that prove what happened.' }),
   ].filter(Boolean));
@@ -618,6 +627,140 @@ function viewCase() {
   const box = h('div', { class: 'casefile-inline' });
   renderCaseFile(box);
   return h('div', {}, tipFor('case', 'This is your evidence timeline, in time order. A good one tells the story of the attack from the first email to the data staged for removal.'), box);
+}
+
+// ── Security engineering: configuration, architecture, diff and pipeline ──
+const SEVCOL = { critical: 'Critical', high: 'High', medium: 'Medium', low: 'Low' };
+const showVal = (v) => (v === true ? 'on' : v === false ? 'off' : String(v));
+function engSide() {
+  const w = st.eng.working;
+  const prod = E.prodNow(st);
+  const pw = X.policyResults(scn, w);
+  const pp = X.policyResults(scn, prod);
+  const crit = (list) => list.filter((p) => !p.ok && ['critical', 'high'].includes(p.sev)).length;
+  return h('div', {}, h('h3', { text: 'Baseline' }),
+    h('p', { class: 'dim', text: `Production: ${pp.filter((p) => p.ok).length} of ${pp.length} checks pass, ${crit(pp)} critical or high failing.` }),
+    h('p', { class: crit(pw) ? 'svc-bad' : 'svc-ok', text: `Your working copy: ${pw.filter((p) => p.ok).length} of ${pw.length} pass, ${crit(pw)} critical or high failing.` }),
+    h('p', { class: 'dim', text: `${st.eng.runs.length} pipeline run${st.eng.runs.length === 1 ? '' : 's'}, ${st.eng.releases} release${st.eng.releases === 1 ? '' : 's'}${st.eng.forced ? ` (${st.eng.forced} forced)` : ''}.` }));
+}
+
+const settingChecks = (id) => scn.eng.policy.filter((p) => JSON.stringify(p.test).includes(`"${id}"`));
+const edgeChecks = (id) => scn.eng.policy.filter((p) => JSON.stringify(p.test).includes(`"${id}"`));
+
+function viewConfig() {
+  const w = st.eng.working;
+  const prod = E.prodNow(st);
+  const comps = scn.eng.components.filter((c) => (c.settings || []).length);
+  const list = h('ul', { class: 'queue' }, comps.map((c) => {
+    const fails = c.settings.flatMap((x) => settingChecks(`${c.id}.${x.id}`)).filter((p, i, a) => a.findIndex((q) => q.id === p.id) === i).filter((p) => !X.holds(p.test, w)).length;
+    return h('li', {}, h('button', { class: `acard fcard${ui.compId === c.id ? ' sel' : ''}`, type: 'button', 'data-key': `comp-${c.id}`, onclick: () => { ui.compId = c.id; renderView(); toDetail(); } }, h('strong', { text: c.name }), h('small', { class: 'mono', text: `${c.settings.length} setting${c.settings.length === 1 ? '' : 's'}` }), h('small', { class: `astate ${fails ? 'st-new' : 'st-closed'}`, text: fails ? `${fails} baseline check${fails === 1 ? '' : 's'} failing` : 'Meets the baseline' })));
+  }));
+  const comp = comps.find((c) => c.id === ui.compId) || comps[0];
+  const rows = comp.settings.map((sg) => {
+    const id = `${comp.id}.${sg.id}`;
+    const cur = w.cfg[id];
+    const changed = cur !== prod.cfg[id];
+    let ctl;
+    if (sg.type === 'toggle') ctl = h('button', { class: `btn small ${cur ? 'primary' : ''}`, type: 'button', 'data-key': `set-${id}`, 'aria-pressed': cur ? 'true' : 'false', onclick: () => { E.engSet(scn, st, id, !cur); refresh(); }, text: cur ? 'On' : 'Off' });
+    else if (sg.type === 'select') ctl = h('select', { 'data-key': `set-${id}`, 'aria-label': sg.label, onchange: (ev) => { E.engSet(scn, st, id, ev.target.value); refresh(); } }, sg.options.map((o) => h('option', { value: o, selected: o === cur ? true : null, text: o })));
+    else ctl = h('input', { type: 'text', 'data-key': `set-${id}`, 'aria-label': sg.label, value: String(cur), size: 6, inputmode: 'numeric', autocomplete: 'off', onchange: (ev) => { const r = E.engSet(scn, st, id, ev.target.value); ui.engMsg = r.ok ? null : { ok: false, text: r.text }; refresh(); } });
+    const checks = settingChecks(id);
+    return h('div', { class: `setrow${changed ? ' changed' : ''}` }, h('div', { class: 'setmain' }, h('strong', { text: sg.label }), h('small', { text: sg.note })), h('div', { class: 'setctl' }, ctl, changed ? h('small', { class: 'dim', text: `Production: ${showVal(prod.cfg[id])}` }) : null),
+      checks.length ? h('ul', { class: 'bl' }, checks.map((p) => { const ok = X.holds(p.test, w); return h('li', { class: ok ? 'ok' : 'no' }, h('span', { class: `band b-${p.sev === 'critical' ? 'Critical' : p.sev === 'high' ? 'High' : p.sev === 'medium' ? 'Medium' : 'Low'}`, text: SEVCOL[p.sev] }), ` ${ok ? '✓' : '✗'} ${p.label}`, ok ? null : h('small', { text: ` ${p.fix}` })); })) : null);
+  });
+  return h('div', { class: 'queue-view' }, tipFor('config', 'Edit the working copy.'), ui.engMsg ? h('div', { class: 'result bad', role: 'status' }, h('p', { text: ui.engMsg.text })) : null,
+    h('div', { class: 'two-col' }, h('div', { class: 'col-list' }, list), h('div', { class: 'col-detail' }, h('h2', { text: comp.name }), rows)));
+}
+
+function viewArch() {
+  const w = st.eng.working;
+  const prod = E.prodNow(st);
+  const W = 800;
+  const H = 520;
+  const px = (x) => (x / 100) * W;
+  const py = (y) => (y / 100) * H;
+  const comp = (id) => scn.eng.components.find((c) => c.id === id);
+  const svg = sv('svg', { viewBox: `0 0 ${W} ${H}`, class: 'netmap estate', role: 'group', 'aria-label': 'System architecture: components and the connections between them' });
+  const R = 18;
+  for (const e of scn.eng.edges) {
+    const a = comp(e.from);
+    const b = comp(e.to);
+    const x1 = px(a.x);
+    const y1 = py(a.y);
+    const x2 = px(b.x);
+    const y2 = py(b.y);
+    const len = Math.hypot(x2 - x1, y2 - y1) || 1;
+    const ux = (x2 - x1) / len;
+    const uy = (y2 - y1) / len;
+    const cv = e.curve || 0;
+    // control point of the arc, offset sideways from the middle of the line
+    const cx = (x1 + x2) / 2 - uy * cv * 2;
+    const cy = (y1 + y2) / 2 + ux * cv * 2;
+    const toC = Math.hypot(cx - x1, cy - y1) || 1;
+    const fromC = Math.hypot(x2 - cx, y2 - cy) || 1;
+    const sx = cv ? x1 + ((cx - x1) / toC) * 50 : x1 + ux * 60;
+    const sy = cv ? y1 + ((cy - y1) / toC) * 28 : y1 + uy * 18;
+    const tx = cv ? (x2 - cx) / fromC : ux;
+    const ty = cv ? (y2 - cy) / fromC : uy;
+    const ex = cv ? x2 - tx * 52 : x2 - ux * 60;
+    const ey = cv ? y2 - ty * 28 : y2 - uy * 18;
+    const on = w.edges[e.id];
+    const changed = on !== prod.edges[e.id];
+    const toggle = () => { E.engEdge(scn, st, e.id, !on); refresh(); };
+    const d = cv ? `M ${sx} ${sy} Q ${cx} ${cy} ${ex} ${ey}` : `M ${sx} ${sy} L ${ex} ${ey}`;
+    svg.append(sv('path', { d, fill: 'none', class: `eg ${on ? 'ae-on' : 'ae-off'}${changed ? ' ae-chg' : ''}` }));
+    svg.append(sv('polygon', { points: `${ex},${ey} ${ex - tx * 9 - ty * 5},${ey - ty * 9 + tx * 5} ${ex - tx * 9 + ty * 5},${ey - ty * 9 - tx * 5}`, class: on ? 'ah-on' : 'ah-off' }));
+    svg.append(sv('path', { d, fill: 'none', class: 'hit', 'stroke-width': 16, tabindex: 0, role: 'button', 'aria-label': `${e.label}: ${on ? 'allowed' : 'blocked'}. Press to toggle.`, onclick: toggle, onkeydown: (ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); toggle(); } } }));
+  }
+  for (const c of scn.eng.components) {
+    const wBox = Math.max(90, c.name.length * 7 + 18);
+    svg.append(sv('g', { class: `node ck-${c.kind === 'external' ? 'public' : c.kind === 'data' ? 'resource' : 'service'}` }, sv('rect', { x: px(c.x) - wBox / 2, y: py(c.y) - R, width: wBox, height: R * 2, rx: 8 }), sv('text', { x: px(c.x), y: py(c.y) + 4, 'text-anchor': 'middle' }, c.name)));
+  }
+  const list = h('div', { class: 'tablewrap' }, h('table', { class: 'links' }, h('thead', {}, h('tr', {}, ['From', 'To', 'What', 'Now', ''].map((x) => h('th', { text: x })))), h('tbody', {}, scn.eng.edges.map((e) => {
+    const on = w.edges[e.id];
+    const checks = edgeChecks(e.id);
+    return h('tr', {}, h('td', { class: 'mono', text: comp(e.from).name }), h('td', { class: 'mono', text: comp(e.to).name }), h('td', {}, e.label, checks.length ? h('small', { class: 'dim', text: ` · baseline: ${checks.map((p) => p.id).join(', ')}` }) : null), h('td', { class: on ? 'okc' : 'noc', text: on ? 'Allowed' : 'Blocked' }), h('td', {}, h('button', { class: 'btn small', type: 'button', 'data-key': `edge-${e.id}`, onclick: () => { E.engEdge(scn, st, e.id, !on); refresh(); }, text: on ? 'Block' : 'Allow' })));
+  }))));
+  return h('div', { class: 'map-view' }, tipFor('arch', 'Click a connection.'), h('div', { class: 'mapwrap' }, svg), h('p', { class: 'legend dim' }, h('span', { class: 'lg rd', text: 'allowed' }), ' ', h('span', { class: 'lg leak', text: 'blocked' }), ' ', h('span', { class: 'lg adm', text: 'changed from production (thick)' })), list);
+}
+
+function viewDiff() {
+  const w = st.eng.working;
+  const prod = E.prodNow(st);
+  const d = X.diff(scn, prod, w);
+  const rows = d.map((c) => {
+    if (c.kind === 'setting') {
+      const [comp, sid] = c.id.split('.');
+      const f = X.settingOf(scn, c.id);
+      const was = X.policyResults(scn, prod).filter((p) => JSON.stringify(p.test).includes(`"${c.id}"`));
+      const now = X.policyResults(scn, w).filter((p) => JSON.stringify(p.test).includes(`"${c.id}"`));
+      const gain = now.filter((p, i) => p.ok && !was[i].ok).map((p) => p.id);
+      const lost = now.filter((p, i) => !p.ok && was[i].ok).map((p) => p.id);
+      return h('tr', {}, h('td', { class: 'mono', text: c.id }), h('td', { class: 'noc', text: `− ${showVal(c.from)}` }), h('td', { class: 'okc', text: `+ ${showVal(c.to)}` }), h('td', { text: [gain.length ? `meets ${gain.join(', ')}` : '', lost.length ? `no longer meets ${lost.join(', ')}` : ''].filter(Boolean).join('; ') || (f ? 'no baseline effect' : '') }));
+    }
+    return h('tr', {}, h('td', { class: 'mono', text: `${c.edge.from} → ${c.edge.to}` }), h('td', { class: 'noc', text: `− ${c.from ? 'allowed' : 'blocked'}` }), h('td', { class: 'okc', text: `+ ${c.to ? 'allowed' : 'blocked'}` }), h('td', { text: c.edge.label }));
+  });
+  return h('div', { class: 'plan-view' }, tipFor('diff', 'What would change.'), h('p', { class: 'dim', text: d.length ? `${d.length} change${d.length === 1 ? '' : 's'} against production.` : 'No changes: the working copy is the same as production.' }),
+    d.length ? h('div', { class: 'tablewrap' }, h('table', { class: 'links diff' }, h('thead', {}, h('tr', {}, ['Item', 'Production', 'Working copy', 'Effect'].map((x) => h('th', { text: x })))), h('tbody', {}, rows))) : null,
+    d.length ? h('button', { class: 'btn small', type: 'button', 'data-key': 'discard', onclick: () => { E.engDiscard(scn, st); refresh(); }, text: 'Discard my changes (1 min)' }) : null);
+}
+
+function viewPipeline() {
+  const e = st.eng;
+  const last = e.runs[e.runs.length - 1];
+  const key = X.stateKey(e.working);
+  const ready = e.lastPass === key && !X.sameState(e.working, E.prodNow(st));
+  const stage = (sg) => h('li', { class: `stage st-${sg.status}` }, h('div', { class: 'stg-h' }, h('span', { class: `stg-i i-${sg.status}`, text: sg.status === 'pass' ? '✓' : sg.status === 'fail' ? '✗' : '–' }), h('strong', { text: sg.name }), h('small', { class: 'dim', text: sg.status === 'skipped' ? 'skipped' : sg.status })), sg.lines.length ? h('ul', { class: 'facts' }, sg.lines.map((l) => h('li', { text: l }))) : null);
+  return h('div', { class: 'pipeline-view' }, tipFor('pipeline', 'Run the pipeline.'),
+    h('div', { class: 'quick' },
+      h('button', { class: 'btn primary', type: 'button', 'data-key': 'run', onclick: () => { E.engRun(scn, st); ui.engMsg = null; refresh(); }, text: `Run the pipeline (${scn.eng.runMinutes} min)` }),
+      h('button', { class: 'btn', type: 'button', 'data-key': 'release', disabled: !ready ? true : null, onclick: () => { const r = E.engRelease(scn, st, false); ui.engMsg = { ok: r.ok, text: r.text }; refresh(); }, text: `Release to production (${scn.eng.releaseMinutes} min)` }),
+      ui.forceArm ? h('button', { class: 'btn danger', type: 'button', 'data-key': 'force-confirm', onclick: () => { const r = E.engRelease(scn, st, true); ui.engMsg = { ok: r.ok && !/broke/.test(r.text || ''), text: r.text }; ui.forceArm = false; refresh(); }, text: 'Confirm: skip the pipeline and release' }) : h('button', { class: 'btn small', type: 'button', 'data-key': 'force', onclick: () => { ui.forceArm = true; renderView(); }, text: 'Emergency: force a release' })),
+    ui.forceArm ? h('p', { class: 'svc-bad', text: 'A forced release skips every check. Anything the pipeline would have caught goes into production broken.' }) : null,
+    !ready ? h('p', { class: 'dim', text: last && last.key === key ? (last.passed ? 'This configuration is already in production.' : 'The last run failed on this configuration. Fix what it says and run it again.') : 'The working copy has changed since the last run (or there has been no run). Run the pipeline.' }) : h('p', { class: 'svc-ok', text: 'The last run passed on exactly this configuration. It can be released.' }),
+    ui.engMsg ? h('div', { class: `result ${ui.engMsg.ok ? 'ok' : 'bad'}`, role: 'status' }, h('p', { text: ui.engMsg.text })) : null,
+    h('h3', { text: last ? `Last run (${timeText(last.at)})` : 'No run yet' }), last ? h('ol', { class: 'stages' }, last.stages.map(stage)) : h('p', { class: 'empty', text: 'Run the pipeline to see what it finds.' }),
+    h('h3', { text: 'In production' }), h('p', { class: 'dim', text: e.releases ? `${e.releases} release${e.releases === 1 ? '' : 's'}; the latest at ${timeText(e.prod[e.prod.length - 1].at)}${e.prod[e.prod.length - 1].forced ? ' (forced)' : ''}.` : 'Nothing has been released yet. Production still has the original configuration.' }));
 }
 
 // ── Social engineering: the service desk ────────────────────────
