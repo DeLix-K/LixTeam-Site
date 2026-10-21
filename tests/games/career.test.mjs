@@ -30,7 +30,8 @@ const { NET_FLAT } = await import(U('workspace/scenarios/net-flat.js'));
 const { CLOUD_BUCKET } = await import(U('workspace/scenarios/cloud-bucket.js'));
 const { VM_PATCH } = await import(U('workspace/scenarios/vm-patch.js'));
 const { GRC_AUDIT } = await import(U('workspace/scenarios/grc-audit.js'));
-const contentIds = { workspace: [SOC_INVOICE.id, DFIR_LAPTOP.id, NET_FLAT.id, CLOUD_BUCKET.id, VM_PATCH.id, GRC_AUDIT.id], 'cyber-detective': DET.map((x) => x.id), 'breach-room': BR.map((x) => x.id), 'incident-commander': IC.map((x) => x.id), 'social-engineering': SE.map((x) => x.id), simulation: SIMS.map((x) => x.id) };
+const { TI_PAPERTRAIL } = await import(U('workspace/scenarios/ti-papertrail.js'));
+const contentIds = { workspace: [SOC_INVOICE.id, DFIR_LAPTOP.id, NET_FLAT.id, CLOUD_BUCKET.id, VM_PATCH.id, GRC_AUDIT.id, TI_PAPERTRAIL.id], 'cyber-detective': DET.map((x) => x.id), 'breach-room': BR.map((x) => x.id), 'incident-commander': IC.map((x) => x.id), 'social-engineering': SE.map((x) => x.id), simulation: SIMS.map((x) => x.id) };
 
 t('content integrity: every mission points at a case that exists in its mode', () => {
   for (const m of M.MISSIONS) {

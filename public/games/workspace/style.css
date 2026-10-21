@@ -447,3 +447,11 @@ button.fcard { text-align: left; }
 .hl { font: 700 12px var(--mono); padding: 2px 8px; border-radius: 6px; }
 .hl.treat { background: rgba(248, 113, 113, 0.16); } .hl.own { background: rgba(251, 191, 36, 0.12); } .hl.tol { background: rgba(74, 222, 128, 0.1); }
 @media (max-width: 759px) { .hcell { min-height: 56px; } }
+
+/* ── Threat intelligence workspace ───────────────────────────── */
+.estate .eg.tl { stroke: #a3e635; stroke-width: 2.2; opacity: 0.8; }
+.estate .ellabel { fill: #9ca3af; font: 600 10px var(--mono); pointer-events: none; }
+.jrow { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.jrow .jl { display: flex; gap: 10px; align-items: flex-start; flex: 1 1 320px; cursor: pointer; }
+.jrow .jl input { margin-top: 4px; accent-color: var(--accent); width: 16px; height: 16px; flex: 0 0 auto; }
+.jrow.on { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, #121212); }

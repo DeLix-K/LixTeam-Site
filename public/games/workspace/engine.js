@@ -16,6 +16,7 @@ import * as Net from './net.js';
 import * as Cloud from './cloud.js';
 import * as VM from './vm.js';
 import * as GRC from './grc.js';
+import * as TI from './ti.js';
 
 export const COSTS = { search: 1, entity: 1, tree: 1, map: 1, action: 3, alert: 1, rule: 3, tweak: 1 };
 
@@ -46,6 +47,7 @@ export function newRun(scn) {
   };
   if (scn.vm) st.vm = VM.newState(scn);
   if (scn.grc) st.grc = GRC.newState();
+  if (scn.ti) st.ti = TI.newState(scn);
   if (scn.cloud) st.cloud = { history: [{ at: -1, applied: [] }] };
   if (scn.net) st.fw = { history: [{ at: -1, policy: Net.initialPolicy(scn) }], next: scn.net.rules.length + 1 };
   return st;
@@ -487,6 +489,59 @@ export function grcTreat(scn, st, fid, optionId) {
   return { ok: true, text: o.done || 'Done.' };
 }
 
+// ── Threat intelligence ─────────────────────────────────────────
+// Handing in the finished piece of work. Events can depend on it having been handed in by a deadline.
+export function submit(st) {
+  if (st.flags.submitted === undefined) st.flags.submitted = st.clock;
+}
+export function tiRead(scn, st, rid) {
+  const r = scn.ti.reports.find((x) => x.id === rid);
+  if (!r) return null;
+  const first = !TI.reportRead(st, rid);
+  if (first) {
+    st.ti.read.push(rid);
+    advance(st, 5, `Read: ${r.title}`);
+  }
+  return { report: r, first };
+}
+export function tiRate(scn, st, rid, rel, cred) {
+  if (!TI.reportRead(st, rid)) return { ok: false, text: 'Read the report before you rate it.' };
+  if (!TI.REL.some((x) => x[0] === rel) || !TI.CRED.some((x) => x[0] === cred)) return { ok: false, text: 'Choose a reliability and a credibility.' };
+  st.ti.rate[rid] = { rel, cred };
+  return { ok: true };
+}
+export function tiClaim(scn, st, cid, cls) {
+  const c = scn.ti.claims.find((x) => x.id === cid);
+  if (!c || !TI.reportRead(st, c.report)) return { ok: false, text: 'Read the report that makes this claim first.' };
+  if (!TI.CLASSES.some((x) => x[0] === cls)) return { ok: false, text: 'Choose what kind of statement this is.' };
+  st.ti.claim[cid] = cls;
+  return { ok: true };
+}
+export function tiEnrich(scn, st, iid) {
+  const i = scn.ti.indicators.find((x) => x.id === iid);
+  if (!i || !TI.visibleIndicators(scn, st).includes(i)) return { ok: false, text: 'You have not seen that indicator yet.' };
+  if (st.ti.enriched.includes(iid)) return { ok: true, again: true, indicator: i };
+  if (st.ti.credits < 1) return { ok: false, text: 'No lookup credits left. Choose what to look up with care.' };
+  st.ti.credits -= 1;
+  st.ti.enriched.push(iid);
+  advance(st, 2, `Looked up ${i.value}`);
+  return { ok: true, indicator: i };
+}
+export function tiLink(scn, st, a, b, basis) {
+  const vis = TI.visibleIndicators(scn, st).map((x) => x.id);
+  if (!vis.includes(a) || !vis.includes(b) || a === b) return { ok: false, text: 'Choose two different indicators you have seen.' };
+  if (!TI.BASES.some((x) => x[0] === basis)) return { ok: false, text: 'Say why they are linked.' };
+  if (TI.hasLink(st, a, b)) return { ok: false, text: 'Those two are already linked.' };
+  st.ti.links.push({ a, b, basis });
+  advance(st, 1, `Linked ${a} and ${b}`);
+  return { ok: true };
+}
+export function tiUnlink(scn, st, a, b) {
+  const n = st.ti.links.length;
+  st.ti.links = st.ti.links.filter((l) => TI.pairKey(l.a, l.b) !== TI.pairKey(a, b));
+  return { ok: st.ti.links.length < n };
+}
+
 // What the state of the estate says about the scenario's threats and the services that must keep working.
 export function stateChecks(scn, st) {
   if (scn.net) {
@@ -581,6 +636,18 @@ export function grade(scn, st, report) {
       add('Triage', `${f.id}: ${bits.join(' · ')}`, pts, per, `${f.title}. ${f.why}`);
     }
   }
+  if (scn.ti) {
+    for (const r of TI.scoreReports(scn, st)) {
+      tri += r.points;
+      const got = r.got ? `${r.got.rel}${r.got.cred}` : 'not rated';
+      add('Triage', `${r.report.title}: rated ${got} (assessed ${r.report.rel}${r.report.cred})`, r.points, r.max, r.report.why || '');
+    }
+    for (const c of TI.scoreClaims(scn, st)) {
+      tri += c.points;
+      const label = c.claim.text.length > 90 ? `${c.claim.text.slice(0, 88)}…` : c.claim.text;
+      add('Triage', `${label}: marked ${c.got || 'nothing'} (it is ${c.claim.truth})`, c.points, c.max, c.claim.why || '');
+    }
+  }
   const triMax = g.triage;
 
   // Evidence
@@ -613,6 +680,14 @@ export function grade(scn, st, report) {
     const real = scn.grc.requirements.filter((r) => !scn.grc.controls.some((c) => (c.fits || {})[r.id])).map((r) => r.id);
     if (real.some((id) => gaps.includes(id)) === false && real.length) add('Evidence', `Real gap with no control: ${real.join(', ')}`, 0, 0, 'A requirement that no control addresses is a gap the audit did not list.');
   }
+  if (scn.ti) {
+    const ls = TI.scoreLinks(scn, st);
+    evi += ls.points;
+    const bits = [];
+    if (ls.missed.length) bits.push(`Missed: ${ls.missed.slice(0, 3).map((t) => `${t.a} and ${t.b} (${t.basis})`).join('; ')}.`);
+    if (ls.falseLinks.length) bits.push(`Not linked in reality: ${ls.falseLinks.slice(0, 3).map((l) => `${l.a} and ${l.b}`).join('; ')}. Coincidence and shared hosting are not links.`);
+    add('Evidence', `Indicator links: ${ls.found.length} of ${scn.ti.links.length} real links found${ls.falseLinks.length ? `, ${ls.falseLinks.length} false` : ''}`, ls.points, ls.max, bits.join(' '));
+  }
   const wrongPins = st.pins.map((id) => scn.events.find((e) => e.id === id)).filter((e) => e && !e.key).length;
   const penalty = Math.min(g.evidence * 0.2, wrongPins * 1.5);
   if (penalty > 0) add('Evidence', `Unrelated events pinned (${wrongPins})`, -penalty, 0, 'Only pin events that belong to the incident.');
@@ -621,6 +696,7 @@ export function grade(scn, st, report) {
   // Response
   let res = 0;
   let harmNet = 0;
+  let lateToReport = 0; // with no response score to take it from, a missed deadline comes off the report
   const goodRules = scn.responses.filter((r) => r.good);
   const doneKeys = new Set(st.actions.map((a) => a.key));
   const hits = [];
@@ -689,8 +765,9 @@ export function grade(scn, st, report) {
     cur.cost += e.consequence.cost;
     byLabel.set(e.consequence.label, cur);
   }
-  for (const [label, c] of byLabel) add('Response', c.n > 1 ? `${label} (${c.n} times)` : label, -c.cost, 0, c.text);
+  for (const [label, c] of byLabel) add(g.response ? 'Response' : 'Report', c.n > 1 ? `${label} (${c.n} times)` : label, -c.cost, 0, c.text);
   res = Math.max(0, res - lateCost);
+  if (!g.response) lateToReport = lateCost;
 
   // Report: the scenario lists the fields, what is true and what each is worth.
   let rep = 0;
@@ -726,8 +803,17 @@ export function grade(scn, st, report) {
     add('Report', label, pts, f.points, note);
   }
 
+  if (scn.ti) {
+    const sb = TI.scoreBrief(scn, report);
+    for (const l of sb.lines) add('Report', l.label, l.points, l.max, l.note);
+    rep += sb.points;
+  }
   // A report written without the evidence behind it is mostly a guess: it earns 40% plus a share of the rest for the evidence found.
   let grounded = g.evidence ? 0.4 + 0.6 * Math.min(1, evi / g.evidence) : 1;
+  if (scn.ti) {
+    const read = scn.ti.reports.filter((r) => TI.reportRead(st, r.id)).length;
+    grounded = 0.4 + 0.6 * (read / scn.ti.reports.length);
+  }
   if (scn.grc) {
     const opened = scn.grc.findings.filter((f) => GRC.docsOpened(st, f.id) > 0).length;
     grounded = 0.4 + 0.6 * (opened / scn.grc.findings.length);
@@ -737,8 +823,8 @@ export function grade(scn, st, report) {
     const opened = scn.vm.findings.filter((f) => st.seen.has(`finding:${f.id}`)).length;
     grounded = 0.4 + 0.6 * (opened / scn.vm.findings.length);
   }
-  if (grounded < 1) add('Report', scn.vm || scn.grc ? `Report not fully backed by looking (${Math.round(grounded * 100)}% credit)` : `Report not fully backed by pinned evidence (${Math.round(grounded * 100)}% credit)`, -(rep - rep * grounded), 0, scn.vm || scn.grc ? 'Read the evidence for every finding before you report on it: it changes the answer.' : 'Pin the events that prove each part of your report.');
-  rep *= grounded;
+  if (grounded < 1) add('Report', scn.vm || scn.grc || scn.ti ? `Report not fully backed by looking (${Math.round(grounded * 100)}% credit)` : `Report not fully backed by pinned evidence (${Math.round(grounded * 100)}% credit)`, -(rep - rep * grounded), 0, scn.ti ? 'Read every report before you brief the defender: the one you skipped may be the one that changes the answer.' : scn.vm || scn.grc ? 'Read the evidence for every finding before you report on it: it changes the answer.' : 'Pin the events that prove each part of your report.');
+  rep = Math.max(0, rep * grounded - lateToReport);
   const parts = { triage: Math.min(tri, triMax), evidence: Math.min(evi, g.evidence), response: Math.min(res, g.response), report: Math.min(rep, g.reportTotal) };
   const total = Math.round(parts.triage + parts.evidence + parts.response + parts.report);
   let tier = total >= g.gold ? 3 : total >= g.silver ? 2 : total >= g.bronze ? 1 : 0;
@@ -787,6 +873,7 @@ export function problems(scn) {
     else if (!scn.targets[def.targetKind] || !scn.targets[def.targetKind].includes(r.target)) out.push(`response ${r.action}/${r.target}: target is not on the list for ${def.targetKind}`);
   }
   for (const e of scn.events) for (const f of e.unless || []) {
+    if (f === 'submitted') continue;
     const [action, target] = f.split(':');
     if (!scn.responses.some((r) => (r.action === action && r.target === target) || (r.sets || []).includes(f)) && !(scn.vm && scn.vm.findings.some((x) => x.options.some((o) => (o.sets || []).includes(f)))) && !(scn.grc && scn.grc.findings.some((x) => x.options.some((o) => (o.sets || []).includes(f)) || (x.challenge && f === `plan:${x.id}`)))) out.push(`event ${e.id}: nothing the player can do sets ${f}`);
   }
@@ -795,7 +882,7 @@ export function problems(scn) {
   const roles = new Set(scn.events.filter((e) => e.key && e.keyWeight !== 0).map((e) => e.key));
   for (const r of roles) if (!scn.roleLabels[r] || !scn.roleHints[r]) out.push(`evidence role ${r} needs a label and a hint`);
   const repSum = scn.report.reduce((n, f) => n + f.points, 0);
-  if (repSum !== scn.grading.reportTotal) out.push(`report parts add up to ${repSum}, not ${scn.grading.reportTotal}`);
+  if (!scn.ti && repSum !== scn.grading.reportTotal) out.push(`report parts add up to ${repSum}, not ${scn.grading.reportTotal}`);
   const total = scn.grading.triage + scn.grading.evidence + scn.grading.response + scn.grading.reportTotal;
   if (total !== 100) out.push(`grading adds up to ${total}, not 100`);
   for (const f of scn.report) {
@@ -828,6 +915,26 @@ export function problems(scn) {
     const cost = v.findings.flatMap((f) => f.options.filter((o) => !o.breaks)).reduce((n, o) => n + o.cost, 0);
     if (cost <= v.budget * 1.5) out.push('the budget is too generous: the whole backlog nearly fits');
     if (!opt.value) out.push('nothing can be removed within the budget');
+  }
+  if (scn.ti) {
+    const t = scn.ti;
+    const P = t.points;
+    if (P.reports + P.claims !== scn.grading.triage) out.push('report and claim points do not add up to the triage score');
+    if (P.links !== scn.grading.evidence) out.push('link points do not add up to the evidence score');
+    if (P.judgements + P.iocs + P.recs + P.decision + P.summary !== scn.grading.reportTotal) out.push('brief points do not add up to the report score');
+    const rep = new Set(t.reports.map((r) => r.id));
+    const ind = new Set(t.indicators.map((i) => i.id));
+    for (const c of t.claims) if (!rep.has(c.report)) out.push(`claim ${c.id}: unknown report`);
+    for (const i of t.indicators) for (const r of i.from) if (!rep.has(r)) out.push(`indicator ${i.id}: unknown report ${r}`);
+    for (const l of t.links) {
+      if (!ind.has(l.a) || !ind.has(l.b)) out.push(`link ${l.a}-${l.b}: unknown indicator`);
+      if (!TI.BASES.some((b) => b[0] === l.basis)) out.push(`link ${l.a}-${l.b}: unknown basis`);
+    }
+    if (P.judgements !== t.judgements.filter((j) => j.include).reduce((n, j) => n + j.weight, 0)) out.push('judgement weights do not add up');
+    for (const i of t.indicators) if (!i.enrich) out.push(`indicator ${i.id} has no lookup result`);
+    for (const r of t.reports) if (!t.sources.some((x) => x.id === r.source)) out.push(`report ${r.id}: unknown source`);
+    if (t.credits >= t.indicators.length) out.push('there are enough lookups to look up everything');
+    for (const e of scn.events) for (const fl of e.unless || []) if (fl !== 'submitted' && !/^plan:/.test(fl)) out.push(`event ${e.id}: nothing sets ${fl}`);
   }
   if (scn.grc) {
     const gr = scn.grc;

@@ -6,18 +6,20 @@ import * as Net from './net.js';
 import * as Cloud from './cloud.js';
 import * as VM from './vm.js';
 import * as GRC from './grc.js';
+import * as TI from './ti.js';
 import { SOC_INVOICE } from './scenarios/soc-invoice.js';
 import { DFIR_LAPTOP } from './scenarios/dfir-laptop.js';
 import { NET_FLAT } from './scenarios/net-flat.js';
 import { CLOUD_BUCKET } from './scenarios/cloud-bucket.js';
 import { VM_PATCH } from './scenarios/vm-patch.js';
 import { GRC_AUDIT } from './scenarios/grc-audit.js';
+import { TI_PAPERTRAIL } from './scenarios/ti-papertrail.js';
 import { medalIcon } from '../core/art.js';
 import { MEDALS } from '../core/missions.js';
 import * as streak from '../core/streak.js';
 import * as missionLink from '../core/mission-link.js';
 
-const SCENARIOS = [SOC_INVOICE, DFIR_LAPTOP, NET_FLAT, CLOUD_BUCKET, VM_PATCH, GRC_AUDIT];
+const SCENARIOS = [SOC_INVOICE, DFIR_LAPTOP, NET_FLAT, CLOUD_BUCKET, VM_PATCH, GRC_AUDIT, TI_PAPERTRAIL];
 const MISSION = missionLink.current('workspace');
 const BEST_KEY = 'lixteam.workspace.best.v1';
 const $ = (id) => document.getElementById(id);
@@ -95,6 +97,10 @@ const freshUi = () => ({
   assetId: null,
   docId: null,
   rateDraft: {},
+  tiBrief: { judge: {}, iocs: [], recs: [], decision: '', summary: '' },
+  reportId: null,
+  linkFrom: null,
+  linkMsg: null,
   grcSort: 'rating',
   grcMsg: null,
   fwForm: { action: 'deny', src: '*', dst: '*', port: '*', proto: '*', where: 'top' },
@@ -118,6 +124,10 @@ const NAV_ALL = {
   queue: { label: 'Findings' },
   assets: { label: 'Assets' },
   register: { label: 'Risk register' },
+  sources: { label: 'Sources & reports' },
+  claims: { label: 'Fact or assumption' },
+  graph: { label: 'Indicator graph' },
+  assess: { label: 'Intelligence brief' },
   controls: { label: 'Controls' },
   heatmap: { label: 'Heatmap' },
   firewall: { label: 'Firewall' },
@@ -205,14 +215,14 @@ function updateChrome() {
   for (const b of $('rail').children) {
     const id = b.dataset.view;
     b.setAttribute('aria-current', id === ui.view ? 'page' : 'false');
-    b.disabled = over && !['report', 'case'].includes(id);
+    b.disabled = over && ![scn.ui.reportView || 'report', 'case'].includes(id);
     const badge = b.querySelector('.rail-badge');
     const count = id === 'alerts' ? open : id === 'case' ? st.pins.length : 0;
     badge.hidden = !count;
     badge.textContent = String(count);
     badge.classList.toggle('alarm', id === 'alerts' && open > 0);
   }
-  $('ws-report-btn').onclick = () => setView('report');
+  $('ws-report-btn').onclick = () => setView(scn.ui.reportView || 'report');
 }
 
 function toast(text, kind = '') {
@@ -229,7 +239,7 @@ function refresh({ keepView = false } = {}) {
       toast(`New ${a.sev} alert: ${a.title}`, 'alarm');
     }
   }
-  if (shiftOver() && !['report', 'case'].includes(ui.view)) {
+  if (shiftOver() && ![scn.ui.reportView || 'report', 'case'].includes(ui.view)) {
     toast('The shift is over. File your report.', 'alarm');
     ui.view = 'report';
   }
@@ -248,7 +258,7 @@ function setView(v) {
 function renderView() {
   const keep = document.activeElement && document.activeElement.dataset ? document.activeElement.dataset.key : null;
   const stage = $('view');
-  const fn = { register: viewRegister, controls: viewControls, heatmap: viewHeatmap, queue: viewQueue, assets: viewAssets, findings: viewFindings, estate: viewEstate, changes: viewChanges, topology: viewTopology, firewall: viewFirewall, alerts: viewAlerts, brief: viewBrief, logs: viewLogs, entities: viewEntities, tree: viewTree, map: viewMap, respond: viewRespond, case: scn.vm ? viewPlan : scn.grc ? viewPlanGrc : viewCase, report: viewReport }[ui.view];
+  const fn = { sources: viewSources, claims: viewClaims, graph: viewGraph, assess: viewAssess, register: viewRegister, controls: viewControls, heatmap: viewHeatmap, queue: viewQueue, assets: viewAssets, findings: viewFindings, estate: viewEstate, changes: viewChanges, topology: viewTopology, firewall: viewFirewall, alerts: viewAlerts, brief: viewBrief, logs: viewLogs, entities: viewEntities, tree: viewTree, map: viewMap, respond: viewRespond, case: scn.vm ? viewPlan : scn.grc ? viewPlanGrc : viewCase, report: viewReport }[ui.view];
   stage.replaceChildren(fn());
   if (keep) {
     const again = stage.querySelector(`[data-key="${CSS.escape(keep)}"]`);
@@ -598,6 +608,136 @@ function viewCase() {
   const box = h('div', { class: 'casefile-inline' });
   renderCaseFile(box);
   return h('div', {}, tipFor('case', 'This is your evidence timeline, in time order. A good one tells the story of the attack from the first email to the data staged for removal.'), box);
+}
+
+// ── Threat intelligence: sources, claims, graph and brief ───────
+const relText = (v) => (TI.REL.find((x) => x[0] === v) || [])[1];
+const credText = (v) => (TI.CRED.find((x) => x[0] === v) || [])[1];
+
+function viewSources() {
+  const list = h('ul', { class: 'queue' }, scn.ti.reports.map((r) => {
+    const src = scn.ti.sources.find((x) => x.id === r.source);
+    const read = TI.reportRead(st, r.id);
+    const rated = st.ti.rate[r.id];
+    return h('li', {}, h('button', { class: `acard fcard${ui.reportId === r.id ? ' sel' : ''}${rated ? ' done-closed' : ''}`, type: 'button', 'data-key': `rep-${r.id}`, 'aria-pressed': ui.reportId === r.id ? 'true' : 'false', onclick: () => { ui.reportId = r.id; renderView(); toDetail(); } },
+      h('div', { class: 'acard-top' }, h('span', { class: 'cvss', text: src.kind })),
+      h('strong', { text: r.title }), h('small', { class: 'mono', text: src.name }),
+      h('small', { class: `astate ${rated ? 'st-closed' : read ? 'st-new' : ''}`, text: rated ? `Rated ${rated.rel}${rated.cred}` : read ? 'Read, not rated' : 'Unread' })));
+  }));
+  const sel = scn.ti.reports.find((r) => r.id === ui.reportId);
+  const detail = (() => {
+    if (!sel) return h('p', { class: 'empty', text: 'Choose a report. Reading it takes five minutes.' });
+    const src = scn.ti.sources.find((x) => x.id === sel.source);
+    const read = TI.reportRead(st, sel.id);
+    const draft = (ui.rateDraft[sel.id] = ui.rateDraft[sel.id] || {});
+    const cur = st.ti.rate[sel.id] || {};
+    const val = { rel: draft.rel ?? cur.rel, cred: draft.cred ?? cur.cred };
+    const setR = (k, v) => {
+      draft[k] = v || undefined;
+      const now = st.ti.rate[sel.id] || {};
+      const rel = draft.rel ?? now.rel;
+      const cred = draft.cred ?? now.cred;
+      if (rel && cred) E.tiRate(scn, st, sel.id, rel, cred);
+      refresh();
+    };
+    const opt = (list, v) => list.map(([k, l]) => h('option', { value: k, selected: k === v ? true : null, text: `${k} · ${l}` }));
+    return h('div', { class: 'fdetail' },
+      h('header', {}, h('span', { class: 'cvss', text: src.kind }), h('h2', { text: sel.title })),
+      h('p', { class: 'dim', text: `${src.name}. ${src.desc}` }),
+      read ? h('blockquote', { class: 'doc', text: sel.text }) : h('div', {}, h('p', { class: 'dim', text: 'You have not read this report yet.' }), h('button', { class: 'btn primary small', type: 'button', 'data-key': 'read-report', onclick: () => { E.tiRead(scn, st, sel.id); refresh(); }, text: 'Read it (5 min)' })),
+      read ? h('div', {}, h('h3', { text: 'Your rating' }), h('div', { class: 'ruleform' },
+        h('label', {}, 'Source reliability ', h('select', { 'data-key': `rel-${sel.id}`, 'aria-label': 'Reliability', onchange: (ev) => setR('rel', ev.target.value) }, h('option', { value: '', text: 'Choose…' }), opt(TI.REL, val.rel))),
+        h('label', {}, 'Credibility of this report ', h('select', { 'data-key': `cred-${sel.id}`, 'aria-label': 'Credibility', onchange: (ev) => setR('cred', ev.target.value) }, h('option', { value: '', text: 'Choose…' }), opt(TI.CRED, val.cred)))),
+        cur.rel ? h('p', { class: 'dim', text: `Recorded: ${relText(cur.rel)}; ${credText(cur.cred).toLowerCase()}.` }) : h('p', { class: 'dim', text: 'Choose both to record a rating.' })) : null);
+  })();
+  return h('div', { class: 'queue-view' }, tipFor('sources', 'Read a report, then rate it.'), h('div', { class: 'two-col' }, h('div', { class: 'col-list' }, list), h('div', { class: 'col-detail' }, detail)));
+}
+
+function viewClaims() {
+  const vis = TI.visibleClaims(scn, st);
+  const groups = scn.ti.reports.filter((r) => TI.reportRead(st, r.id));
+  return h('div', { class: 'claims-view' }, tipFor('claims', 'Mark every claim.'),
+    h('ul', { class: 'facts' }, h('li', {}, h('strong', { text: 'Fact: ' }), 'confirmed by independent sources or by our own data.'), h('li', {}, h('strong', { text: 'Assessment: ' }), 'a reasoned inference or one credible source; could change.'), h('li', {}, h('strong', { text: 'Assumption: ' }), 'a guess or an over-reach with no support.'), h('li', {}, h('strong', { text: 'Rumour: ' }), 'from an unreliable source, with no evidence.')),
+    h('p', { class: 'dim', text: `${vis.length} of ${scn.ti.claims.length} claims visible. ${Object.keys(st.ti.claim).length} marked.` }),
+    groups.length ? groups.map((r) => h('div', { class: 'fixsec' }, h('h4', { text: `${scn.ti.sources.find((x) => x.id === r.source).name}: ${r.title}` }),
+      h('ul', { class: 'fixes' }, scn.ti.claims.filter((c) => c.report === r.id).map((c) => h('li', { class: 'fixrow' }, h('div', {}, h('strong', { text: c.text })), h('div', { class: 'fixbtns' }, TI.CLASSES.map(([k, l]) => h('button', { class: `chip-btn${st.ti.claim[c.id] === k ? ' on' : ''}`, type: 'button', 'data-key': `cl-${c.id}-${k}`, 'aria-pressed': st.ti.claim[c.id] === k ? 'true' : 'false', onclick: () => { E.tiClaim(scn, st, c.id, k); refresh(); }, text: l })))))))) : h('p', { class: 'empty', text: 'Read a report first. Its claims will appear here.' }));
+}
+
+const TYPE_TAG = { domain: 'DOM', ip: 'IP', hash: 'HASH', cert: 'CERT', email: 'MAIL', malware: 'MAL' };
+function viewGraph() {
+  const vis = TI.visibleIndicators(scn, st);
+  const W = 800;
+  const H = 520;
+  const px = (x) => (x / 100) * W;
+  const py = (y) => (y / 100) * H;
+  const by = Object.fromEntries(vis.map((i) => [i.id, i]));
+  const sel = ui.nodeId && by[ui.nodeId] ? ui.nodeId : null;
+  const svg = sv('svg', { viewBox: `0 0 ${W} ${H}`, class: 'netmap estate', role: 'group', 'aria-label': 'Indicators and the links you have made' });
+  for (const l of st.ti.links) {
+    if (!by[l.a] || !by[l.b]) continue;
+    const a = by[l.a];
+    const b = by[l.b];
+    const mx = (px(a.x) + px(b.x)) / 2;
+    const my = (py(a.y) + py(b.y)) / 2;
+    svg.append(sv('line', { x1: px(a.x), y1: py(a.y), x2: px(b.x), y2: py(b.y), class: `eg tl${sel ? (l.a === sel || l.b === sel ? ' hot' : ' dim') : ''}` }));
+    svg.append(sv('text', { x: mx, y: my - 4, 'text-anchor': 'middle', class: 'ellabel' }, (TI.BASES.find((x) => x[0] === l.basis) || [])[1] || l.basis));
+  }
+  for (const i of vis) {
+    const label = `${TYPE_TAG[i.type]} ${i.value.length > 22 ? i.value.slice(0, 21) + '…' : i.value}`;
+    const w = Math.max(80, label.length * 6.8 + 14);
+    const p = { x: px(i.x), y: py(i.y) };
+    const pick = () => { ui.nodeId = i.id === sel ? null : i.id; ui.linkMsg = null; renderView(); };
+    svg.append(sv('g', { class: `node ck-${i.type === 'domain' ? 'role' : i.type === 'ip' ? 'service' : 'resource'}${i.id === sel ? ' sel' : ''}${st.ti.enriched.includes(i.id) ? ' fixed' : ''}`, tabindex: 0, role: 'button', 'aria-label': i.value, 'aria-pressed': i.id === sel ? 'true' : 'false', onclick: pick, onkeydown: (ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); pick(); } } }, sv('rect', { x: p.x - w / 2, y: p.y - 13, width: w, height: 26, rx: 7 }), sv('text', { x: p.x, y: p.y + 4, 'text-anchor': 'middle' }, label)));
+  }
+  const links = h('ul', { class: 'facts' }, st.ti.links.length ? st.ti.links.map((l) => h('li', {}, `${by[l.a] ? by[l.a].value : l.a} ↔ ${by[l.b] ? by[l.b].value : l.b}: ${(TI.BASES.find((x) => x[0] === l.basis) || [])[1]} `, h('button', { class: 'btn small', type: 'button', 'data-key': `unlink-${l.a}-${l.b}`, onclick: () => { E.tiUnlink(scn, st, l.a, l.b); refresh(); }, text: 'Remove' }))) : [h('li', { class: 'dim', text: 'No links yet.' })]);
+  let inspector = h('p', { class: 'empty', text: vis.length ? 'Choose an indicator.' : 'No indicators yet. They appear as you read the reports.' });
+  if (sel) {
+    const i = by[sel];
+    const done = st.ti.enriched.includes(i.id);
+    const others = vis.filter((x) => x.id !== i.id);
+    let target = ui.linkTo && by[ui.linkTo] && ui.linkTo !== i.id ? ui.linkTo : '';
+    let basis = ui.linkBasis || '';
+    inspector = h('div', { class: 'ninsp' },
+      h('header', {}, h('span', { class: 'chip', text: i.type }), h('h2', { class: 'mono', text: i.value })),
+      h('p', { class: 'dim', text: `Mentioned in: ${i.from.filter((r) => TI.reportRead(st, r)).map((r) => scn.ti.sources.find((x) => x.id === scn.ti.reports.find((y) => y.id === r).source).name).join(', ')}.` }),
+      done ? h('blockquote', { class: 'doc', text: i.enrich }) : h('div', {}, h('p', { class: 'dim', text: 'Nothing is known beyond the report. A lookup shows its history and what it connects to.' }), h('button', { class: 'btn small', type: 'button', 'data-key': 'lookup', disabled: st.ti.credits < 1 ? true : null, onclick: () => { E.tiEnrich(scn, st, i.id); refresh(); }, text: `Look it up (${st.ti.credits} left, 2 min)` })),
+      h('h3', { text: 'Link it to another indicator' }),
+      h('div', { class: 'ruleform' },
+        h('label', {}, 'To ', h('select', { 'data-key': 'link-to', onchange: (ev) => { ui.linkTo = ev.target.value; } }, h('option', { value: '', text: 'Choose…' }), others.map((x) => h('option', { value: x.id, selected: x.id === target ? true : null, text: `${TYPE_TAG[x.type]} ${x.value.slice(0, 40)}` })))),
+        h('label', {}, 'Because ', h('select', { 'data-key': 'link-basis', onchange: (ev) => { ui.linkBasis = ev.target.value; } }, h('option', { value: '', text: 'Choose…' }), TI.BASES.map(([k, l]) => h('option', { value: k, selected: k === basis ? true : null, text: l })))),
+        h('button', { class: 'btn small primary', type: 'button', 'data-key': 'add-link', onclick: () => { const r = E.tiLink(scn, st, i.id, ui.linkTo || '', ui.linkBasis || ''); ui.linkMsg = r.ok ? { ok: true, text: 'Linked.' } : { ok: false, text: r.text }; if (r.ok) { ui.linkTo = ''; } refresh(); }, text: 'Add link (1 min)' })),
+      ui.linkMsg ? h('div', { class: `result ${ui.linkMsg.ok ? 'ok' : 'bad'}`, role: 'status' }, h('p', { text: ui.linkMsg.text })) : null);
+  }
+  return h('div', { class: 'estate-view' }, tipFor('graph', 'Click an indicator.'), h('div', { class: 'mapwrap' }, svg), h('p', { class: 'dim', text: `${vis.length} of ${scn.ti.indicators.length} indicators seen. ${st.ti.credits} of ${scn.ti.credits} lookups left.` }), inspector, h('h3', { text: 'Links you have made' }), links);
+}
+
+function viewAssess() {
+  const b = ui.tiBrief;
+  const vis = TI.visibleIndicators(scn, st).filter((i) => i.blockable !== false && ['domain', 'ip', 'hash', 'cert'].includes(i.type));
+  const submit = h('button', { class: 'btn primary big', type: 'button', 'data-key': 'submit', onclick: finish, text: 'Submit the brief' });
+  const counter = h('small', { class: 'count', text: '' });
+  const validate = () => {
+    submit.disabled = !b.decision;
+    counter.textContent = `${b.summary.trim().length} characters (at least ${scn.ti.minSummary} for full credit)`;
+  };
+  const judge = scn.ti.judgements.map((j) => {
+    const on = !!b.judge[j.id];
+    const cb = h('input', { type: 'checkbox', checked: on ? true : null, 'data-key': `j-${j.id}`, onchange: (ev) => { if (ev.target.checked) b.judge[j.id] = b.judge[j.id] || 'moderate'; else delete b.judge[j.id]; renderView(); } });
+    return h('div', { class: `opt jrow${on ? ' on' : ''}` }, h('label', { class: 'jl' }, cb, h('span', { text: j.text })),
+      on ? h('select', { 'aria-label': 'Confidence', 'data-key': `jc-${j.id}`, onchange: (ev) => { b.judge[j.id] = ev.target.value; } }, TI.CONF.map((c) => h('option', { value: c, selected: b.judge[j.id] === c ? true : null, text: `${c} confidence` }))) : null);
+  });
+  const checks = (list, key, label) => h('div', { class: 'opts' }, list.map((x) => h('label', { class: 'opt' }, h('input', { type: 'checkbox', checked: b[key].includes(x.id) ? true : null, onchange: (ev) => { b[key] = ev.target.checked ? [...b[key], x.id] : b[key].filter((y) => y !== x.id); } }), h('span', { text: label(x) }))));
+  const decision = h('div', { class: 'opts' }, scn.ti.decisions.map((d) => h('label', { class: 'opt' }, h('input', { type: 'radio', name: 'decision', value: d.id, checked: b.decision === d.id ? true : null, onchange: () => { b.decision = d.id; validate(); } }), h('span', { text: d.text }))));
+  const ta = h('textarea', { rows: 5, 'aria-label': 'Summary', placeholder: 'The answer to the CISO\'s question in plain words: is it aimed at us, how worried should we be, what to do.', oninput: (ev) => { b.summary = ev.target.value; validate(); } });
+  ta.value = b.summary;
+  queueMicrotask(validate);
+  return h('div', { class: 'report' }, tipFor('assess', 'Write the brief.'),
+    h('fieldset', {}, h('legend', { text: 'Key judgements: tick what the evidence supports, and say how confident you are' }), h('div', { class: 'opts' }, judge)),
+    h('fieldset', {}, h('legend', { text: 'What to block' }), vis.length ? checks(vis, 'iocs', (i) => `${TYPE_TAG[i.type]} ${i.value}`) : h('p', { class: 'empty', text: 'No blockable indicators seen yet.' })),
+    h('fieldset', {}, h('legend', { text: 'What to do' }), checks(scn.ti.recommendations, 'recs', (r) => r.text)),
+    h('fieldset', {}, h('legend', { text: 'Your recommendation to the CISO' }), decision),
+    h('fieldset', {}, h('legend', { text: 'Summary' }), ta, counter),
+    h('div', { class: 'btn-row' }, submit));
 }
 
 // ── Governance, risk and compliance: register, controls, heatmap and plan ──
@@ -1156,7 +1296,8 @@ function viewReport() {
 // ── Finishing ───────────────────────────────────────────────────
 function finish() {
   st.submitted = true;
-  const report = { ...ui.report };
+  E.submit(st);
+  const report = scn.ti ? { ...ui.tiBrief } : { ...ui.report };
   const g = E.grade(scn, st, report);
   const best = readBest();
   const prev = best[scn.id];

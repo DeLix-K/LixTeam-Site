@@ -461,6 +461,12 @@ export const MISSIONS = [
     competencies: { risk: 0.4, policy: 0.4, reporting: 0.2 },
     unlock: { passedTier: { 'gr-found': 2 } },
   },
+  {
+    id: 'ti12-bench', title: 'Is the Paper Trail campaign aimed at us?', tier: 'ti-prac', kind: 'workspace', mode: 'workspace', ref: 'ti-papertrail', minutes: 28, par: 0, access: 'plus',
+    blurb: 'Seven reports of very different quality, thirteen indicators and nine lookups. Judge the sources, separate fact from assumption, link what belongs together and brief the CISO.',
+    competencies: { sources: 0.35, analysis: 0.35, briefing: 0.3 },
+    unlock: { passedTier: { 'ti-found': 2 } },
+  },
   // ── Threat Intelligence path
   {
     id: 'ti01-sources', title: "Which report to trust", tier: 'ti-found', kind: 'simulation', mode: 'simulation', ref: 'sorting-reports', minutes: 20, par: 0, access: 'free',
