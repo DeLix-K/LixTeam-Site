@@ -205,6 +205,12 @@ export const MISSIONS = [
     competencies: { triage: 0.3, correlation: 0.3, endpoint: 0.2, response: 0.2 },
     unlock: { passedTier: { beginner: 2 } },
   },
+  {
+    id: 'm26-desk', title: 'The service desk, Friday afternoon', tier: 'intermediate', kind: 'workspace', mode: 'workspace', ref: 'se-servicedesk', minutes: 25, par: 0, access: 'plus',
+    blurb: 'Eight contacts, four of them attacks, all using the same pressure. Decide whom to help with checks that range from useless to decisive, while a payment run keeps the clock moving.',
+    competencies: { identity: 0.5, response: 0.3, reporting: 0.2 },
+    unlock: { passedTier: { beginner: 2 } },
+  },
   // ── Advanced
   {
     id: 'm08-ransom', title: 'The macro that kept going', tier: 'advanced', kind: 'breach', mode: 'breach-room', ref: 'ransom', minutes: 12, par: 255, access: 'plus',

@@ -7,6 +7,7 @@ import * as Cloud from './cloud.js';
 import * as VM from './vm.js';
 import * as GRC from './grc.js';
 import * as TI from './ti.js';
+import * as SE from './se.js';
 import { SOC_INVOICE } from './scenarios/soc-invoice.js';
 import { DFIR_LAPTOP } from './scenarios/dfir-laptop.js';
 import { NET_FLAT } from './scenarios/net-flat.js';
@@ -14,12 +15,13 @@ import { CLOUD_BUCKET } from './scenarios/cloud-bucket.js';
 import { VM_PATCH } from './scenarios/vm-patch.js';
 import { GRC_AUDIT } from './scenarios/grc-audit.js';
 import { TI_PAPERTRAIL } from './scenarios/ti-papertrail.js';
+import { SE_SERVICEDESK } from './scenarios/se-servicedesk.js';
 import { medalIcon } from '../core/art.js';
 import { MEDALS } from '../core/missions.js';
 import * as streak from '../core/streak.js';
 import * as missionLink from '../core/mission-link.js';
 
-const SCENARIOS = [SOC_INVOICE, DFIR_LAPTOP, NET_FLAT, CLOUD_BUCKET, VM_PATCH, GRC_AUDIT, TI_PAPERTRAIL];
+const SCENARIOS = [SOC_INVOICE, DFIR_LAPTOP, NET_FLAT, CLOUD_BUCKET, VM_PATCH, GRC_AUDIT, TI_PAPERTRAIL, SE_SERVICEDESK];
 const MISSION = missionLink.current('workspace');
 const BEST_KEY = 'lixteam.workspace.best.v1';
 const $ = (id) => document.getElementById(id);
@@ -99,6 +101,9 @@ const freshUi = () => ({
   rateDraft: {},
   tiBrief: { judge: {}, iocs: [], recs: [], decision: '', summary: '' },
   reportId: null,
+  contactId: null,
+  seMsg: null,
+  seSeen: new Set(),
   linkFrom: null,
   linkMsg: null,
   grcSort: 'rating',
@@ -124,6 +129,7 @@ const NAV_ALL = {
   queue: { label: 'Findings' },
   assets: { label: 'Assets' },
   register: { label: 'Risk register' },
+  inbox: { label: 'Contacts' },
   sources: { label: 'Sources & reports' },
   claims: { label: 'Fact or assumption' },
   graph: { label: 'Indicator graph' },
@@ -233,6 +239,10 @@ function toast(text, kind = '') {
 
 // Called after anything that may have moved the clock or changed the case.
 function refresh({ keepView = false } = {}) {
+  if (scn.se) {
+    for (const c of E.seSweep(scn, st)) toast(c.genuine ? `${c.from} gave up waiting.` : `${c.from} hung up.`, c.genuine ? 'alarm' : '');
+    for (const c of SE.arrived(scn, st)) if (!ui.seSeen.has(c.id)) { ui.seSeen.add(c.id); toast(`New ${c.channel}: ${c.from}`, ''); }
+  }
   for (const a of E.alertsNow(scn, st)) {
     if (!ui.seenAlerts.has(a.id)) {
       ui.seenAlerts.add(a.id);
@@ -258,7 +268,7 @@ function setView(v) {
 function renderView() {
   const keep = document.activeElement && document.activeElement.dataset ? document.activeElement.dataset.key : null;
   const stage = $('view');
-  const fn = { sources: viewSources, claims: viewClaims, graph: viewGraph, assess: viewAssess, register: viewRegister, controls: viewControls, heatmap: viewHeatmap, queue: viewQueue, assets: viewAssets, findings: viewFindings, estate: viewEstate, changes: viewChanges, topology: viewTopology, firewall: viewFirewall, alerts: viewAlerts, brief: viewBrief, logs: viewLogs, entities: viewEntities, tree: viewTree, map: viewMap, respond: viewRespond, case: scn.vm ? viewPlan : scn.grc ? viewPlanGrc : viewCase, report: viewReport }[ui.view];
+  const fn = { inbox: viewInbox, sources: viewSources, claims: viewClaims, graph: viewGraph, assess: viewAssess, register: viewRegister, controls: viewControls, heatmap: viewHeatmap, queue: viewQueue, assets: viewAssets, findings: viewFindings, estate: viewEstate, changes: viewChanges, topology: viewTopology, firewall: viewFirewall, alerts: viewAlerts, brief: viewBrief, logs: viewLogs, entities: viewEntities, tree: viewTree, map: viewMap, respond: viewRespond, case: scn.vm ? viewPlan : scn.grc ? viewPlanGrc : scn.se ? viewShift : viewCase, report: viewReport }[ui.view];
   stage.replaceChildren(fn());
   if (keep) {
     const again = stage.querySelector(`[data-key="${CSS.escape(keep)}"]`);
@@ -597,9 +607,9 @@ function renderCaseFile(box) {
     h('header', {}, h('strong', { text: 'Case file' }), h('small', { text: `${E.clockText(st.clock)}` })),
     h('dl', { class: 'cstat' }, scn.alerts.length ? h('dt', { text: 'Alerts' }) : null, scn.alerts.length ? h('dd', { text: `${openAlerts().length} open · ${esc} escalated · ${closed} closed` }) : null, h('dt', { text: 'Searches' }), h('dd', { text: String(st.searches) }), h('dt', { text: 'Actions' }), h('dd', { text: String(st.actions.length) })),
     scn.net || scn.cloud ? servicesBlock() : null,
-    scn.vm ? vmSide() : scn.grc ? grcSide() : null,
-    scn.vm || scn.grc ? null : h('h3', { text: 'Pinned timeline' }),
-    scn.vm || scn.grc ? null : pins.length
+    scn.vm ? vmSide() : scn.grc ? grcSide() : scn.se ? seSide() : null,
+    scn.vm || scn.grc || scn.se ? null : h('h3', { text: 'Pinned timeline' }),
+    scn.vm || scn.grc || scn.se ? null : pins.length
       ? h('ol', { class: 'pintl' }, pins.map((e) => h('li', {}, h('time', { text: timeText(e.t) }), h('span', { text: e.summary }), h('button', { class: 'x', type: 'button', 'aria-label': 'Unpin', onclick: () => { E.unpin(st, e.id); refresh(); }, text: '×' }))))
       : h('p', { class: 'empty', text: 'Nothing pinned yet. Pin the events that prove what happened.' }),
   ].filter(Boolean));
@@ -608,6 +618,61 @@ function viewCase() {
   const box = h('div', { class: 'casefile-inline' });
   renderCaseFile(box);
   return h('div', {}, tipFor('case', 'This is your evidence timeline, in time order. A good one tells the story of the attack from the first email to the data staged for removal.'), box);
+}
+
+// ── Social engineering: the service desk ────────────────────────
+const CHAN = { call: 'Call', chat: 'Chat', email: 'Email' };
+const STRENGTH = { strong: 'Strong check', weak: 'Weak check', context: 'Context' };
+function seStatus(c) {
+  const d = st.se.decisions[c.id];
+  if (!d) return `Waiting (${Math.max(0, c.at + c.patience - st.clock)} min left)`;
+  if (d.action === 'left') return c.genuine ? 'Gave up waiting' : 'Hung up';
+  return SE.label(SE.ACTIONS, d.action);
+}
+function seSide() {
+  const all = scn.se.contacts;
+  const arrived = SE.arrived(scn, st);
+  const done = all.filter((c) => st.se.decisions[c.id]).length;
+  const waiting = arrived.filter((c) => !st.se.decisions[c.id]).length;
+  return h('div', {}, h('h3', { text: 'The shift' }), h('p', { class: 'dim', text: `${done} of ${all.length} contacts dealt with, ${waiting} waiting, ${all.length - arrived.length} still to come.` }));
+}
+
+function viewInbox() {
+  const arrived = SE.arrived(scn, st);
+  const list = h('ul', { class: 'queue' }, arrived.length ? arrived.slice().sort((a, b) => b.at - a.at).map((c) => {
+    const d = st.se.decisions[c.id];
+    return h('li', {}, h('button', { class: `acard fcard${ui.contactId === c.id ? ' sel' : ''}${d ? ' done-closed' : ''}`, type: 'button', 'data-key': `c-${c.id}`, 'aria-pressed': ui.contactId === c.id ? 'true' : 'false', onclick: () => { ui.contactId = c.id; ui.seMsg = null; renderView(); toDetail(); } },
+      h('div', { class: 'acard-top' }, h('span', { class: `cvss ch-${c.channel}`, text: CHAN[c.channel] }), h('span', { class: 'mono dim', text: timeText(c.at) })),
+      h('strong', { text: c.from }), h('small', { text: c.title }), h('small', { class: `astate ${d ? 'st-closed' : 'st-new'}`, text: seStatus(c) })));
+  }) : [h('li', { class: 'empty', text: 'Nobody is waiting.' })]);
+  const sel = arrived.find((c) => c.id === ui.contactId);
+  return h('div', { class: 'queue-view' }, tipFor('inbox', 'Open a contact.'),
+    h('div', { class: 'sortbar' }, h('button', { class: 'btn small', type: 'button', 'data-key': 'wait-next', onclick: () => { const r = E.seWait(scn, st); toast(r.next ? `Waited ${r.minutes} minutes for the next contact.` : 'Nothing else is coming for now.', ''); refresh(); }, text: 'Wait for the next contact' }), h('span', { class: 'dim', text: ' Nobody to help? Time only passes when you work or wait.' })),
+    h('div', { class: 'two-col' }, h('div', { class: 'col-list' }, list), h('div', { class: 'col-detail' }, sel ? contactDetail(sel) : h('p', { class: 'empty', text: 'Choose a contact. Anyone you leave too long will give up.' }))));
+}
+
+function contactDetail(c) {
+  const d = st.se.decisions[c.id];
+  const used = SE.usedTools(st, c.id);
+  const lines = c.transcript.map(([who, text]) => h('p', { class: 'say', text }));
+  const toolBtns = SE.TOOLS.filter(([id]) => c.tools[id]).map(([id, label]) => h('button', { class: `btn small${used.includes(id) ? '' : ''}`, type: 'button', 'data-key': `tool-${c.id}-${id}`, disabled: d || used.includes(id) ? true : null, onclick: () => { E.seTool(scn, st, c.id, id); refresh(); }, text: `${label} (${c.tools[id].cost} min)${used.includes(id) ? ' ✓' : ''}` }));
+  const known = used.map((id) => { const t = c.tools[id]; return h('li', { class: `kn kn-${t.strength}` }, h('span', { class: `band kb-${t.strength}`, text: STRENGTH[t.strength] }), ' ', h('strong', { text: SE.label(SE.TOOLS, id) + ': ' }), t.text); });
+  const acts = SE.ACTIONS.filter(([id]) => c.actions[id]).map(([id, label]) => h('button', { class: `btn ${id === 'escalate' ? '' : 'primary'}`, type: 'button', 'data-key': `act-${c.id}-${id}`, disabled: d ? true : null, onclick: () => { const r = E.seAct(scn, st, c.id, id); ui.seMsg = { ok: !(r.breach || r.harm), text: r.text }; refresh(); }, text: label }));
+  return h('div', { class: 'fdetail' },
+    h('header', {}, h('span', { class: `cvss ch-${c.channel}`, text: CHAN[c.channel] }), h('span', { class: 'mono dim', text: ` ${timeText(c.at)} · ${seStatus(c)}` }), h('h2', { text: c.from }), h('p', { class: 'dim', text: c.title })),
+    h('blockquote', { class: 'doc' }, lines),
+    h('p', { class: 'dim', text: `Their manner: ${c.pressure}` }),
+    h('h3', { text: 'Checks' }), h('div', { class: 'quick' }, toolBtns),
+    known.length ? h('ul', { class: 'facts knlist' }, known) : h('p', { class: 'dim', text: 'You have not checked anything yet.' }),
+    h('h3', { text: 'Your decision' }),
+    h('ul', { class: 'facts' }, h('li', {}, h('strong', { text: 'Do what they ask: ' }), 'give them exactly what they want.'), h('li', {}, h('strong', { text: 'Offer the standard safe route: ' }), 'the normal, verified way to get the same thing done.'), h('li', {}, h('strong', { text: 'Politely decline: ' }), 'say no and end it.'), h('li', {}, h('strong', { text: 'Report it to Security: ' }), 'decline and pass the details on.')),
+    h('div', { class: 'quick' }, acts),
+    ui.seMsg && d ? h('div', { class: `result ${ui.seMsg.ok ? 'ok' : 'bad'}`, role: 'status' }, h('p', { text: ui.seMsg.text })) : null);
+}
+
+function viewShift() {
+  return h('div', { class: 'plan-view' }, tipFor('case', 'Who has been handled.'), seSide(),
+    h('ul', { class: 'facts' }, scn.se.contacts.map((c) => { const arrived = c.at <= st.clock; return h('li', { text: arrived ? `${timeText(c.at)} ${c.from}: ${seStatus(c)}` : `${timeText(c.at)} (not yet arrived)` }); })));
 }
 
 // ── Threat intelligence: sources, claims, graph and brief ───────

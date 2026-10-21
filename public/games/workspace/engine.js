@@ -17,6 +17,7 @@ import * as Cloud from './cloud.js';
 import * as VM from './vm.js';
 import * as GRC from './grc.js';
 import * as TI from './ti.js';
+import * as SE from './se.js';
 
 export const COSTS = { search: 1, entity: 1, tree: 1, map: 1, action: 3, alert: 1, rule: 3, tweak: 1 };
 
@@ -48,6 +49,7 @@ export function newRun(scn) {
   if (scn.vm) st.vm = VM.newState(scn);
   if (scn.grc) st.grc = GRC.newState();
   if (scn.ti) st.ti = TI.newState(scn);
+  if (scn.se) st.se = SE.newState();
   if (scn.cloud) st.cloud = { history: [{ at: -1, applied: [] }] };
   if (scn.net) st.fw = { history: [{ at: -1, policy: Net.initialPolicy(scn) }], next: scn.net.rules.length + 1 };
   return st;
@@ -59,6 +61,8 @@ const flagName = (action, target) => `${action}:${target}`;
 function suppressed(e, st, scn) {
   if (scn && scn.net && e.flow && Net.decide(scn, Net.policyAt(st, e.t), e.flow).action === 'deny') return true;
   if (scn && scn.cloud && e.access && !Cloud.can(scn, Cloud.stateAtTime(scn, st, e.t), e.access.who, e.access.resource, e.access.action)) return true;
+  // Aftermath: an event that only happens if the player did something earlier (for example, helped an attacker).
+  if (e.when && !e.when.some((f) => st.flags[f] !== undefined && st.flags[f] <= e.t)) return true;
   if (!e.unless) return false;
   return e.unless.some((f) => st.flags[f] !== undefined && st.flags[f] <= e.t);
 }
@@ -542,6 +546,56 @@ export function tiUnlink(scn, st, a, b) {
   return { ok: st.ti.links.length < n };
 }
 
+// ── Social engineering at the service desk ──────────────────────
+// A contact who waited too long gives up. A real colleague left hanging is harm to the business; an attacker simply
+// tries another route, which is no credit to the agent.
+export function seSweep(scn, st) {
+  const gone = [];
+  for (const c of SE.arrived(scn, st)) {
+    if (st.se.decisions[c.id] || st.clock <= c.at + c.patience) continue;
+    st.se.decisions[c.id] = { action: 'left', at: c.at + c.patience };
+    if (c.genuine) {
+      const harm = c.leftHarm ?? 2;
+      st.disruption += harm;
+      st.se.harm.push({ label: `${c.from} gave up waiting`, harm, text: c.leftText || 'A real colleague was left without help.' });
+    }
+    gone.push(c);
+  }
+  return gone;
+}
+export function seTool(scn, st, cid, tool) {
+  const c = SE.arrived(scn, st).find((x) => x.id === cid);
+  if (!c) return { ok: false, text: 'That contact is not waiting.' };
+  const t = SE.toolOf(c, tool);
+  if (!t) return { ok: false, text: 'That check is not possible for this contact.' };
+  if (st.se.decisions[cid]) return { ok: false, text: 'You have already dealt with this contact.' };
+  if (SE.usedTools(st, cid).includes(tool)) return { ok: true, again: true, tool: t };
+  st.se.used[cid] = [...SE.usedTools(st, cid), tool];
+  advance(st, t.cost ?? 1, `${c.from}: ${SE.label(SE.TOOLS, tool)}`);
+  return { ok: true, tool: t };
+}
+export function seAct(scn, st, cid, action) {
+  const c = SE.arrived(scn, st).find((x) => x.id === cid);
+  const o = c && c.actions[action];
+  if (!o) return { ok: false, text: 'That cannot be done.' };
+  if (st.se.decisions[cid]) return { ok: false, text: 'You have already dealt with this contact.' };
+  st.se.decisions[cid] = { action, at: st.clock, verified: SE.strongUsed(c, st) };
+  if (o.harm) {
+    st.disruption += o.harm;
+    st.se.harm.push({ label: `${c.from}: ${SE.label(SE.ACTIONS, action).toLowerCase()}`, harm: o.harm, text: o.text });
+  }
+  if (o.breach) st.se.breaches += 1;
+  for (const f of o.sets || []) if (st.flags[f] === undefined) st.flags[f] = st.clock;
+  advance(st, 2, `${c.from}: ${SE.label(SE.ACTIONS, action)}`);
+  return { ok: true, text: o.text, harm: o.harm || 0, breach: !!o.breach };
+}
+export function seWait(scn, st) {
+  const next = scn.se.contacts.map((c) => c.at).filter((t) => t > st.clock).sort((a, b) => a - b)[0];
+  const by = next ? next - st.clock : 15;
+  advance(st, by, 'Waited for the next contact');
+  return { minutes: by, next: !!next };
+}
+
 // What the state of the estate says about the scenario's threats and the services that must keep working.
 export function stateChecks(scn, st) {
   if (scn.net) {
@@ -648,6 +702,19 @@ export function grade(scn, st, report) {
       add('Triage', `${label}: marked ${c.got || 'nothing'} (it is ${c.claim.truth})`, c.points, c.max, c.claim.why || '');
     }
   }
+  if (scn.se) {
+    SE.arrived(scn, st);
+    seSweep(scn, st);
+    const n = scn.se.contacts.length;
+    const per = g.triage / n;
+    for (const c of scn.se.contacts) {
+      const d = st.se.decisions[c.id];
+      const sc = SE.decisionScore(c, d);
+      tri += per * sc;
+      const what = !d ? 'never arrived or never dealt with' : d.action === 'left' ? 'left waiting until they gave up' : SE.label(SE.ACTIONS, d.action).toLowerCase();
+      add('Triage', `${c.from} (${c.channel}): ${what}`, per * sc, per, `${c.genuine ? 'A genuine request.' : 'An attack.'} ${c.why}`);
+    }
+  }
   const triMax = g.triage;
 
   // Evidence
@@ -688,6 +755,15 @@ export function grade(scn, st, report) {
     if (ls.falseLinks.length) bits.push(`Not linked in reality: ${ls.falseLinks.slice(0, 3).map((l) => `${l.a} and ${l.b}`).join('; ')}. Coincidence and shared hosting are not links.`);
     add('Evidence', `Indicator links: ${ls.found.length} of ${scn.ti.links.length} real links found${ls.falseLinks.length ? `, ${ls.falseLinks.length} false` : ''}`, ls.points, ls.max, bits.join(' '));
   }
+  if (scn.se) {
+    const perV = g.evidence / scn.se.contacts.length;
+    for (const c of scn.se.contacts) {
+      const sh = SE.verifyShare(c, st);
+      evi += perV * sh;
+      const how = !c.needsVerify ? 'no check needed' : SE.strongUsed(c, st) ? 'checked through a channel they did not provide' : SE.anyUsed(st, c.id) ? 'only weak checks' : 'no check before deciding';
+      add('Evidence', `${c.from}: ${how}`, perV * sh, perV, sh < 1 && c.needsVerify ? c.verifyNote || '' : '');
+    }
+  }
   const wrongPins = st.pins.map((id) => scn.events.find((e) => e.id === id)).filter((e) => e && !e.key).length;
   const penalty = Math.min(g.evidence * 0.2, wrongPins * 1.5);
   if (penalty > 0) add('Evidence', `Unrelated events pinned (${wrongPins})`, -penalty, 0, 'Only pin events that belong to the incident.');
@@ -706,6 +782,14 @@ export function grade(scn, st, report) {
       hits.push(r);
       add('Response', `Done: ${r.label}`, r.points, r.points);
     } else add('Response', `Not done: ${r.label}`, 0, r.points, r.why || '');
+  }
+  if (scn.se) {
+    res += scn.se.outcomePoints;
+    if (!st.se.harm.length) add('Response', 'Nothing your decisions did harmed anyone', scn.se.outcomePoints, scn.se.outcomePoints);
+    for (const hm of st.se.harm) {
+      harmNet += hm.harm * g.harmScale;
+      add('Response', `Cost: ${hm.label}`, -hm.harm * g.harmScale, 0, hm.text);
+    }
   }
   if (scn.grc) {
     const best = GRC.optimum(scn).value;
@@ -877,7 +961,7 @@ export function problems(scn) {
     const [action, target] = f.split(':');
     if (!scn.responses.some((r) => (r.action === action && r.target === target) || (r.sets || []).includes(f)) && !(scn.vm && scn.vm.findings.some((x) => x.options.some((o) => (o.sets || []).includes(f)))) && !(scn.grc && scn.grc.findings.some((x) => x.options.some((o) => (o.sets || []).includes(f)) || (x.challenge && f === `plan:${x.id}`)))) out.push(`event ${e.id}: nothing the player can do sets ${f}`);
   }
-  const goodSum = scn.responses.filter((r) => r.good).reduce((n, r) => n + r.points, 0) + ((scn.net || scn.cloud) ? (scn.net || scn.cloud).threats.reduce((n, th) => n + th.points, 0) : 0) + (scn.vm ? scn.vm.riskPoints : 0) + (scn.grc ? scn.grc.riskPoints : 0);
+  const goodSum = scn.responses.filter((r) => r.good).reduce((n, r) => n + r.points, 0) + ((scn.net || scn.cloud) ? (scn.net || scn.cloud).threats.reduce((n, th) => n + th.points, 0) : 0) + (scn.vm ? scn.vm.riskPoints : 0) + (scn.grc ? scn.grc.riskPoints : 0) + (scn.se ? scn.se.outcomePoints : 0);
   if (goodSum !== scn.grading.response) out.push(`good responses are worth ${goodSum}, the response score is ${scn.grading.response}`);
   const roles = new Set(scn.events.filter((e) => e.key && e.keyWeight !== 0).map((e) => e.key));
   for (const r of roles) if (!scn.roleLabels[r] || !scn.roleHints[r]) out.push(`evidence role ${r} needs a label and a hint`);
@@ -915,6 +999,28 @@ export function problems(scn) {
     const cost = v.findings.flatMap((f) => f.options.filter((o) => !o.breaks)).reduce((n, o) => n + o.cost, 0);
     if (cost <= v.budget * 1.5) out.push('the budget is too generous: the whole backlog nearly fits');
     if (!opt.value) out.push('nothing can be removed within the budget');
+  }
+  if (scn.se) {
+    const q = scn.se;
+    const ids = new Set();
+    for (const c of q.contacts) {
+      if (ids.has(c.id)) out.push(`duplicate contact ${c.id}`);
+      ids.add(c.id);
+      for (const a of Object.keys(c.actions)) if (!SE.ACTIONS.some((x) => x[0] === a)) out.push(`contact ${c.id}: unknown action ${a}`);
+      for (const a of [...c.good, ...(c.fine || [])]) if (!c.actions[a]) out.push(`contact ${c.id}: ${a} is rated but not offered`);
+      if (!c.good.length) out.push(`contact ${c.id} has no good action`);
+      for (const tl of Object.keys(c.tools || {})) if (!SE.TOOLS.some((x) => x[0] === tl)) out.push(`contact ${c.id}: unknown tool ${tl}`);
+      for (const tl of c.strongTools || []) if (!(c.tools || {})[tl]) out.push(`contact ${c.id}: strong tool ${tl} is not available`);
+      if (c.needsVerify && !(c.strongTools || []).length) out.push(`contact ${c.id} needs verifying but has no strong check`);
+      if (!c.genuine && c.good.includes('help')) out.push(`contact ${c.id}: helping an attacker cannot be good`);
+      if (c.genuine && c.good.includes('refuse') && c.risk !== 'high') out.push(`contact ${c.id}: refusing a genuine low-risk request cannot be good`);
+      if (!(c.patience > 0)) out.push(`contact ${c.id} needs a patience`);
+    }
+    for (const e of scn.events) for (const f of e.when || []) {
+      const m = /^breach:(.+)$/.exec(f);
+      if (!m || !q.contacts.some((c) => c.id === m[1] && Object.values(c.actions).some((a) => (a.sets || []).includes(f)))) out.push(`event ${e.id}: nothing sets ${f}`);
+    }
+    if (q.outcomePoints !== scn.grading.response) out.push('outcome points must equal the response score');
   }
   if (scn.ti) {
     const t = scn.ti;

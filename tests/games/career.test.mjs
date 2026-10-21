@@ -31,7 +31,8 @@ const { CLOUD_BUCKET } = await import(U('workspace/scenarios/cloud-bucket.js'));
 const { VM_PATCH } = await import(U('workspace/scenarios/vm-patch.js'));
 const { GRC_AUDIT } = await import(U('workspace/scenarios/grc-audit.js'));
 const { TI_PAPERTRAIL } = await import(U('workspace/scenarios/ti-papertrail.js'));
-const contentIds = { workspace: [SOC_INVOICE.id, DFIR_LAPTOP.id, NET_FLAT.id, CLOUD_BUCKET.id, VM_PATCH.id, GRC_AUDIT.id, TI_PAPERTRAIL.id], 'cyber-detective': DET.map((x) => x.id), 'breach-room': BR.map((x) => x.id), 'incident-commander': IC.map((x) => x.id), 'social-engineering': SE.map((x) => x.id), simulation: SIMS.map((x) => x.id) };
+const { SE_SERVICEDESK } = await import(U('workspace/scenarios/se-servicedesk.js'));
+const contentIds = { workspace: [SOC_INVOICE.id, DFIR_LAPTOP.id, NET_FLAT.id, CLOUD_BUCKET.id, VM_PATCH.id, GRC_AUDIT.id, TI_PAPERTRAIL.id, SE_SERVICEDESK.id], 'cyber-detective': DET.map((x) => x.id), 'breach-room': BR.map((x) => x.id), 'incident-commander': IC.map((x) => x.id), 'social-engineering': SE.map((x) => x.id), simulation: SIMS.map((x) => x.id) };
 
 t('content integrity: every mission points at a case that exists in its mode', () => {
   for (const m of M.MISSIONS) {
@@ -78,7 +79,7 @@ t('mission data is well formed, with the right numbers per tier', () => {
     assert.ok(Math.abs(w.reduce((a, [, x]) => a + x, 0) - 1) < 1e-9, m.id + ' weights should sum to 1');
     if (m.exam) assert.ok(m.promotes && m.passTier >= 2);
   }
-  assert.deepEqual([ids('beginner').length, ids('intermediate').length, ids('advanced').length, ids('senior').length, ids('lead').length, ids('manager').length, ids('cloud').length], [4, 8, 4, 3, 4, 2, 3]);
+  assert.deepEqual([ids('beginner').length, ids('intermediate').length, ids('advanced').length, ids('senior').length, ids('lead').length, ids('manager').length, ids('cloud').length], [4, 9, 4, 3, 4, 2, 3]);
   assert.equal(M.MISSIONS.filter((m) => m.exam).length, 22);
   assert.equal(M.RANKS.length, 6);
   assert.equal(M.COMPETENCIES.length, 30);

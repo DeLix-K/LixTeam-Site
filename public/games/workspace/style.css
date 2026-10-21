@@ -455,3 +455,16 @@ button.fcard { text-align: left; }
 .jrow .jl { display: flex; gap: 10px; align-items: flex-start; flex: 1 1 320px; cursor: pointer; }
 .jrow .jl input { margin-top: 4px; accent-color: var(--accent); width: 16px; height: 16px; flex: 0 0 auto; }
 .jrow.on { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, #121212); }
+
+/* ── Social engineering workspace: the service desk ──────────── */
+.ch-call { color: #fdba74; border-color: #fb923c66; }
+.ch-chat { color: #7dd3fc; border-color: #38bdf866; }
+.ch-email { color: #d8b4fe; border-color: #c084fc66; }
+.say { margin: 0 0 8px; color: #e5e5e5; }
+.knlist { list-style: none; padding-left: 0; display: grid; gap: 6px; }
+.kn { padding: 8px 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; border-left: 4px solid #555; }
+.kn-strong { border-left-color: var(--good); }
+.kn-weak { border-left-color: var(--warn); }
+.kb-strong { color: #86efac; border-color: #4ade8066; }
+.kb-weak { color: #fcd34d; border-color: #fbbf2466; }
+.kb-context { color: var(--muted); }
