@@ -3,135 +3,120 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>RootLine · LixTeam</title>
-  <meta name="description" content="Free cyber security training games across nine career paths: spot phishing, run incidents, hunt attackers and rank up. No sign-up, no tracking." />
+  <title>ROOTLINE · Two cyber security games</title>
+  <meta name="description" content="ROOTLINE: two free cyber security games. Investigate, analyse and respond in the Hands-on Cyber Workspace, or complete missions, build skills and advance in Level Up in Cyber Security. No sign-up, no tracking." />
   <meta name="theme-color" content="#0a0a0a" />
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23a3e635'/%3E%3Ctext x='16' y='22' font-family='Arial' font-weight='900' font-size='15' text-anchor='middle' fill='%230a0a0a'%3ELT%3C/text%3E%3C/svg%3E" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23a3e635'/%3E%3Ctext x='16' y='22' font-family='Arial' font-weight='900' font-size='15' text-anchor='middle' fill='%230a0a0a'%3ERL%3C/text%3E%3C/svg%3E" />
   <link rel="stylesheet" href="shared.css" />
-  <link rel="stylesheet" href="hub.css" />
+  <link rel="stylesheet" href="rootline.css" />
 </head>
-<body class="home">
-  <header class="top">
-    <a class="back" href="/">← LixTeam</a>
-    <span class="title">RootLine</span>
-    <span class="spacer" aria-hidden="true"></span>
+<body class="rl">
+  <a class="skip" href="#games">Skip to the games</a>
+
+  <header class="rl-nav">
+    <a class="rl-brand" href="/games/" aria-label="ROOTLINE home">
+      <span class="rl-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="M7 4v7a5 5 0 0 0 5 5h2" /><circle cx="17.5" cy="16" r="2.4" /></svg>
+      </span>
+      <span class="rl-word">Root<b>line</b></span>
+    </a>
+    <nav class="rl-links" aria-label="Main">
+      <a href="/games/" aria-current="page">Home</a>
+      <a href="#games">Games</a>
+      <a href="#progress">Progress</a>
+      <span class="rl-sep" aria-hidden="true"></span>
+      <button type="button" class="rl-gear" data-open-settings aria-label="Settings" title="Settings"></button>
+    </nav>
   </header>
 
-  <main id="hub" class="wide">
-    <section class="screen" aria-labelledby="hub-h">
-      <div class="hero">
-        <div class="hero-copy">
-          <p class="boot" aria-hidden="true">&gt; rootline.boot --paths 9 --status online</p>
-          <p class="eyebrow">Free security training games</p>
-          <h1 id="hub-h">Level up in <span class="accent-text">cyber security.</span></h1>
-          <p class="lead">Short, hands-on missions across nine career paths. Spot scams, hunt attackers and run live incidents. No sign-up, and your progress stays on this device.</p>
-          <div class="btn-row hero-cta">
-            <a class="btn primary big" id="hero-btn" href="#paths">Choose your path</a>
-            <a class="btn big" href="#modes-h">Jump into a mode</a>
-          </div>
-        </div>
-        <div class="hero-art" aria-hidden="true">
-          <svg viewBox="0 0 320 320" class="radar-art" focusable="false">
-            <defs>
-              <radialGradient id="rg" cx="50%" cy="50%" r="50%">
-                <stop offset="0" stop-color="#a3e635" stop-opacity="0.16" />
-                <stop offset="1" stop-color="#a3e635" stop-opacity="0" />
-              </radialGradient>
-              <linearGradient id="sweep" x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0" stop-color="#a3e635" stop-opacity="0" />
-                <stop offset="1" stop-color="#a3e635" stop-opacity="0.55" />
-              </linearGradient>
-            </defs>
-            <circle cx="160" cy="160" r="150" fill="url(#rg)" />
-            <g fill="none" stroke="#a3e635" stroke-opacity="0.35" stroke-width="1">
-              <circle cx="160" cy="160" r="150" />
-              <circle cx="160" cy="160" r="110" />
-              <circle cx="160" cy="160" r="70" />
-              <circle cx="160" cy="160" r="30" />
-              <line x1="160" y1="6" x2="160" y2="314" />
-              <line x1="6" y1="160" x2="314" y2="160" />
-              <line x1="51" y1="51" x2="269" y2="269" stroke-opacity="0.15" />
-              <line x1="269" y1="51" x2="51" y2="269" stroke-opacity="0.15" />
+  <main class="rl-main" id="main">
+    <section class="rl-hero" aria-labelledby="rl-h">
+      <p class="rl-boot" aria-hidden="true">&gt; rootline --games 2 --status online</p>
+      <h1 class="rl-title" id="rl-h">Rootline</h1>
+      <p class="rl-lead">Two ways to train in one cyber range. Work a live-style incident, or climb a career of missions. Everything is simulated, free, and saved only on this device.</p>
+    </section>
+
+    <section id="games" class="rl-gates" role="group" aria-label="Choose a game">
+      <a class="gate gate-ws" href="/games/workspace/" data-game="workspace">
+        <div class="gate-art" aria-hidden="true">
+          <svg viewBox="0 0 400 200" preserveAspectRatio="xMidYMid meet" focusable="false">
+            <rect x="12" y="12" width="376" height="176" rx="10" fill="#0c0c0c" stroke="currentColor" stroke-opacity="0.35" />
+            <rect x="12" y="12" width="376" height="22" rx="10" fill="currentColor" fill-opacity="0.1" />
+            <circle cx="28" cy="23" r="3.5" fill="#f87171" /><circle cx="42" cy="23" r="3.5" fill="#fbbf24" /><circle cx="56" cy="23" r="3.5" fill="#4ade80" />
+            <text x="200" y="27" text-anchor="middle" font-family="monospace" font-size="9" fill="currentColor" fill-opacity="0.7">ALERT QUEUE · SIMULATED</text>
+            <g font-family="monospace" font-size="8.5">
+              <rect x="24" y="44" width="104" height="132" rx="6" fill="currentColor" fill-opacity="0.05" />
+              <circle class="art-pulse" cx="36" cy="60" r="4" fill="#f87171" /><rect x="46" y="55" width="70" height="4" rx="2" fill="#e5e5e5" fill-opacity="0.7" /><rect x="46" y="62" width="48" height="3" rx="1.5" fill="#a3a3a3" fill-opacity="0.5" />
+              <circle cx="36" cy="86" r="4" fill="#fbbf24" /><rect x="46" y="81" width="62" height="4" rx="2" fill="#e5e5e5" fill-opacity="0.6" /><rect x="46" y="88" width="54" height="3" rx="1.5" fill="#a3a3a3" fill-opacity="0.5" />
+              <circle cx="36" cy="112" r="4" fill="#38bdf8" /><rect x="46" y="107" width="74" height="4" rx="2" fill="#e5e5e5" fill-opacity="0.5" /><rect x="46" y="114" width="40" height="3" rx="1.5" fill="#a3a3a3" fill-opacity="0.5" />
+              <circle cx="36" cy="138" r="4" fill="#4ade80" /><rect x="46" y="133" width="56" height="4" rx="2" fill="#e5e5e5" fill-opacity="0.4" /><rect x="46" y="140" width="60" height="3" rx="1.5" fill="#a3a3a3" fill-opacity="0.4" />
             </g>
-            <g class="sweep"><path d="M160 160 L160 10 A150 150 0 0 1 266 54 Z" fill="url(#sweep)" /></g>
-            <g class="blips">
-              <circle class="blip b1" cx="220" cy="92" r="6" fill="#a3e635" />
-              <circle class="blip b2" cx="96" cy="108" r="6" fill="#38bdf8" />
-              <circle class="blip b3" cx="238" cy="188" r="6" fill="#a78bfa" />
-              <circle class="blip b4" cx="132" cy="236" r="6" fill="#2dd4bf" />
-              <circle class="blip b5" cx="74" cy="186" r="6" fill="#fbbf24" />
-              <circle class="blip b6" cx="190" cy="136" r="6" fill="#f87171" />
+            <g>
+              <rect x="138" y="44" width="150" height="86" rx="6" fill="currentColor" fill-opacity="0.04" />
+              <rect x="146" y="54" width="120" height="4" rx="2" fill="#a3a3a3" fill-opacity="0.45" />
+              <rect x="146" y="64" width="134" height="4" rx="2" fill="currentColor" fill-opacity="0.75" />
+              <rect x="146" y="74" width="96" height="4" rx="2" fill="#a3a3a3" fill-opacity="0.45" />
+              <rect x="146" y="84" width="126" height="4" rx="2" fill="#f87171" fill-opacity="0.7" />
+              <rect x="146" y="94" width="110" height="4" rx="2" fill="#a3a3a3" fill-opacity="0.45" />
+              <rect x="146" y="104" width="70" height="4" rx="2" fill="#a3a3a3" fill-opacity="0.45" />
+              <rect x="146" y="114" width="8" height="4" class="art-blink" fill="currentColor" />
+              <rect class="art-scan" x="138" y="40" width="150" height="2" fill="currentColor" fill-opacity="0.35" />
             </g>
-            <circle cx="160" cy="160" r="4" fill="#a3e635" />
+            <g>
+              <rect x="298" y="44" width="78" height="86" rx="6" fill="currentColor" fill-opacity="0.04" />
+              <path class="art-dash" d="M318 70 L348 62 M318 70 L336 104 M348 62 L358 96 M336 104 L358 96" fill="none" stroke="currentColor" stroke-opacity="0.6" stroke-width="1.4" />
+              <circle cx="318" cy="70" r="6" fill="#38bdf8" /><circle cx="348" cy="62" r="6" fill="currentColor" /><circle cx="336" cy="104" r="6" fill="#fbbf24" /><circle class="art-pulse" cx="358" cy="96" r="6" fill="#f87171" />
+            </g>
+            <line x1="138" y1="150" x2="376" y2="150" stroke="currentColor" stroke-opacity="0.4" />
+            <g fill="currentColor"><circle cx="160" cy="150" r="3.5" /><circle cx="204" cy="150" r="3.5" fill="#fbbf24" /><circle cx="256" cy="150" r="3.5" /><circle cx="312" cy="150" r="3.5" fill="#f87171" /></g>
+            <rect x="138" y="160" width="86" height="4" rx="2" fill="#a3a3a3" fill-opacity="0.35" /><rect x="138" y="168" width="52" height="4" rx="2" fill="#a3a3a3" fill-opacity="0.25" />
           </svg>
         </div>
-      </div>
-
-      <div class="hud" aria-label="Your progress">
-        <div class="hud-tile hud-level"><span class="hud-label">Level</span><span class="hud-big" id="p-level">1</span></div>
-        <div class="hud-tile hud-xp">
-          <div class="xp-top"><span class="hud-label">Experience</span><span id="p-xp">0 XP</span></div>
-          <div class="progress"><div id="p-bar"></div></div>
-          <small id="p-next"></small>
-        </div>
-        <div class="hud-tile hud-streak"><span class="hud-label">Day streak</span><span class="hud-big" id="p-streak">0</span><small class="hud-note" id="streak-note"></small></div>
-        <div class="hud-tile"><span class="hud-label">Gold medals</span><span class="hud-big gold" id="p-gold">0</span></div>
-        <div class="hud-tile"><span class="hud-label">Paths started</span><span class="hud-big" id="p-paths">0<small>/9</small></span></div>
-      </div>
-
-      <a class="continue" href="career/" id="continue" hidden>
-        <span class="continue-badge" id="continue-badge"></span>
-        <span class="continue-text">
-          <small>Continue</small>
-          <strong id="continue-path">Your path</strong>
-          <span id="continue-line"></span>
-        </span>
-        <span class="btn primary">Resume</span>
+        <p class="gate-kicker">Game 01 · Simulation</p>
+        <h2>Hands-on Cyber Workspace</h2>
+        <p class="gate-line">Investigate. Analyse. Respond.</p>
+        <p class="gate-desc">Enter the operations floor. Investigate threats, analyse evidence, and respond to live-style cyber incidents.</p>
+        <ul class="gate-facts" id="facts-ws" aria-label="About this game"></ul>
+        <span class="gate-cta">Enter workspace <i aria-hidden="true">→</i></span>
       </a>
 
-      <div class="weekly" id="weekly" hidden>
-        <div class="weekly-text">
-          <p class="tag-line">This week's case</p>
-          <h2 id="weekly-title"></h2>
-          <p id="weekly-blurb"></p>
-          <p class="weekly-meta"><span class="chip" id="weekly-mode"></span><span class="chip" id="weekly-status"></span><span class="weekly-next" id="weekly-next"></span></p>
+      <a class="gate gate-lu" href="/games/levelup/" data-game="levelup">
+        <div class="gate-art" aria-hidden="true">
+          <svg viewBox="0 0 400 200" preserveAspectRatio="xMidYMid meet" focusable="false">
+            <rect x="12" y="12" width="376" height="176" rx="10" fill="#0c0c0c" stroke="currentColor" stroke-opacity="0.35" />
+            <path d="M40 160 C 90 160, 90 118, 140 118 S 190 150, 236 120 S 300 70, 360 52" fill="none" stroke="currentColor" stroke-opacity="0.3" stroke-width="3" stroke-linecap="round" />
+            <path class="art-dash" d="M236 120 S 300 70, 360 52" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" />
+            <g>
+              <circle cx="40" cy="160" r="12" fill="currentColor" /><path d="M35 160l4 4 7-8" stroke="#0a0a0a" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round" />
+              <circle cx="140" cy="118" r="12" fill="currentColor" /><path d="M135 118l4 4 7-8" stroke="#0a0a0a" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round" />
+              <circle class="art-pulse" cx="236" cy="120" r="14" fill="none" stroke="currentColor" stroke-width="3" /><circle cx="236" cy="120" r="6" fill="currentColor" />
+              <circle cx="300" cy="82" r="11" fill="#141414" stroke="#6b7280" stroke-width="2" /><rect x="296" y="82" width="8" height="6" rx="1.5" fill="#6b7280" /><path d="M297 82v-3a3 3 0 0 1 6 0v3" fill="none" stroke="#6b7280" stroke-width="1.6" />
+              <path d="M360 38l4.5 9 10 1.4-7.2 7 1.7 10-9-4.7-9 4.7 1.7-10-7.2-7 10-1.4z" fill="#141414" stroke="#fbbf24" stroke-width="2" stroke-linejoin="round" />
+            </g>
+            <g font-family="monospace" font-size="9" fill="currentColor"><text x="26" y="44" fill-opacity="0.85">MISSION MAP</text><text x="26" y="58" fill-opacity="0.55">XP · MEDALS · RANKS</text></g>
+            <rect x="26" y="174" width="210" height="6" rx="3" fill="currentColor" fill-opacity="0.18" /><rect x="26" y="174" width="132" height="6" rx="3" fill="currentColor" />
+          </svg>
         </div>
-        <a class="btn primary big" id="weekly-btn" href="#">Play</a>
-      </div>
-      <details class="weekly-archive" id="weekly-archive" hidden>
-        <summary>Earlier weekly cases</summary>
-        <ul id="weekly-list"></ul>
-      </details>
-
-      <h2 class="sec" id="paths">Choose your path</h2>
-      <p class="section-sub">Every path is its own ladder with its own ranks, skills and promotion exams. Try any of them, and switch whenever you like.</p>
-      <div class="paths" id="path-list"></div>
-
-      <div class="daily" id="daily">
-        <div>
-          <p class="tag-line">Daily mission</p>
-          <h2>Five quick emails</h2>
-          <p id="daily-text">Five quick emails. About two minutes.</p>
-        </div>
-        <a class="btn primary big" id="daily-btn" href="phish-or-legit/?mode=daily">Start</a>
-      </div>
-
-      <h2 class="sec" id="modes-h">Training modes</h2>
-      <p class="section-sub">Free practice. The first seven modes are also the missions on every career path. The SOC Workspace is new: a hands-on simulator, not a quiz.</p>
-      <div class="modes" id="modes"></div>
-
-      <h2 class="sec">Your stats</h2>
-      <p class="section-sub" id="skills-sub">Play a few rounds and your strengths will show here.</p>
-      <div class="skills" id="skills"></div>
-
-      <p class="fine">
-        Everything here is fictional and for learning. Progress is saved only in this browser.
-        <button class="linklike" id="reset-btn" type="button">Reset my practice stats</button>
-        <a class="linklike" href="privacy/">Privacy</a>
-      </p>
+        <p class="gate-kicker">Game 02 · Progression</p>
+        <h2>Level Up in Cyber Security</h2>
+        <p class="gate-line">Complete missions. Build skills. Advance.</p>
+        <p class="gate-desc">Take on missions, sharpen your skills, earn XP, and progress through your cybersecurity journey.</p>
+        <ul class="gate-facts" id="facts-lu" aria-label="About this game"></ul>
+        <span class="gate-cta">Start your journey <i aria-hidden="true">→</i></span>
+      </a>
     </section>
+
+    <section class="rl-dash" id="progress" aria-labelledby="progress-h">
+      <h2 id="progress-h">Your progress</h2>
+      <div id="dash"></div>
+    </section>
+
+    <p class="rl-foot">
+      Everything here is fictional and for learning. Career titles are illustrative ranks in a game, not qualifications. Progress is saved only in this browser.
+      <a href="/">LixTeam</a> · <a href="privacy/">Privacy</a>
+    </p>
   </main>
 
-  <script type="module" src="hub.js"></script>
+  <script type="module" src="landing.js"></script>
 </body>
 </html>
