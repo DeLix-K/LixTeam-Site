@@ -37,6 +37,10 @@ import { GRC } from './sims-grc.js';
 import { TI } from './sims-ti.js';
 import { WEEKLY } from './sims-weekly.js';
 import { OT } from './sims-ot.js';
+import { DFIR_LEAD } from './sims-dfir-lead.js';
+import { GRC_LEAD } from './sims-grc-lead.js';
+import { TI_LEAD } from './sims-ti-lead.js';
+import { OT_LEAD } from './sims-ot-lead.js';
 
 const CORE = [
   // ─────────────────────────────────────────────────────────────
@@ -278,4 +282,4 @@ const CORE = [
 ];
 
 // Everything the simulation draws from.
-export const SIMS = [...CORE, ...SENIOR, ...LEAD, ...MANAGER, ...VULN, ...NETWORK, ...PENTEST, ...ENGINEER, ...CLOUD, ...ENGINEER_LEAD, ...CLOUD_LEAD, ...NETWORK_LEAD, ...VULN_LEAD, ...PENTEST_LEAD, ...ENGINEER_ARCH, ...CLOUD_ARCH, ...NETWORK_ARCH, ...VULN_ARCH, ...PENTEST_ARCH, ...DFIR, ...GRC, ...TI, ...WEEKLY, ...OT];
+export const SIMS = [...CORE, ...SENIOR, ...LEAD, ...MANAGER, ...VULN, ...NETWORK, ...PENTEST, ...ENGINEER, ...CLOUD, ...ENGINEER_LEAD, ...CLOUD_LEAD, ...NETWORK_LEAD, ...VULN_LEAD, ...PENTEST_LEAD, ...ENGINEER_ARCH, ...CLOUD_ARCH, ...NETWORK_ARCH, ...VULN_ARCH, ...PENTEST_ARCH, ...DFIR, ...GRC, ...TI, ...WEEKLY, ...OT, ...DFIR_LEAD, ...GRC_LEAD, ...TI_LEAD, ...OT_LEAD];

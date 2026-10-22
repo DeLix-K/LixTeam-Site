@@ -874,4 +874,98 @@ t('night-command: doing nothing scores far below the ideal', () => {
   assert.ok(r.gr.points < ncIdeal.gr.points - 60, String(r.gr.points));
 });
 
+// ── senior-tier incidents (incident response, GRC, threat intelligence, OT) ──
+console.log('--- senior-tier strategies');
+const RP = 'restore-pressure';
+const rpIdeal = run(RP, ['scope', 'image', 'isolate', 'restore', 'logs', 'legal', 'finance', 'declare']);
+t('restore-pressure: the ideal response is Textbook, with the evidence preserved', () => { assert.equal(rpIdeal.gr.rating.name, 'Textbook'); assert.equal(rpIdeal.g.outcome, 'declared'); assert.equal(rpIdeal.g.flags.imaged, true); assert.equal(rpIdeal.g.flags.evidenceLost, false); });
+t('restore-pressure: nothing can be imaged, isolated or restored before the scope is known, and you cannot declare early', () => {
+  const g = E.newGame(byId[RP]);
+  const ids = E.availableActions(byId[RP], g).map((a) => a.id);
+  for (const locked of ['image', 'isolate', 'restore', 'legal', 'finance', 'declare']) assert.ok(!ids.includes(locked), locked + ' should be locked at the start');
+});
+t('restore-pressure: skipping the logs, Legal or the finance director drops below Textbook', () => {
+  for (const seq of [['scope', 'image', 'isolate', 'restore', 'legal', 'finance', 'declare'], ['scope', 'image', 'isolate', 'restore', 'logs', 'finance', 'declare'], ['scope', 'image', 'isolate', 'restore', 'logs', 'legal', 'declare']]) assert.notEqual(run(RP, seq, { quiet: true }).gr.rating.name, 'Textbook', seq.join());
+});
+t('restore-pressure: rebuilding or powering off destroys the evidence and is a breach, and restoring early lets the program spread', () => {
+  assert.equal(run(RP, ['scope', 'rebuild', 'legal', 'finance'], { quiet: true }).gr.rating.name, 'Breach');
+  assert.equal(run(RP, ['scope', 'poweroff', 'legal', 'finance'], { quiet: true }).gr.rating.name, 'Breach');
+  const early = run(RP, ['scope', 'restoreearly', 'image', 'isolate', 'restore', 'logs', 'legal', 'finance', 'declare'], { quiet: true });
+  assert.ok(early.g.threat >= 20);
+  assert.notEqual(early.gr.rating.name, 'Textbook');
+});
+t('restore-pressure: if nobody preserves the evidence, IT wipes the server on its own', () => {
+  const r = run(RP, ['scope', 'logs', 'legal', 'finance'], { quiet: true });
+  assert.equal(r.g.flags.evidenceLost, true);
+});
+
+const SL = 'supplier-late-friday';
+const slIdeal = run(SL, ['log', 'facts', 'dpo', 'assess', 'notify', 'customers', 'secure', 'declare']);
+t('supplier-late-friday: the ideal response is Textbook and ends declared', () => { assert.equal(slIdeal.gr.rating.name, 'Textbook'); assert.equal(slIdeal.g.outcome, 'declared'); assert.ok(slIdeal.g.threat <= 20); });
+t('supplier-late-friday: you cannot assess, notify or declare before the facts, the officer and the log are in place', () => {
+  const g = E.newGame(byId[SL]);
+  const ids = E.availableActions(byId[SL], g).map((a) => a.id);
+  for (const locked of ['dpo', 'assess', 'notify', 'customers', 'secure', 'declare']) assert.ok(!ids.includes(locked), locked + ' should be locked at the start');
+});
+t('supplier-late-friday: skipping the log, customers or the written confirmation drops below Textbook', () => {
+  for (const seq of [['facts', 'dpo', 'assess', 'notify', 'customers', 'secure'], ['log', 'facts', 'dpo', 'assess', 'notify', 'secure', 'declare'], ['log', 'facts', 'dpo', 'assess', 'notify', 'customers', 'declare']]) assert.notEqual(run(SL, seq, { quiet: true }).gr.rating.name, 'Textbook', seq.join());
+});
+t('supplier-late-friday: waiting, denying and terminating are poor responses', () => {
+  const wait = run(SL, ['log', 'facts', 'wait'], { quiet: true });
+  assert.ok(wait.gr.points < slIdeal.gr.points - 60, String(wait.gr.points));
+  const deny = run(SL, ['log', 'facts', 'dpo', 'assess', 'deny', 'notify', 'declare'], { quiet: true });
+  assert.ok(deny.gr.points < slIdeal.gr.points - 40, String(deny.gr.points));
+  const term = run(SL, ['log', 'facts', 'terminate'], { quiet: true });
+  assert.ok(term.g.disruption >= 35);
+});
+t('supplier-late-friday: not telling the regulator costs far more than any other omission', () => {
+  const r = run(SL, ['log', 'facts', 'dpo', 'assess'], { quiet: true });
+  assert.ok(!r.g.flags.notified);
+  assert.ok(r.gr.points < slIdeal.gr.points - 40, String(r.gr.points));
+});
+
+const EW = 'embargoed-warning';
+const ewIdeal = run(EW, ['read', 'mitigate', 'hunt', 'kill', 'brief', 'declare']);
+t('embargoed-warning: the ideal response is Textbook and ends declared', () => { assert.equal(ewIdeal.gr.rating.name, 'Textbook'); assert.equal(ewIdeal.g.outcome, 'declared'); });
+t('embargoed-warning: you cannot protect, hunt or brief before you have read the advisory, and cannot declare with an intruder inside', () => {
+  const g = E.newGame(byId[EW]);
+  const ids = E.availableActions(byId[EW], g).map((a) => a.id);
+  for (const locked of ['mitigate', 'hunt', 'kill', 'brief', 'declare']) assert.ok(!ids.includes(locked), locked + ' should be locked at the start');
+  const h = run(EW, ['read', 'mitigate', 'hunt'], { quiet: true });
+  assert.ok(!E.availableActions(byId[EW], h.g).some((a) => a.ends), 'a live session blocks the declaration');
+});
+t('embargoed-warning: skipping the briefing or closing the door only after the hunt lowers the result', () => {
+  assert.notEqual(run(EW, ['read', 'mitigate', 'hunt', 'kill', 'declare'], { quiet: true }).gr.rating.name, 'Textbook');
+  assert.notEqual(run(EW, ['read', 'hunt', 'kill', 'mitigate', 'brief', 'declare'], { quiet: true }).gr.rating.name, 'Textbook');
+});
+t('embargoed-warning: breaking the embargo, switching the gateway off and waiting are poor responses', () => {
+  const leak = run(EW, ['read', 'mitigate', 'hunt', 'kill', 'brief', 'tellsector', 'declare'], { quiet: true });
+  assert.ok(leak.gr.points < ewIdeal.gr.points - 40, String(leak.gr.points));
+  assert.equal(leak.g.flags.leaked, true);
+  const off = run(EW, ['read', 'offline', 'hunt', 'kill', 'brief', 'declare'], { quiet: true });
+  assert.ok(off.g.disruption >= 35);
+  assert.notEqual(off.gr.rating.name, 'Textbook');
+  assert.equal(run(EW, ['wait'], { quiet: true }).gr.rating.name, 'Breach');
+});
+
+const OR = 'office-ransomware';
+const orIdeal = run(OR, ['check', 'ops', 'cut', 'vendor', 'backups', 'declare']);
+t('office-ransomware: the ideal response is Textbook, with the plant running', () => { assert.equal(orIdeal.gr.rating.name, 'Textbook'); assert.equal(orIdeal.g.outcome, 'declared'); assert.ok(orIdeal.g.disruption <= 15); });
+t('office-ransomware: you cannot cut the links before you have checked and told the operator', () => {
+  const g = E.newGame(byId[OR]);
+  const ids = E.availableActions(byId[OR], g).map((a) => a.id);
+  for (const locked of ['ops', 'cut', 'vendor', 'backups', 'declare']) assert.ok(!ids.includes(locked), locked + ' should be locked at the start');
+});
+t('office-ransomware: skipping the vendor access and the backup check drops below Textbook', () => {
+  assert.notEqual(run(OR, ['check', 'ops', 'cut', 'declare'], { quiet: true }).gr.rating.name, 'Textbook');
+});
+t('office-ransomware: shutting the plant down, restarting SCADA and waiting are poor responses', () => {
+  const sd = run(OR, ['check', 'ops', 'shutdown', 'declare'], { quiet: true });
+  assert.ok(sd.g.disruption >= 35);
+  assert.equal(sd.gr.rating.name, 'Overkill');
+  const rb = run(OR, ['check', 'ops', 'cut', 'reboot', 'declare'], { quiet: true });
+  assert.ok(rb.gr.points < orIdeal.gr.points - 30, String(rb.gr.points));
+  assert.equal(run(OR, ['wait'], { quiet: true }).gr.rating.name, 'Breach');
+});
+
 console.log(n, 'passed');

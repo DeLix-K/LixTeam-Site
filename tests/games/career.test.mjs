@@ -83,7 +83,7 @@ t('mission data is well formed, with the right numbers per tier', () => {
     if (m.exam) assert.ok(m.promotes && m.passTier >= 2);
   }
   assert.deepEqual([ids('beginner').length, ids('intermediate').length, ids('advanced').length, ids('senior').length, ids('lead').length, ids('manager').length, ids('cloud').length], [4, 9, 4, 3, 4, 2, 3]);
-  assert.equal(M.MISSIONS.filter((m) => m.exam).length, 23);
+  assert.equal(M.MISSIONS.filter((m) => m.exam).length, 27);
   assert.equal(M.RANKS.length, 6);
   assert.equal(M.COMPETENCIES.length, 33);
   for (const c of M.COMPETENCIES) assert.ok(M.MISSIONS.filter((m) => m.competencies[c.id]).length >= 2, c.id + ' needs at least two missions');
@@ -1101,8 +1101,8 @@ for (const pth of M.PATHS.filter((x) => x.tiers && x.tiers.some((id) => id.endsW
 for (const pid of ['dfir', 'grc', 'ti', 'ot']) {
   t(`the ${pid} path: foundations open, practitioner needs two passes, Junior after two, the exam promotes at silver (bronze is not a pass)`, () => {
     const pth = M.PATHS.find((x) => x.id === pid);
-    assert.ok(pth && pth.ranks.length === 3, pid + ' has three ranks');
-    const [found, prac] = pth.tiers;
+    assert.ok(pth && pth.ranks.length === 4, pid + ' has four ranks');
+    const [found, prac, leadTier] = pth.tiers;
     const foundIds = M.MISSIONS.filter((m) => m.tier === found).map((m) => m.id);
     const pracIds = M.MISSIONS.filter((m) => m.tier === prac && !m.exam).map((m) => m.id);
     const exam = pth.ranks[2].requires.exam;
@@ -1120,7 +1120,22 @@ for (const pid of ['dfir', 'grc', 'ti', 'ot']) {
     assert.equal(C.missionStatus(s, exam).unlocked, true, JSON.stringify(C.missionStatus(s, exam).missing));
     play(s, exam, 1);
     assert.equal(C.rankOf(s, pid).rank.id, pth.ranks[1].id, 'bronze is not a pass');
+    const leadIds = M.MISSIONS.filter((m) => m.tier === leadTier && !m.exam).map((m) => m.id);
+    const seniorExam = pth.ranks[3].requires.exam;
+    assert.equal(leadIds.length, 3, 'the senior tier has three missions');
+    const fresh = C.blank();
+    for (const id of [...leadIds, seniorExam]) assert.equal(C.missionStatus(fresh, id).unlocked, false, id + ' is locked at the start');
+    for (const id of [...leadIds, seniorExam]) assert.equal(C.missionStatus(s, id).unlocked, false, id + ' is locked before the full rank');
     assert.equal(play(s, exam, 2).promoted.id, pth.ranks[2].id);
+    assert.equal(C.rankOf(s, pid).isTop, false, 'Senior is above the full rank');
+    for (const id of leadIds) assert.equal(C.missionStatus(s, id).unlocked, true, id + ' opens at the full rank');
+    assert.equal(C.missionStatus(s, seniorExam).unlocked, false, 'the senior exam needs the senior missions first');
+    for (const id of [...foundIds, ...pracIds]) play(s, id, 3);
+    for (const id of leadIds) play(s, id, 3);
+    assert.equal(C.missionStatus(s, seniorExam).unlocked, true, JSON.stringify(C.missionStatus(s, seniorExam).missing));
+    play(s, seniorExam, 1);
+    assert.equal(C.rankOf(s, pid).rank.id, pth.ranks[2].id, 'bronze is not a pass');
+    assert.equal(play(s, seniorExam, 2).promoted.id, pth.ranks[3].id, JSON.stringify(C.rankOf(s, pid).checklist));
     assert.equal(C.rankOf(s, pid).isTop, true);
     assert.equal(C.rankOf(s, 'analyst').rank.id, 'recruit', 'the analyst ladder is untouched');
     assert.deepEqual(C.visibleCompetencies(s, pid).map((c) => c.id), pth.competencies);
