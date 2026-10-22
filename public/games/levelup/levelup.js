@@ -110,8 +110,22 @@ function renderMap() {
       )
     );
   }
+  markRowStarts();
   return map;
 }
+
+// Nodes that wrap onto a new row start a new line of the path: hide the connector that would point off the left edge.
+function markRowStarts() {
+  for (const list of document.querySelectorAll('.lv-nodes')) {
+    let top = null;
+    for (const li of list.children) {
+      const y = li.offsetTop;
+      li.classList.toggle('row-start', top === null || y > top + 4);
+      top = top === null ? y : Math.max(top, y);
+    }
+  }
+}
+window.addEventListener('resize', markRowStarts);
 
 function lockIcon() {
   const ns = 'http://www.w3.org/2000/svg';

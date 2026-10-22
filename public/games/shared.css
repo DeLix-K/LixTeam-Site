@@ -133,3 +133,7 @@ html[data-scanlines='off'] body::after { display: none !important; }
 .rl-note { margin: 0; color: var(--muted); font-size: 13.5px; }
 .rl-note a { color: var(--text); }
 .btn.small { min-height: 38px; padding: 8px 14px; font-size: 14px; }
+
+/* Mission result: the XP line pops in, and the next step sits beside the way back */
+.mission-card .xp-gain { display: inline-block; color: var(--accent); font-weight: 800; animation: pop 0.6s var(--ease) 0.2s both; }
+.mission-card .btn-row { margin-top: 12px; }

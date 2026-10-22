@@ -1,7 +1,10 @@
+import * as shell from '../core/shell.js';
 import * as career from '../core/career.js';
 import * as streak from '../core/streak.js';
 import { MISSIONS, TIERS, MEDALS, ROADMAP, PATHS } from '../core/missions.js';
 import { rankBadge, medalIcon, skillRadar, pathIcon } from '../core/art.js';
+
+shell.init();
 
 const $ = (id) => document.getElementById(id);
 

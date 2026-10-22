@@ -22,6 +22,9 @@ import { SE_SERVICEDESK } from './scenarios/se-servicedesk.js';
 import { ENG_TICKETS } from './scenarios/eng-tickets.js';
 import { PT_LAB } from './scenarios/pt-lab.js';
 import { OT_PLANT } from './scenarios/ot-plant.js';
+import { CATALOG, difficultyOf } from './catalog.js';
+import * as settings from '../core/settings.js';
+import * as profileStore from '../core/profile.js';
 import { medalIcon } from '../core/art.js';
 import { MEDALS } from '../core/missions.js';
 import * as streak from '../core/streak.js';
@@ -194,9 +197,19 @@ function renderPicker() {
   const list = $('assignment-list');
   list.replaceChildren();
   const best = readBest();
+  // The case board: counts from this player's own saved results, never invented.
+  const done = SCENARIOS.filter((x) => best[x.id] && best[x.id].tier > 0).length;
+  const golds = SCENARIOS.filter((x) => best[x.id] && best[x.id].tier === 3).length;
+  const info = profileStore.levelInfo(profileStore.load().xp);
+  $('ops-strip').replaceChildren(
+    h('div', {}, h('small', { text: 'Case files' }), h('strong', { text: String(SCENARIOS.length) })),
+    h('div', {}, h('small', { text: 'Completed' }), h('strong', { text: String(done) })),
+    h('div', {}, h('small', { text: 'Gold medals' }), h('strong', { class: 'gold', text: String(golds) })),
+    h('div', {}, h('small', { text: 'Player level' }), h('strong', { text: String(info.level) }))
+  );
   for (const s of SCENARIOS) {
     const b = best[s.id];
-    const card = h('article', { class: 'assign-card' }, h('div', { class: 'assign-top' }, h('span', { class: 'chip' }, s.pathLabel), b ? h('span', { class: 'chip best' }, `Best: ${MEDALS[b.tier] || 'No medal'} · ${b.total}/100`) : h('span', { class: 'chip' }, 'New')), h('h3', { text: s.title }), h('p', { text: s.blurb }), h('button', { class: 'btn primary', type: 'button', onclick: () => openBrief(s) }, b ? 'Play again' : 'Take the shift'));
+    const card = h('article', { class: 'assign-card' }, h('div', { class: 'assign-top' }, h('span', { class: 'chip' }, s.pathLabel), h('span', { class: `chip diff d-${difficultyOf(s.id).toLowerCase()}` }, difficultyOf(s.id)), b ? h('span', { class: 'chip best' }, `Best: ${MEDALS[b.tier] || 'No medal'} · ${b.total}/100`) : h('span', { class: 'chip' }, 'New')), h('h3', { text: s.title }), h('p', { text: s.blurb }), h('p', { class: 'assign-meta' }, `About ${(CATALOG.find((c) => c.id === s.id) || { minutes: 25 }).minutes} min`), h('button', { class: 'btn primary', type: 'button', onclick: () => openBrief(s) }, b ? 'Play again' : 'Take the shift'));
     list.append(card);
   }
 }
@@ -218,6 +231,8 @@ function startShift() {
   for (const a of E.alertsNow(scn, st)) ui.seenAlerts.add(a.id);
   $('ws-name').textContent = scn.ui.name;
   $('ws-sub').textContent = scn.title;
+  $('ws-diff').textContent = difficultyOf(scn.id) || 'Standard';
+  settings.noteGame('workspace', scn.title);
   buildRail();
   show('ws');
   setView(scn.ui.nav[0]);
@@ -237,6 +252,11 @@ function buildRail() {
 
 function updateChrome() {
   $('ws-clock').textContent = E.clockText(st.clock);
+  {
+    const info = profileStore.levelInfo(profileStore.load().xp);
+    $('ws-player').textContent = `Level ${info.level}`;
+    renderActivity();
+  }
   const open = openAlerts().length;
   $('ws-open').textContent = String(open);
   $('ws-open').parentElement.hidden = scn.alerts.length === 0;
@@ -316,7 +336,7 @@ function eventRow(e) {
   const pinned = st.pins.includes(e.id);
   return h(
     'button',
-    { class: `erow${ui.eventId === e.id ? ' sel' : ''}${pinned ? ' pinned' : ''}${e.synthetic ? ' mine' : ''}`, type: 'button', 'data-key': `row-${e.id}`, 'aria-pressed': ui.eventId === e.id ? 'true' : 'false', onclick: () => selectEvent(e.id) },
+    { class: `erow${ui.eventId === e.id ? ' sel' : ''}${pinned ? ' pinned' : ''}${e.synthetic ? ' mine' : ''}`, type: 'button', draggable: scn && !scn.ui.noPins ? 'true' : null, 'data-event': e.id, 'data-key': `row-${e.id}`, 'aria-pressed': ui.eventId === e.id ? 'true' : 'false', onclick: () => selectEvent(e.id) },
     h('time', { text: timeText(e.t) }),
     sevChip(e.sev),
     h('span', { class: 'etype', text: e.type }),
@@ -1793,6 +1813,52 @@ function viewReport() {
   queueMicrotask(validate);
   return form;
 }
+
+// ── The activity timeline along the bottom ──────────────────────
+// What you have actually done this shift, newest first. It is the same log the results screen replays.
+function renderActivity() {
+  const list = $('ws-act-list');
+  const entries = st.log.slice(-8).reverse();
+  $('ws-act-count').textContent = st.log.length ? `${st.log.length} step${st.log.length === 1 ? '' : 's'}` : '';
+  list.replaceChildren(...(entries.length ? entries.map((l) => h('li', {}, h('time', { text: timeText(l.t) }), h('span', { text: l.text }))) : [h('li', { class: 'empty', text: 'Nothing done yet. Every search, pin and action you take is recorded here.' })]));
+}
+$('ws-act-toggle').addEventListener('click', () => {
+  const open = $('ws-act-toggle').getAttribute('aria-expanded') === 'true';
+  $('ws-act-toggle').setAttribute('aria-expanded', String(!open));
+  $('ws-act-toggle').textContent = open ? 'Show' : 'Hide';
+  $('ws-act-list').hidden = open;
+});
+
+// ── Drag an event onto the case file to pin it ──────────────────
+// The Pin button does the same thing, so this is a shortcut and never the only way.
+document.addEventListener('dragstart', (e) => {
+  const row = e.target instanceof Element ? e.target.closest('.erow[data-event]') : null;
+  if (!row || !e.dataTransfer) return;
+  e.dataTransfer.setData('text/x-rootline-event', row.dataset.event);
+  e.dataTransfer.effectAllowed = 'copy';
+});
+{
+  const cf = $('casefile');
+  const accepts = (e) => !!st && !!scn && !scn.ui.noPins && !submittedNow() && e.dataTransfer && [...e.dataTransfer.types].includes('text/x-rootline-event');
+  cf.addEventListener('dragover', (e) => {
+    if (!accepts(e)) return;
+    e.preventDefault();
+    cf.classList.add('drop-ok');
+  });
+  cf.addEventListener('dragleave', () => cf.classList.remove('drop-ok'));
+  cf.addEventListener('drop', (e) => {
+    cf.classList.remove('drop-ok');
+    if (!accepts(e)) return;
+    e.preventDefault();
+    const id = e.dataTransfer.getData('text/x-rootline-event');
+    const ev = E.visibleEvents(scn, st).find((x) => x.id === id);
+    if (!ev) return;
+    E.pin(st, id);
+    toast(`Pinned to your case: ${ev.summary.slice(0, 70)}${ev.summary.length > 70 ? '…' : ''}`, '');
+    refresh();
+  });
+}
+const submittedNow = () => !!st.submitted || shiftOver();
 
 // ── Finishing ───────────────────────────────────────────────────
 function finish() {

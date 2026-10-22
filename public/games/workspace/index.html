@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Workspaces · RootLine</title>
+  <title>Hands-on Cyber Workspace · ROOTLINE</title>
   <meta name="description" content="Hands-on cyber workspaces: work a live alert queue or a forensics bench, search the logs, contain the attack and file your report. Free, no sign-up, no tracking." />
   <meta name="theme-color" content="#0a0a0a" />
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23a3e635'/%3E%3Ctext x='16' y='22' font-family='Arial' font-weight='900' font-size='15' text-anchor='middle' fill='%230a0a0a'%3ELT%3C/text%3E%3C/svg%3E" />
@@ -12,16 +12,16 @@
 </head>
 <body data-mode="workspace">
   <header class="top">
-    <a class="back" href="/games/">← All games</a>
-    <span class="title">Workspaces</span>
+    <a class="back" href="/games/">← ROOTLINE</a>
+    <span class="title">Hands-on Cyber Workspace</span>
     <span class="spacer" aria-hidden="true"></span>
   </header>
 
   <!-- Choose an assignment and read the brief -->
   <main id="app" class="screen-main">
     <section id="screen-pick" class="screen" aria-labelledby="pick-h">
-      <p class="eyebrow">Hands-on · simulated workplaces</p>
-      <h1 id="pick-h">Hands-on <span class="accent-text">workspaces</span></h1>
+      <p class="eyebrow">Game 01 · Investigate. Analyse. Respond.</p>
+      <h1 id="pick-h">Hands-on <span class="accent-text">cyber workspace</span></h1>
       <p class="lead">A simulated workplace, real tools and real consequences. There are no multiple-choice questions to get through: you investigate, you decide, and the clock keeps moving.</p>
       <ul class="howto">
         <li><strong>Use the tools.</strong> Search the logs, open the people, machines and files involved, follow the process tree and the network map.</li>
@@ -29,6 +29,8 @@
         <li><strong>Act, but proportionately.</strong> Every action takes time and the attacker is still working. Shutting down the wrong thing hurts the business.</li>
         <li><strong>File your report.</strong> Say what happened, who and what was affected, and how it began.</li>
       </ul>
+      <div class="ops-strip" id="ops-strip" aria-label="Your case board"></div>
+      <h2 class="ops-h">Case files</h2>
       <div class="assignments" id="assignment-list"></div>
       <p class="fine">Everything here is fictional. Your progress stays on this device and is never sent anywhere.</p>
     </section>
@@ -50,6 +52,8 @@
   <div id="screen-ws" class="ws" hidden>
     <div class="ws-bar" role="group" aria-label="Case status">
       <div class="ws-brand"><strong id="ws-name">SOC console</strong><small id="ws-sub"></small></div>
+      <div class="ws-stat ws-meta"><small>Difficulty</small><span id="ws-diff">Beginner</span></div>
+      <div class="ws-stat ws-meta" id="ws-player-wrap"><small>Player</small><span id="ws-player">Level 1</span></div>
       <div class="ws-stat clock-stat" aria-live="off"><small>Time</small><span id="ws-clock">14:05</span></div>
       <div class="ws-stat"><small>Open alerts</small><span id="ws-open">6</span></div>
       <div class="ws-stat"><small>Pinned</small><span id="ws-pins">0</span></div>
@@ -63,6 +67,10 @@
       <section class="stage" id="view" tabindex="-1" aria-live="off"></section>
       <aside class="casefile" id="casefile" aria-label="Case file"></aside>
     </div>
+    <section class="ws-activity" id="ws-activity" aria-labelledby="ws-act-h">
+      <header><h3 id="ws-act-h">Activity</h3><small id="ws-act-count"></small><button class="btn small" id="ws-act-toggle" type="button" aria-expanded="true" aria-controls="ws-act-list">Hide</button></header>
+      <ol id="ws-act-list" class="ws-act-list"></ol>
+    </section>
     <div class="toasts" id="toasts" role="status" aria-live="polite"></div>
   </div>
 
