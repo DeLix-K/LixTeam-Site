@@ -3,6 +3,7 @@
 // from art.js are added; nothing here parses markup.
 
 import { modeIcon, MODE_COLOUR } from './art.js';
+import { init as initShell } from './shell.js';
 
 const mode = document.body.dataset.mode;
 
@@ -27,3 +28,5 @@ if (mode && MODE_COLOUR[mode]) {
     eyebrow.before(hero);
   }
 }
+
+initShell();

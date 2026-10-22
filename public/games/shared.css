@@ -12,6 +12,15 @@
   --bad: #f87171;
   --warn: #fbbf24;
   --radius: 16px;
+  /* Brand gradient and glow: one definition, reused by the landing page, both games and the dialogs. */
+  --accent-hi: #bef264;
+  --accent-lo: #65a30d;
+  --violet: #a78bfa;
+  --grad-brand: linear-gradient(100deg, #bef264, #a3e635 45%, #65a30d);
+  --grad-brand-soft: linear-gradient(135deg, rgba(163, 230, 53, 0.14), rgba(56, 189, 248, 0.06));
+  --glow-accent: 0 0 24px rgba(163, 230, 53, 0.35);
+  --panel: linear-gradient(180deg, rgba(163, 230, 53, 0.06), var(--surface) 55%);
+  --panel-border: rgba(163, 230, 53, 0.22);
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
 }
 * { box-sizing: border-box; }
@@ -47,7 +56,7 @@ main.wide { max-width: 980px; }
 .eyebrow::before { content: '> '; opacity: 0.7; }
 h1 { font-size: clamp(34px, 8vw, 52px); line-height: 1.05; margin: 0 0 16px; letter-spacing: -1.2px; }
 h2 { font-size: 20px; margin: 28px 0 10px; }
-.accent-text { background: linear-gradient(100deg, #bef264, var(--accent) 45%, #65a30d); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.accent-text { background: var(--grad-brand); -webkit-background-clip: text; background-clip: text; color: transparent; }
 .lead { color: var(--muted); font-size: 18px; margin: 0 0 24px; }
 .fine { color: var(--muted); font-size: 13px; margin: 20px 0 0; }
 
@@ -103,3 +112,28 @@ kbd { font: inherit; font-size: 13px; opacity: 0.7; border: 1px solid currentCol
 @media (prefers-reduced-motion: reduce) { .mission-card .medal-icon, .rankup .rank-badge { animation: none; } }
 
 .mission-card .mission-streak { color: #fb923c; font-weight: 700; }
+
+/* ── Settings: motion and screen texture, set on <html> by core/settings.js ── */
+html[data-motion='reduce'] *, html[data-motion='reduce'] *::before, html[data-motion='reduce'] *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; animation-delay: 0s !important; transition-duration: 0.001ms !important; scroll-behavior: auto !important; }
+html[data-scanlines='off'] body::after { display: none !important; }
+
+/* ── Top bar tools and the settings dialog ───────────────────── */
+.top .top-tools { justify-self: end; display: inline-flex; align-items: center; gap: 8px; }
+.rl-gear { display: inline-grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); color: var(--muted); cursor: pointer; transition: color 0.2s, border-color 0.2s, transform 0.2s var(--ease); }
+.rl-gear:hover { color: var(--text); border-color: rgba(163, 230, 53, 0.5); transform: rotate(30deg); }
+.rl-dialog { width: min(520px, calc(100vw - 32px)); max-height: calc(100vh - 32px); padding: 0; border: 1px solid var(--panel-border); border-radius: 18px; background: var(--surface); color: var(--text); box-shadow: 0 30px 90px -30px #000, 0 0 0 1px rgba(163, 230, 53, 0.08), var(--glow-accent); }
+.rl-dialog::backdrop { background: rgba(5, 5, 5, 0.72); backdrop-filter: blur(4px); }
+.rl-dialog-body { padding: 22px 22px 20px; display: grid; gap: 14px; overflow: auto; max-height: calc(100vh - 34px); }
+.rl-dialog h2 { margin: 0; font-size: 22px; }
+.rl-dialog fieldset { margin: 0; padding: 12px 14px 14px; border: 1px solid var(--border); border-radius: 12px; display: grid; gap: 10px; }
+.rl-dialog legend { padding: 0 6px; color: var(--accent); font-family: var(--mono); font-size: 12px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; }
+.rl-opt { display: flex; gap: 12px; align-items: flex-start; cursor: pointer; }
+.rl-opt input { margin-top: 5px; accent-color: var(--accent); width: 18px; height: 18px; flex: 0 0 auto; }
+.rl-opt small { display: block; color: var(--muted); font-size: 13px; }
+.rl-note { margin: 0; color: var(--muted); font-size: 13.5px; }
+.rl-note a { color: var(--text); }
+.btn.small { min-height: 38px; padding: 8px 14px; font-size: 14px; }
+
+/* Mission result: the XP line pops in, and the next step sits beside the way back */
+.mission-card .xp-gain { display: inline-block; color: var(--accent); font-weight: 800; animation: pop 0.6s var(--ease) 0.2s both; }
+.mission-card .btn-row { margin-top: 12px; }

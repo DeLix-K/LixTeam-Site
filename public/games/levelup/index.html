@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Level Up in Cyber Security · ROOTLINE</title>
+  <meta name="description" content="Level Up in Cyber Security: a mission map across ten career paths. Complete missions, earn XP and medals, unlock promotion exams and rise through the ranks. Free, no sign-up." />
+  <meta name="theme-color" content="#0a0a0a" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23a3e635'/%3E%3Ctext x='16' y='22' font-family='Arial' font-weight='900' font-size='15' text-anchor='middle' fill='%230a0a0a'%3ERL%3C/text%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="../shared.css" />
+  <link rel="stylesheet" href="../rootline.css" />
+  <link rel="stylesheet" href="../hub.css" />
+  <link rel="stylesheet" href="levelup.css" />
+</head>
+<body class="rl home lv">
+  <a class="skip" href="#map">Skip to the mission map</a>
+
+  <header class="rl-nav">
+    <a class="rl-brand" href="/games/" aria-label="ROOTLINE home">
+      <span class="rl-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="M7 4v7a5 5 0 0 0 5 5h2" /><circle cx="17.5" cy="16" r="2.4" /></svg>
+      </span>
+      <span class="rl-word">Root<b>line</b></span>
+    </a>
+    <nav class="rl-links" aria-label="Main">
+      <a href="/games/">Home</a>
+      <a href="/games/workspace/">Workspace</a>
+      <a href="/games/levelup/" aria-current="page">Level Up</a>
+      <a href="/games/career/" id="nav-profile">Career profile</a>
+      <span class="rl-sep" aria-hidden="true"></span>
+      <button type="button" class="rl-gear" data-open-settings aria-label="Settings" title="Settings"></button>
+    </nav>
+  </header>
+
+  <main class="lv-main" id="main">
+    <header class="lv-head">
+      <div>
+        <p class="eyebrow">Game 02 · Progression</p>
+        <h1>Level up in <span class="accent-text">cyber security</span></h1>
+        <p class="lead">Pick a path, follow the map and complete missions. Every medal earns XP and opens the next step. Career titles here are illustrative ranks in a game, not qualifications.</p>
+      </div>
+      <div class="hud lv-hud" aria-label="Your progress">
+        <div class="hud-tile hud-level"><span class="hud-label">Level</span><span class="hud-big" id="p-level">1</span></div>
+        <div class="hud-tile hud-xp">
+          <div class="xp-top"><span class="hud-label">Experience</span><span id="p-xp">0 XP</span></div>
+          <div class="progress"><div id="p-bar"></div></div>
+          <small id="p-next"></small>
+        </div>
+        <div class="hud-tile hud-streak"><span class="hud-label">Day streak</span><span class="hud-big" id="p-streak">0</span><small class="hud-note" id="streak-note"></small></div>
+        <div class="hud-tile"><span class="hud-label">Gold medals</span><span class="hud-big gold" id="p-gold">0</span></div>
+        <div class="hud-tile"><span class="hud-label">Paths started</span><span class="hud-big" id="p-paths">0<small>/10</small></span></div>
+      </div>
+    </header>
+
+    <section class="lv-objective" id="objective" aria-labelledby="obj-h">
+      <span class="lv-obj-badge" id="obj-badge" aria-hidden="true"></span>
+      <div class="lv-obj-text">
+        <p class="tag-line">Current objective</p>
+        <h2 id="obj-h">Choose a path</h2>
+        <p id="obj-line"></p>
+      </div>
+      <a class="btn primary big" id="obj-btn" href="#map">Open the map</a>
+    </section>
+
+    <h2 class="sec" id="paths-h">Choose your path</h2>
+    <div class="lv-chips" id="path-chips" role="group" aria-labelledby="paths-h"></div>
+
+    <h2 class="sec" id="map-h">Mission map</h2>
+    <div class="lv-grid" id="map">
+      <div class="lv-stages" id="stages" aria-label="Mission map"></div>
+      <aside class="lv-brief" id="brief" aria-live="polite" aria-labelledby="brief-h">
+        <p class="empty" id="brief-empty">Choose a mission on the map to read its briefing.</p>
+      </aside>
+    </div>
+    <p class="lv-legend" aria-hidden="true"><span class="k done"></span> Passed <span class="k ready"></span> Ready <span class="k locked"></span> Locked <span class="k boss"></span> Promotion exam</p>
+
+    <div class="weekly" id="weekly" hidden>
+      <div class="weekly-text">
+        <p class="tag-line">This week's case</p>
+        <h2 id="weekly-title"></h2>
+        <p id="weekly-blurb"></p>
+        <p class="weekly-meta"><span class="chip" id="weekly-mode"></span><span class="chip" id="weekly-status"></span><span class="weekly-next" id="weekly-next"></span></p>
+      </div>
+      <a class="btn primary big" id="weekly-btn" href="#">Play</a>
+    </div>
+    <details class="weekly-archive" id="weekly-archive" hidden>
+      <summary>Earlier weekly cases</summary>
+      <ul id="weekly-list"></ul>
+    </details>
+
+    <div class="daily" id="daily">
+      <div>
+        <p class="tag-line">Daily mission</p>
+        <h2>Five quick emails</h2>
+        <p id="daily-text">Five quick emails. About two minutes.</p>
+      </div>
+      <a class="btn primary big" id="daily-btn" href="../phish-or-legit/?mode=daily">Start</a>
+    </div>
+
+    <h2 class="sec" id="all-paths">All career paths</h2>
+    <p class="section-sub">Every path is its own ladder with its own ranks, skills and promotion exams. Select one to put it on the map.</p>
+    <div class="paths" id="path-list"></div>
+
+    <h2 class="sec" id="modes-h">Practice modes</h2>
+    <p class="section-sub">Free practice. The first seven modes are also the missions on every career path. The Hands-on Workspaces are their own game.</p>
+    <div class="modes" id="modes"></div>
+
+    <h2 class="sec">Your stats</h2>
+    <p class="section-sub" id="skills-sub">Play a few rounds and your strengths will show here.</p>
+    <div class="skills" id="skills"></div>
+
+    <p class="fine">
+      Everything here is fictional and for learning. Progress is saved only in this browser.
+      <button class="linklike" id="reset-btn" type="button">Reset my practice stats</button>
+      <a class="linklike" href="../privacy/">Privacy</a>
+    </p>
+  </main>
+
+  <div class="lv-toasts" id="toasts" role="status" aria-live="polite"></div>
+  <script type="module" src="levelup.js"></script>
+</body>
+</html>

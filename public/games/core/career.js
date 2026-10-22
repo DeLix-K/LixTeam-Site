@@ -128,7 +128,7 @@ export function xpOf(s, pathId = pathOf(s)) {
   let xp = 0;
   for (const m of pathMissions(pathId)) {
     const r = s.missions[m.id];
-    if (r && r.attempts > 0) xp += xpFor(m, r.bestTier) + (r.tried ? TRY_XP : 0);
+    if (r && r.attempts > 0) xp += xpReward(m, r.bestTier) + (r.tried ? TRY_XP : 0);
   }
   return xp;
 }
@@ -281,7 +281,7 @@ export function rankOf(s, pathId = pathOf(s)) {
 }
 
 // ── Recording a result ──────────────────────────────────────────
-const xpFor = (m, tier) => (m.exam ? EXAM_XP[tier] : Math.round(MEDAL_XP[tier] * (TIERS.find((t) => t.id === m.tier)?.xpMultiplier || 1)));
+export const xpReward = (m, tier) => (m.exam ? EXAM_XP[tier] : Math.round(MEDAL_XP[tier] * (TIERS.find((t) => t.id === m.tier)?.xpMultiplier || 1)));
 
 // input: { missionId, points, tier (0..3), perf? (0..1), summary?: string[], now? }
 export function recordAttempt(s, input) {
@@ -307,7 +307,7 @@ export function recordAttempt(s, input) {
   r.bestPoints = Math.max(r.bestPoints, points);
 
   // XP only for improving the medal, plus a small one-off for trying.
-  let xpGained = Math.max(0, xpFor(m, r.bestTier) - xpFor(m, prevTier));
+  let xpGained = Math.max(0, xpReward(m, r.bestTier) - xpReward(m, prevTier));
   if (firstAttempt && tier === 0 && !r.tried) {
     xpGained += TRY_XP;
     r.tried = true;

@@ -11,8 +11,8 @@ import * as weekly from './weekly.js';
 import { missionById, MEDALS } from './missions.js';
 import { medalIcon, rankBadge } from './art.js';
 
-const CAMPAIGN_URL = '/games/career/';
-const HOME_URL = '/games/';
+const CAMPAIGN_URL = '/games/levelup/';
+const HOME_URL = '/games/levelup/';
 
 // The mission this page was opened for, if it belongs to this mode. A weekly case (?weekly=wk01) is
 // described the same way, so each game mode handles it without knowing the difference.
@@ -37,7 +37,7 @@ export function applyChrome() {
   const isWeekly = new URLSearchParams(location.search).has('weekly');
   if (back) {
     back.href = isWeekly ? HOME_URL : CAMPAIGN_URL;
-    back.textContent = isWeekly ? '← Home' : '← Campaign';
+    back.textContent = isWeekly ? '← Level Up' : '← Mission map';
   }
   for (const id of ['res-other']) {
     const el = document.getElementById(id);
@@ -78,7 +78,7 @@ function renderWeekly(container, res) {
   if (st.current > 0) box.append(el('p', 'mission-streak', `Day streak: ${st.current}${st.current === 1 ? ' day' : ' days'}. Come back tomorrow to keep it going.`));
   const nx = weekly.next();
   if (nx) box.append(el('p', 'mission-unlock', `Next weekly case: ${nx.days === 0 ? 'today' : nx.days === 1 ? 'tomorrow' : 'in ' + nx.days + ' days'}.`));
-  const a = el('a', 'btn primary big', 'Back to the home screen');
+  const a = el('a', 'btn primary big', 'Back to Level Up');
   a.href = HOME_URL;
   box.append(a);
   container.append(box);
@@ -106,7 +106,7 @@ export function render(container, res) {
   else if (res.tier === 0) lines.push('You need at least bronze to pass. Replay it and try a different approach.');
   if (res.xpGained > 0) lines.push(`+${res.xpGained} campaign XP.`);
   else if (res.tier > 0) lines.push(res.improved ? '' : `No new XP: XP is only earned by improving your medal (best so far: ${res.bestMedal.toLowerCase()}).`);
-  for (const l of lines.filter(Boolean)) box.append(el('p', '', l));
+  for (const l of lines.filter(Boolean)) box.append(el('p', l.startsWith('+') ? 'xp-gain' : '', l));
 
   if (res.promoted) {
     const up = el('div', 'rankup');
@@ -120,8 +120,17 @@ export function render(container, res) {
   if (res.featuredDone) box.append(el('p', 'mission-unlock', "This week's featured case: done."));
   if (res.newlyUnlocked.length) box.append(el('p', 'mission-unlock', `Unlocked: ${res.newlyUnlocked.map((u) => u.title).join(', ')}.`));
 
-  const a = el('a', 'btn primary big', 'Back to the campaign');
+  // What to do next: the career's own recommendation, when it is a different mission.
+  const next = career.recommend(career.load(), { pathId: res.path });
+  const row = el('div', 'btn-row');
+  const a = el('a', 'btn primary big', 'Back to the mission map');
   a.href = CAMPAIGN_URL;
-  box.append(a);
+  row.append(a);
+  if (next && next.mission.id !== m.id) {
+    const n = el('a', 'btn big', `Next: ${next.mission.title}`);
+    n.href = `/games/${next.mission.mode}/?mission=${next.mission.id}`;
+    row.append(n);
+  }
+  box.append(row);
   container.append(box);
 }
