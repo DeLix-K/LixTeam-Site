@@ -12,6 +12,8 @@ const C = await import(pathToFileURL(GAMES + 'core/career.js').href);
 const M = await import(pathToFileURL(GAMES + 'core/missions.js').href);
 const MAP = await import(pathToFileURL(GAMES + 'core/map.js').href);
 const CAT = await import(pathToFileURL(GAMES + 'workspace/catalog.js').href);
+const ACH = await import(pathToFileURL(GAMES + 'core/achievements.js').href);
+const MODES = await import(pathToFileURL(GAMES + 'core/modes.js').href);
 
 let n = 0;
 const t = (name, fn) => {
@@ -153,6 +155,80 @@ t('what is new since the last visit: nothing on a first visit, only fresh unlock
   const after = MAP.whatsNew(s, { ready: first.ready });
   assert.ok(after.fresh.length >= 1, 'two passes open the practitioner missions');
   for (const id of after.fresh) assert.equal(C.missionStatus(s, id).unlocked, true);
+});
+
+t('the briefing carries the start link, the briefing link and how the mode works', () => {
+  const b = MAP.briefing(C.blank(), 'ot01-priorities');
+  assert.equal(b.briefUrl, '/games/levelup/mission.html?id=ot01-priorities');
+  assert.equal(b.mode.name, 'Incident Simulation');
+  assert.ok(b.how.length >= 3);
+});
+t('every mode a mission uses has a description of how it works', () => {
+  for (const m of M.MISSIONS) {
+    const info = MODES.modeInfo(m.mode);
+    assert.ok(info.how.length >= 3 && info.name, `${m.mode} (${m.id})`);
+  }
+});
+t('skill scores rise when a mission that trains them is passed, and only for the skills it trains', () => {
+  const s = C.blank();
+  const m = M.missionById('ot01-priorities');
+  const ids = Object.keys(m.competencies);
+  const before = MAP.skillScores(s, 'ot', ids);
+  assert.deepEqual(Object.values(before), ids.map(() => 0));
+  C.recordAttempt(s, { missionId: m.id, points: 95, tier: 3, perf: 0.95 });
+  const gains = MAP.skillGains(before, MAP.skillScores(s, 'ot', ids));
+  assert.equal(gains.length, ids.length);
+  assert.ok(gains.every((g) => g.gain > 0 && g.after > g.before), JSON.stringify(gains));
+  assert.ok(gains[0].gain >= gains[gains.length - 1].gain, 'sorted by gain');
+});
+t('the skill board shows the own skills of the path with their scores', () => {
+  const rows = MAP.skillBoard(C.blank(), 'ot');
+  assert.deepEqual(rows.map((r) => r.id), ['safety', 'zones', 'legacy', 'reporting']);
+  assert.ok(rows.every((r) => r.score === 0 && r.name && r.blurb));
+});
+
+// ── achievements ────────────────────────────────────────────────
+t('a new player has earned nothing, and every achievement has a name, a hint and an icon', () => {
+  assert.deepEqual(ACH.earned(C.blank()), []);
+  for (const a of ACH.ACHIEVEMENTS) assert.ok(a.id && a.name && a.hint && a.icon, a.id);
+  assert.equal(new Set(ACH.ACHIEVEMENTS.map((a) => a.id)).size, ACH.ACHIEVEMENTS.length);
+});
+t('passing a mission earns First step, and gold earns Gold standard', () => {
+  const s = C.blank();
+  C.recordAttempt(s, { missionId: 'ot01-priorities', points: 70, tier: 1, perf: 0.5 });
+  assert.ok(ACH.earned(s).includes('first-step'));
+  assert.ok(!ACH.earned(s).includes('gold-standard'));
+  C.recordAttempt(s, { missionId: 'ot02-forgotten', points: 95, tier: 3, perf: 1 });
+  assert.ok(ACH.earned(s).includes('gold-standard'));
+});
+t('Promoted follows a rank-up, Explorer needs three started paths and streak ones read the streak record', () => {
+  const s = C.blank();
+  for (const id of ['ot01-priorities', 'ot02-forgotten']) C.recordAttempt(s, { missionId: id, points: 90, tier: 2, perf: 0.8 });
+  assert.ok(ACH.earned(s).includes('promoted'));
+  assert.ok(!ACH.earned(s).includes('explorer'));
+  for (const id of ['dr01-hour', 'ti01-sources']) C.recordAttempt(s, { missionId: id, points: 60, tier: 1, perf: 0.5 });
+  assert.ok(ACH.earned(s).includes('explorer'));
+  assert.ok(!ACH.earned(s, { streakBest: 2 }).includes('streak-3'));
+  assert.ok(ACH.earned(s, { streakBest: 3 }).includes('streak-3'));
+  assert.ok(ACH.earned(s, { streakBest: 7 }).includes('streak-7'));
+});
+t('achievements only ever grow as results improve', () => {
+  const s = C.blank();
+  let had = [];
+  for (const id of ['ot01-priorities', 'ot02-forgotten', 'ot03-patch', 'dr01-hour']) {
+    C.recordAttempt(s, { missionId: id, points: 90, tier: 3, perf: 1 });
+    const now = ACH.earned(s);
+    for (const a of had) assert.ok(now.includes(a), a + ' was lost');
+    had = now;
+  }
+});
+t('what is new is the difference from what was seen, and the first look announces nothing', () => {
+  assert.deepEqual(ACH.fresh(['a', 'b'], null), []);
+  assert.deepEqual(ACH.fresh(['a', 'b'], ['a']), ['b']);
+  store.clear();
+  assert.equal(ACH.seen(), null);
+  ACH.markSeen(['a', 'a', 'b']);
+  assert.deepEqual(ACH.seen(), ['a', 'b']);
 });
 
 // ── the workspace catalogue ─────────────────────────────────────

@@ -112,3 +112,43 @@
   .lv-node, .lv-brief, .lv-toast, .lv-node.current .lv-orb, .lv-node.fresh .lv-orb { animation: none; }
   .lv-orb, .lv-chip { transition: none; }
 }
+
+/* ── Mission briefing page ───────────────────────────────────── */
+.lv-brief-page { max-width: 1180px; }
+.lv-bp { --mode: var(--accent); display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(300px, 1fr); gap: 18px; align-items: start; }
+.lv-bp-card { padding: clamp(18px, 3vw, 34px); border-radius: 24px; border: 1px solid color-mix(in srgb, var(--mode) 40%, transparent); background: radial-gradient(520px 260px at 0% 0%, color-mix(in srgb, var(--mode) 14%, transparent), transparent 70%), linear-gradient(165deg, color-mix(in srgb, var(--mode) 7%, #131313), #0e0e0e 65%); box-shadow: 0 30px 80px -50px #000, 0 0 60px -34px var(--mode); animation: lv-pop 0.45s var(--ease) both; }
+.lv-bp-card h1 { margin: 2px 0 10px; font-size: clamp(28px, 4vw, 46px); text-transform: uppercase; letter-spacing: -1px; line-height: 1.04; }
+.lv-bp-blurb { margin: 14px 0 4px; font-size: clamp(16px, 1.5vw, 19px); color: #d8d8d8; max-width: 62ch; }
+.lv-bp-card h2, .lv-bp-side h2 { margin: 22px 0 8px; font-family: var(--mono); font-size: 12px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--mode); }
+.lv-objectives { margin: 0; padding: 0; list-style: none; counter-reset: obj; display: grid; gap: 8px; }
+.lv-objectives li { counter-increment: obj; position: relative; padding: 11px 14px 11px 48px; border-radius: 12px; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.06); }
+.lv-objectives li::before { content: counter(obj); position: absolute; left: 12px; top: 50%; transform: translateY(-50%); display: grid; place-items: center; width: 26px; height: 26px; border-radius: 8px; font: 800 13px var(--mono); color: var(--mode); background: color-mix(in srgb, var(--mode) 16%, transparent); border: 1px solid color-mix(in srgb, var(--mode) 40%, transparent); }
+.lv-how { margin: 0; padding-left: 20px; color: #cfcfcf; display: grid; gap: 6px; }
+.lv-bp-side { position: sticky; top: 76px; padding: 20px 20px 22px; border-radius: 24px; border: 1px solid var(--panel-border); background: var(--panel); animation: lv-pop 0.5s var(--ease) 0.08s both; }
+.lv-bp-side h2:first-of-type { margin-top: 4px; }
+.lv-bp-badge { display: grid; place-items: center; width: 64px; height: 64px; border-radius: 18px; margin-bottom: 6px; color: var(--mode); background: color-mix(in srgb, var(--mode) 14%, transparent); border: 1px solid color-mix(in srgb, var(--mode) 45%, transparent); box-shadow: 0 10px 34px -14px var(--mode); }
+.lv-record { margin: 0; color: #d4d4d4; }
+.lv-bp-actions { display: grid; gap: 10px; margin-top: 20px; }
+.lv-bp-actions .btn { width: 100%; }
+.lv-bp .lv-kicker { color: var(--mode); }
+.lv-bp .empty, .lv-brief-page > .empty { color: var(--muted); }
+
+/* ── Skills and achievements ─────────────────────────────────── */
+.lv-skills { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); gap: 12px; }
+.lv-skill { padding: 12px 16px 14px; border-radius: 14px; border: 1px solid var(--panel-border); background: var(--panel); }
+.lv-skill-top { display: flex; justify-content: space-between; gap: 10px; font-weight: 800; font-size: 14.5px; }
+.lv-skill-top span:last-child { font-family: var(--mono); color: var(--accent); font-variant-numeric: tabular-nums; }
+.lv-skill small { display: block; margin: 2px 0 8px; color: var(--muted); font-size: 12.5px; }
+.lv-skill .lv-bar { height: 8px; }
+.lv-skill .lv-bar i { transition: width 0.9s var(--ease); }
+.lv-ach { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr)); gap: 12px; }
+.lv-ach-card { display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--border); background: var(--surface); }
+.lv-ach-card.got { border-color: rgba(251, 191, 36, 0.55); background: linear-gradient(135deg, rgba(251, 191, 36, 0.1), var(--surface) 60%); }
+.lv-ach-card.got.new { animation: lv-unlock 1.2s var(--ease) both; }
+.lv-ach-i { flex: 0 0 auto; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; color: #737373; background: #1b1b1b; border: 1px solid #2c2c2c; }
+.lv-ach-card.got .lv-ach-i { color: #fbbf24; border-color: rgba(251, 191, 36, 0.5); background: rgba(251, 191, 36, 0.1); }
+.lv-ach-card strong { display: block; font-size: 14.5px; }
+.lv-ach-card small { color: var(--muted); font-size: 12.5px; }
+.lv-ach-card:not(.got) strong { color: #a3a3a3; }
+
+@media (max-width: 1000px) { .lv-bp { grid-template-columns: 1fr; } .lv-bp-side { position: static; } }

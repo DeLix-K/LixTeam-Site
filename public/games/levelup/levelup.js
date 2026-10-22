@@ -8,7 +8,8 @@ import * as profile from '../core/profile.js';
 import * as career from '../core/career.js';
 import * as streak from '../core/streak.js';
 import * as weekly from '../core/weekly.js';
-import { buildMap, briefing, whatsNew } from '../core/map.js';
+import { buildMap, briefing, whatsNew, skillBoard } from '../core/map.js';
+import * as ach from '../core/achievements.js';
 import { PATHS, MEDALS } from '../core/missions.js';
 import { rankBadge, modeIcon, pathIcon, MODE_COLOUR } from '../core/art.js';
 
@@ -178,7 +179,7 @@ function renderBrief() {
     rows.push(h('h4', { text: 'To unlock this' }), h('ul', { class: 'lv-missing' }, ...b.missing.map((x) => h('li', {}, h('span', { text: x.label }), h('small', { text: x.detail })))));
     rows.push(h('button', { class: 'btn big', type: 'button', disabled: true }, 'Locked'));
   } else {
-    rows.push(h('a', { class: 'btn primary big', href: b.href, 'data-start': m.id }, b.status === 'done' ? 'Replay for a better medal' : b.attempts ? 'Try again' : 'Start mission'));
+    rows.push(h('a', { class: 'btn primary big', href: b.briefUrl, 'data-start': m.id }, 'Open the mission briefing'));
   }
   box.replaceChildren(...rows);
 }
@@ -290,14 +291,14 @@ function renderWeekly() {
   $('weekly-status').classList.toggle('done', !!(res && res.tier > 0));
   const nx = weekly.next();
   $('weekly-next').textContent = nx ? `Next case ${nx.days === 0 ? 'today' : nx.days === 1 ? 'tomorrow' : 'in ' + nx.days + ' days'}` : '';
-  $('weekly-btn').href = `${BASE}${cur.mode}/?weekly=${cur.id}`;
+  $('weekly-btn').href = `mission.html?weekly=${cur.id}`;
   $('weekly-btn').textContent = res && res.tier > 0 ? 'Play again' : 'Play';
   const past = weekly.released().filter((e) => e.id !== cur.id).sort((a, b) => (a.release < b.release ? 1 : -1));
   $('weekly-archive').hidden = past.length === 0;
   $('weekly-list').replaceChildren(
     ...past.map((e) => {
       const r = weekly.resultOf(e.id);
-      return h('li', {}, h('a', { href: `${BASE}${e.mode}/?weekly=${e.id}` }, h('strong', { text: e.title }), h('small', { text: ` ${MODE_NAME[e.mode] || e.mode}${r && r.tier > 0 ? ' · ' + MEDALS[r.tier] : ''}` })));
+      return h('li', {}, h('a', { href: `mission.html?weekly=${e.id}` }, h('strong', { text: e.title }), h('small', { text: ` ${MODE_NAME[e.mode] || e.mode}${r && r.tier > 0 ? ' · ' + MEDALS[r.tier] : ''}` })));
     })
   );
 }
@@ -352,6 +353,63 @@ function renderRest() {
   $('skills-sub').hidden = anySeen;
 }
 
+// ── Skills on the chosen path, and achievements ─────────────────
+const ICONS = {
+  step: 'M5 19l5-5 3 3 6-9',
+  medal: 'M12 3l2.5 5 5.5.8-4 3.9.9 5.5-4.9-2.6-4.9 2.6.9-5.5-4-3.9 5.5-.8z',
+  flame: 'M12 3c1 4 5 5 5 10a5 5 0 0 1-10 0c0-2 1-3 2-4 0 2 1 3 2 3 0-3-1-6 1-9z',
+  compass: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM15.5 8.5l-2 5-5 2 2-5z',
+  grid: 'M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z',
+  screen: 'M3 5h18v12H3zM8 21h8M12 17v4',
+  chevrons: 'M6 9l6-5 6 5M6 15l6-5 6 5M6 21l6-5 6 5',
+  seal: 'M12 3l2.4 2 3.1-.2 1 3 2.6 1.8-1 3 1 3-2.6 1.8-1 3-3.1-.2L12 21l-2.4-2-3.1.2-1-3L3 14.4l1-3-1-3 2.6-1.8 1-3 3.1.2z',
+  star: 'M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z',
+  crown: 'M3 8l4.5 4L12 5l4.5 7L21 8l-2 11H5z',
+};
+function achIcon(name) {
+  const ns = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(ns, 'svg');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('width', '22');
+  svg.setAttribute('height', '22');
+  svg.setAttribute('aria-hidden', 'true');
+  const p = document.createElementNS(ns, 'path');
+  p.setAttribute('d', ICONS[name] || ICONS.star);
+  for (const [k, v] of Object.entries({ fill: 'none', stroke: 'currentColor', 'stroke-width': 2, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' })) p.setAttribute(k, v);
+  svg.append(p);
+  return svg;
+}
+
+function renderSkills() {
+  const s = career.load();
+  const pid = career.pathOf(s);
+  const rows = skillBoard(s, pid);
+  const box = $('path-skills');
+  box.replaceChildren(
+    ...rows.map((r) => {
+      const bar = h('span', { class: 'lv-bar' }, h('i', {}));
+      bar.firstChild.style.width = '0%';
+      requestAnimationFrame(() => requestAnimationFrame(() => { bar.firstChild.style.width = `${r.score}%`; }));
+      return h('div', { class: 'lv-skill' }, h('div', { class: 'lv-skill-top' }, h('span', { text: r.name }), h('span', { text: r.attempted ? `${r.score}/100` : 'Not started' })), h('small', { text: r.blurb }), bar);
+    })
+  );
+  $('path-skills-sub').textContent = `${PATHS.find((p) => p.id === pid).name}. How well your best results cover each skill. Missions raise them.`;
+}
+
+function renderAchievements(announceNew) {
+  const s = career.load();
+  const best = streak.status().best;
+  const got = ach.earned(s, { streakBest: best });
+  const prior = ach.seen();
+  const fresh = announceNew ? ach.fresh(got, prior) : [];
+  $('ach-sub').textContent = `${got.length} of ${ach.ACHIEVEMENTS.length} earned. Every one is worked out from what you have actually done.`;
+  $('achievements').replaceChildren(
+    ...ach.ACHIEVEMENTS.map((a) => h('div', { class: `lv-ach-card${got.includes(a.id) ? ' got' : ''}${fresh.includes(a.id) ? ' new' : ''}` }, h('span', { class: 'lv-ach-i' }, achIcon(a.icon)), h('div', {}, h('strong', { text: a.name }), h('small', { text: a.hint }))))
+  );
+  for (const id of fresh) toast(`Achievement unlocked: ${ach.byId(id).name}`, 'good');
+  if (announceNew || prior === null) ach.markSeen(got);
+}
+
 function renderAll() {
   renderPaths();
   renderChips();
@@ -360,6 +418,8 @@ function renderAll() {
   renderBrief();
   renderWeekly();
   renderRest();
+  renderSkills();
+  renderAchievements(false);
 }
 
 // ── Unlock and level-up moments: what changed since the last visit ──
@@ -393,6 +453,7 @@ document.addEventListener('rootline:reset', () => renderAll());
 
 announce();
 renderAll();
+renderAchievements(true);
 // Open the recommended mission by default so the briefing is never empty.
 {
   const map = buildMap(career.load(), career.pathOf(career.load()));

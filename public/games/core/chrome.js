@@ -4,6 +4,7 @@
 
 import { modeIcon, MODE_COLOUR } from './art.js';
 import { init as initShell } from './shell.js';
+import { mountHud } from './mission-link.js';
 
 const mode = document.body.dataset.mode;
 
@@ -30,3 +31,4 @@ if (mode && MODE_COLOUR[mode]) {
 }
 
 initShell();
+if (mode) mountHud(mode);
