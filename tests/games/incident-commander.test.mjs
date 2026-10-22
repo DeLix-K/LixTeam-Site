@@ -968,4 +968,90 @@ t('office-ransomware: shutting the plant down, restarting SCADA and waiting are 
   assert.equal(run(OR, ['wait'], { quiet: true }).gr.rating.name, 'Breach');
 });
 
+// ── lead-tier incidents (incident response, GRC, threat intelligence, OT) ──
+console.log('--- lead-tier strategies');
+const TW = 'two-incidents';
+const twIdeal = run(TW, ['triage', 'delegate', 'close-a', 'lock-b', 'purge', 'check-b', 'brief', 'declare']);
+t('two-incidents: the ideal response is Textbook and ends declared', () => { assert.equal(twIdeal.gr.rating.name, 'Textbook'); assert.equal(twIdeal.g.outcome, 'declared'); assert.ok(twIdeal.g.threat <= 20); });
+t('two-incidents: nothing can be delegated or closed before the two incidents are ranked', () => {
+  const g = E.newGame(byId[TW]);
+  const ids = E.availableActions(byId[TW], g).map((a) => a.id);
+  for (const locked of ['delegate', 'close-a', 'lock-b', 'purge', 'check-b', 'brief', 'declare']) assert.ok(!ids.includes(locked), locked + ' should be locked at the start');
+});
+t('two-incidents: not delegating, skipping the purge or the phone check, or not briefing drops below Textbook', () => {
+  for (const seq of [['triage', 'close-a', 'lock-b', 'purge', 'check-b', 'brief', 'declare'], ['triage', 'delegate', 'close-a', 'lock-b', 'check-b', 'brief', 'declare'], ['triage', 'delegate', 'close-a', 'lock-b', 'purge', 'brief', 'declare'], ['triage', 'delegate', 'close-a', 'lock-b', 'purge', 'check-b', 'declare']]) assert.notEqual(run(TW, seq, { quiet: true }).gr.rating.name, 'Textbook', seq.join());
+});
+t('two-incidents: doing it all alone, calling everyone in or leaving the phone are poor responses', () => {
+  const solo = run(TW, ['triage', 'solo', 'close-a', 'purge', 'lock-b', 'brief', 'declare'], { quiet: true });
+  assert.ok(solo.gr.points < twIdeal.gr.points - 40, String(solo.gr.points));
+  const all = run(TW, ['everyone', 'triage', 'delegate', 'close-a', 'lock-b', 'purge', 'check-b', 'brief', 'declare'], { quiet: true });
+  assert.ok(all.g.disruption >= 30);
+  assert.notEqual(all.gr.rating.name, 'Textbook');
+  const ign = run(TW, ['triage', 'ignoreb', 'close-a', 'purge'], { quiet: true });
+  assert.ok(ign.g.threat >= 20);
+  assert.equal(run(TW, ['everyone'], { quiet: true }).gr.rating.name, 'Breach');
+});
+
+const AQ = 'acquisition-surprise';
+const aqIdeal = run(AQ, ['scope', 'counsel', 'board', 'seller', 'plan', 'declare']);
+t('acquisition-surprise: the ideal response is Textbook and ends declared', () => { assert.equal(aqIdeal.gr.rating.name, 'Textbook'); assert.equal(aqIdeal.g.outcome, 'declared'); });
+t('acquisition-surprise: you cannot brief the board before legal advice, or ask the seller before the board, or declare early', () => {
+  const g = E.newGame(byId[AQ]);
+  const ids = E.availableActions(byId[AQ], g).map((a) => a.id);
+  for (const locked of ['counsel', 'board', 'seller', 'plan', 'declare']) assert.ok(!ids.includes(locked), locked + ' should be locked at the start');
+});
+t('acquisition-surprise: skipping the conditions plan drops below Textbook', () => {
+  assert.notEqual(run(AQ, ['scope', 'counsel', 'board', 'seller', 'declare'], { quiet: true }).gr.rating.name, 'Textbook');
+});
+t('acquisition-surprise: copying the data, burying the findings, walking away and waiting are poor responses', () => {
+  const copy = run(AQ, ['scope', 'copy', 'counsel', 'board', 'seller', 'plan'], { quiet: true });
+  assert.equal(copy.g.flags.copied, true);
+  assert.notEqual(copy.gr.rating.name, 'Textbook');
+  for (const seq of [['scope', 'bury'], ['scope', 'counsel', 'walk'], ['scope', 'wait']]) assert.equal(run(AQ, seq, { quiet: true }).gr.rating.name, 'Breach', seq.join());
+});
+
+const FA = 'false-urgent-advisory';
+const faIdeal = run(FA, ['verify', 'hold', 'check', 'warn', 'admin', 'brief', 'declare']);
+t('false-urgent-advisory: the ideal response is Textbook and ends declared', () => { assert.equal(faIdeal.gr.rating.name, 'Textbook'); assert.equal(faIdeal.g.outcome, 'declared'); });
+t('false-urgent-advisory: you cannot hold, warn or declare before you have verified, and cannot declare before checking', () => {
+  const g = E.newGame(byId[FA]);
+  const ids = E.availableActions(byId[FA], g).map((a) => a.id);
+  for (const locked of ['hold', 'check', 'warn', 'admin', 'brief', 'declare']) assert.ok(!ids.includes(locked), locked + ' should be locked at the start');
+});
+t('false-urgent-advisory: skipping the platform report or the verification rule drops below Textbook', () => {
+  assert.notEqual(run(FA, ['verify', 'hold', 'check', 'warn', 'brief', 'declare'], { quiet: true }).gr.rating.name, 'Textbook');
+  assert.notEqual(run(FA, ['verify', 'hold', 'check', 'warn', 'admin', 'declare'], { quiet: true }).gr.rating.name, 'Textbook');
+});
+t('false-urgent-advisory: forwarding, switching the agent off, leaving the group and waiting are poor responses', () => {
+  assert.equal(run(FA, ['forward'], { quiet: true }).gr.rating.name, 'Breach');
+  assert.equal(run(FA, ['ignore'], { quiet: true }).gr.rating.name, 'Breach');
+  const off = run(FA, ['verify', 'disable', 'hold', 'check', 'warn', 'declare'], { quiet: true });
+  assert.ok(off.g.disruption >= 35);
+  assert.notEqual(off.gr.rating.name, 'Textbook');
+  const left = run(FA, ['verify', 'hold', 'check', 'leave', 'warn', 'declare'], { quiet: true });
+  assert.ok(left.gr.points < faIdeal.gr.points - 30, String(left.gr.points));
+});
+
+const VM2 = 'vendor-mid-change';
+const vmIdeal = run(VM2, ['operator', 'call', 'record', 'safestop', 'brief', 'declare']);
+t('vendor-mid-change: the ideal response is Textbook, with the controller intact', () => { assert.equal(vmIdeal.gr.rating.name, 'Textbook'); assert.equal(vmIdeal.g.outcome, 'declared'); assert.ok(vmIdeal.g.disruption <= 15); });
+t('vendor-mid-change: you cannot end the session safely before the operator is ready and the vendor has been called', () => {
+  const g = E.newGame(byId[VM2]);
+  const ids = E.availableActions(byId[VM2], g).map((a) => a.id);
+  assert.ok(!ids.includes('safestop') && !ids.includes('brief') && !ids.includes('declare'));
+  const h = run(VM2, ['operator'], { quiet: true });
+  assert.ok(!E.availableActions(byId[VM2], h.g).some((a) => a.id === 'safestop'), 'the vendor call is needed first');
+});
+t('vendor-mid-change: skipping the recording or the plant owners drops below Textbook', () => {
+  assert.notEqual(run(VM2, ['operator', 'call', 'safestop', 'brief', 'declare'], { quiet: true }).gr.rating.name, 'Textbook');
+  assert.notEqual(run(VM2, ['operator', 'call', 'record', 'safestop', 'declare'], { quiet: true }).gr.rating.name, 'Textbook');
+});
+t('vendor-mid-change: cutting the session, shutting the plant down and ignoring it are poor responses', () => {
+  const cut = run(VM2, ['operator', 'cut'], { quiet: true });
+  assert.equal(cut.g.flags.cut, true);
+  assert.equal(cut.gr.rating.name, 'Breach');
+  assert.equal(run(VM2, ['operator', 'call', 'shutdown'], { quiet: true }).gr.rating.name, 'Breach');
+  assert.equal(run(VM2, ['ignore'], { quiet: true }).gr.rating.name, 'Breach');
+});
+
 console.log(n, 'passed');

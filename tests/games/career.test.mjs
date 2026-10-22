@@ -83,7 +83,7 @@ t('mission data is well formed, with the right numbers per tier', () => {
     if (m.exam) assert.ok(m.promotes && m.passTier >= 2);
   }
   assert.deepEqual([ids('beginner').length, ids('intermediate').length, ids('advanced').length, ids('senior').length, ids('lead').length, ids('manager').length, ids('cloud').length], [4, 9, 4, 3, 4, 2, 3]);
-  assert.equal(M.MISSIONS.filter((m) => m.exam).length, 27);
+  assert.equal(M.MISSIONS.filter((m) => m.exam).length, 31);
   assert.equal(M.RANKS.length, 6);
   assert.equal(M.COMPETENCIES.length, 33);
   for (const c of M.COMPETENCIES) assert.ok(M.MISSIONS.filter((m) => m.competencies[c.id]).length >= 2, c.id + ' needs at least two missions');
@@ -1097,11 +1097,11 @@ for (const pth of M.PATHS.filter((x) => x.tiers && x.tiers.some((id) => id.endsW
   });
 }
 
-// ── the four newest paths (incident response and forensics, GRC, threat intelligence, OT/IoT) ──
+// ── the four newest paths (incident response and forensics, GRC, threat intelligence, OT/IoT): up to Senior; the lead tier is covered by the generic top-tier test above ──
 for (const pid of ['dfir', 'grc', 'ti', 'ot']) {
   t(`the ${pid} path: foundations open, practitioner needs two passes, Junior after two, the exam promotes at silver (bronze is not a pass)`, () => {
     const pth = M.PATHS.find((x) => x.id === pid);
-    assert.ok(pth && pth.ranks.length === 4, pid + ' has four ranks');
+    assert.ok(pth && pth.ranks.length === 5, pid + ' has five ranks');
     const [found, prac, leadTier] = pth.tiers;
     const foundIds = M.MISSIONS.filter((m) => m.tier === found).map((m) => m.id);
     const pracIds = M.MISSIONS.filter((m) => m.tier === prac && !m.exam).map((m) => m.id);
@@ -1136,7 +1136,7 @@ for (const pid of ['dfir', 'grc', 'ti', 'ot']) {
     play(s, seniorExam, 1);
     assert.equal(C.rankOf(s, pid).rank.id, pth.ranks[2].id, 'bronze is not a pass');
     assert.equal(play(s, seniorExam, 2).promoted.id, pth.ranks[3].id, JSON.stringify(C.rankOf(s, pid).checklist));
-    assert.equal(C.rankOf(s, pid).isTop, true);
+    assert.equal(C.rankOf(s, pid).isTop, false, 'the lead tier is above Senior');
     assert.equal(C.rankOf(s, 'analyst').rank.id, 'recruit', 'the analyst ladder is untouched');
     assert.deepEqual(C.visibleCompetencies(s, pid).map((c) => c.id), pth.competencies);
   });

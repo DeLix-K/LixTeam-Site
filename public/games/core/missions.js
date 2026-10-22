@@ -66,15 +66,19 @@ export const TIERS = [
   { id: 'ot-found', name: 'Foundations', xpMultiplier: 1, path: 'ot' },
   { id: 'ot-prac', name: 'Practitioner', xpMultiplier: 1.5, path: 'ot', note: "Needs two Foundations missions passed." },
   { id: 'ot-lead', name: 'Senior', xpMultiplier: 2.5, path: 'ot', note: 'Opens when you reach OT Security Engineer.' },
+  { id: 'ot-arch', name: 'Lead', xpMultiplier: 3, path: 'ot', note: 'Opens when you reach Senior OT Security Engineer.' },
   { id: 'ti-found', name: 'Foundations', xpMultiplier: 1, path: 'ti' },
   { id: 'ti-prac', name: 'Practitioner', xpMultiplier: 1.5, path: 'ti', note: "Needs two Foundations missions passed." },
   { id: 'ti-lead', name: 'Senior', xpMultiplier: 2.5, path: 'ti', note: 'Opens when you reach Threat Intelligence Analyst.' },
+  { id: 'ti-arch', name: 'Lead', xpMultiplier: 3, path: 'ti', note: 'Opens when you reach Senior Intelligence Analyst.' },
   { id: 'gr-found', name: 'Foundations', xpMultiplier: 1, path: 'grc' },
   { id: 'gr-prac', name: 'Practitioner', xpMultiplier: 1.5, path: 'grc', note: "Needs two Foundations missions passed." },
   { id: 'gr-lead', name: 'Senior', xpMultiplier: 2.5, path: 'grc', note: 'Opens when you reach GRC Analyst.' },
+  { id: 'gr-arch', name: 'Lead', xpMultiplier: 3, path: 'grc', note: 'Opens when you reach Senior GRC Analyst.' },
   { id: 'dr-found', name: 'Foundations', xpMultiplier: 1, path: 'dfir' },
   { id: 'dr-prac', name: 'Practitioner', xpMultiplier: 1.5, path: 'dfir', note: "Needs two Foundations missions passed." },
   { id: 'dr-lead', name: 'Senior', xpMultiplier: 2.5, path: 'dfir', note: 'Opens when you reach Incident Responder.' },
+  { id: 'dr-arch', name: 'Lead', xpMultiplier: 3, path: 'dfir', note: 'Opens when you reach Senior Incident Responder.' },
   { id: 'net-found', name: 'Foundations', xpMultiplier: 1, path: 'network' },
   { id: 'net-prac', name: 'Practitioner', xpMultiplier: 1.5, path: 'network', note: 'Needs two Foundations missions passed.' },
   { id: 'net-lead', name: 'Senior', xpMultiplier: 2.5, path: 'network', note: 'Opens when you reach Network Security Engineer.' },
@@ -644,6 +648,58 @@ export const MISSIONS = [
     competencies: { safety: 0.4, zones: 0.4, reporting: 0.2 },
     unlock: { rank: 'ot' },
   },
+  // ── Incident Response Lead (lead tier of the dfir path)
+  {
+    id: 'dr10-programme', title: 'Is the response team any good?', tier: 'dr-arch', kind: 'simulation', mode: 'simulation', ref: 'response-programme', minutes: 24, par: 0, access: 'plus',
+    blurb: 'The board asks how good the response team is, and the dashboard says two days to close. Decide what to measure and what the numbers really show.',
+    competencies: { response: 0.3, evidence: 0.3, reporting: 0.4 },
+    unlock: { rank: 'senior' },
+  },
+  {
+    id: 'dr11-two', title: 'Two incidents, one team', tier: 'dr-arch', kind: 'incident', mode: 'incident-commander', ref: 'two-incidents', minutes: 10, par: 105, access: 'plus',
+    blurb: 'A compromised mailbox and a phone lost in a taxi on the same night. Decide the order, delegate and keep both under control without doing it all yourself.',
+    competencies: { response: 0.6, evidence: 0.2, reporting: 0.2 },
+    unlock: { rank: 'senior' },
+  },
+  // ── Head of Risk (lead tier of the grc path)
+  {
+    id: 'gr10-board', title: 'The risk report the board will actually read', tier: 'gr-arch', kind: 'simulation', mode: 'simulation', ref: 'board-risk-report', minutes: 24, par: 0, access: 'plus',
+    blurb: 'The board wants a heat map and a single risk score. Decide what it needs, what to show and what to say about a number that looks reassuring.',
+    competencies: { risk: 0.5, reporting: 0.5 },
+    unlock: { rank: 'senior' },
+  },
+  {
+    id: 'gr11-acquire', title: 'The company we are about to buy', tier: 'gr-arch', kind: 'incident', mode: 'incident-commander', ref: 'acquisition-surprise', minutes: 10, par: 105, access: 'plus',
+    blurb: 'Two days before signing an acquisition, due diligence finds unreported breaches and data kept without need. Decide what to do with what you have found, without becoming part of the problem.',
+    competencies: { privacy: 0.5, policy: 0.3, reporting: 0.2 },
+    unlock: { rank: 'senior' },
+  },
+  // ── Intelligence Lead (lead tier of the ti path)
+  {
+    id: 'ti10-strategic', title: 'Should we open an office there?', tier: 'ti-arch', kind: 'simulation', mode: 'simulation', ref: 'strategic-assessment', minutes: 24, par: 0, access: 'plus',
+    blurb: 'The board wants to know whether a new country is safe, and the chief executive wants a yes or no. Decide how to say what you assess, how likely and how sure.',
+    competencies: { analysis: 0.5, briefing: 0.4, sources: 0.1 },
+    unlock: { rank: 'senior' },
+  },
+  {
+    id: 'ti11-advisory', title: 'The urgent warning from a trusted friend', tier: 'ti-arch', kind: 'incident', mode: 'incident-commander', ref: 'false-urgent-advisory', minutes: 10, par: 105, access: 'plus',
+    blurb: 'An urgent advisory from a trusted partner\'s account tells members to switch off their endpoint agent. Verify it outside the channel, stop it spreading and warn the others.',
+    competencies: { sources: 0.4, briefing: 0.3, analysis: 0.3 },
+    unlock: { rank: 'senior' },
+  },
+  // ── OT Security Lead (lead tier of the ot path)
+  {
+    id: 'ot10-safety', title: 'The safety case and the security case', tier: 'ot-arch', kind: 'simulation', mode: 'simulation', ref: 'safety-and-security', minutes: 24, par: 0, access: 'plus',
+    blurb: 'The operations director wants remote control of the pump stations to save night call-outs. Bring safety and security together and decide what to recommend.',
+    competencies: { safety: 0.5, zones: 0.2, legacy: 0.3 },
+    unlock: { rank: 'senior' },
+  },
+  {
+    id: 'ot11-vendor', title: 'The vendor is connected right now', tier: 'ot-arch', kind: 'incident', mode: 'incident-commander', ref: 'vendor-mid-change', minutes: 10, par: 105, access: 'plus',
+    blurb: 'A vendor engineer is updating a controller and the monitor shows commands nobody agreed to. Check it, and end the session safely without leaving the controller half changed.',
+    competencies: { safety: 0.4, zones: 0.3, legacy: 0.3 },
+    unlock: { rank: 'senior' },
+  },
   // ── Cloud Security path: architect tier
   {
     id: 'c10-guardrails', title: 'Guardrails as code', tier: 'cloud-arch', kind: 'simulation', mode: 'simulation', ref: 'guardrails-as-code', minutes: 24, par: 0, access: 'plus',
@@ -1041,6 +1097,34 @@ export const MISSIONS = [
     unlock: { rank: 'ot', passedTier: { 'ot-lead': 3 }, mastery: { safety: 60, zones: 55 }, masteryScope: ['ot-found', 'ot-prac', 'ot-lead'] },
   },
   {
+    id: 'dr-lead-exam', title: 'Promotion exam: Incident Response Lead', tier: 'dr-arch', kind: 'simulation', mode: 'simulation', ref: 'dr-lead-exam', minutes: 28, par: 0, access: 'plus',
+    exam: true, promotes: 'irlead', passTier: 2,
+    blurb: 'A serious incident is closed, the board wants a name and the finance director wants a budget cut. Decide how to review it, who to protect and what to say. Silver or better to pass.',
+    competencies: { evidence: 0.3, timeline: 0.2, response: 0.3, reporting: 0.2 },
+    unlock: { rank: 'senior', passedTier: { 'dr-arch': 2 }, mastery: { evidence: 60, timeline: 60 }, masteryScope: ['dr-found', 'dr-prac', 'dr-lead', 'dr-arch'] },
+  },
+  {
+    id: 'gr-lead-exam', title: 'Promotion exam: Head of Risk', tier: 'gr-arch', kind: 'simulation', mode: 'simulation', ref: 'gr-lead-exam', minutes: 28, par: 0, access: 'plus',
+    exam: true, promotes: 'headrisk', passTier: 2,
+    blurb: 'A significant control failure, a chief executive who would like to wait until after results, an auditor and a regulator. Decide what is disclosed, to whom and when. Silver or better to pass.',
+    competencies: { risk: 0.3, policy: 0.3, privacy: 0.2, reporting: 0.2 },
+    unlock: { rank: 'senior', passedTier: { 'gr-arch': 2 }, mastery: { risk: 60, policy: 60 }, masteryScope: ['gr-found', 'gr-prac', 'gr-lead', 'gr-arch'] },
+  },
+  {
+    id: 'ti-lead-exam', title: 'Promotion exam: Intelligence Lead', tier: 'ti-arch', kind: 'simulation', mode: 'simulation', ref: 'ti-lead-exam', minutes: 28, par: 0, access: 'plus',
+    exam: true, promotes: 'intlead', passTier: 2,
+    blurb: 'Your two best analysts disagree about a judgement the board is about to rely on. Decide how to handle the disagreement and what to tell the board. Silver or better to pass.',
+    competencies: { sources: 0.3, analysis: 0.3, briefing: 0.2, reporting: 0.2 },
+    unlock: { rank: 'senior', passedTier: { 'ti-arch': 2 }, mastery: { sources: 60, analysis: 60 }, masteryScope: ['ti-found', 'ti-prac', 'ti-lead', 'ti-arch'] },
+  },
+  {
+    id: 'ot-lead-exam', title: 'Promotion exam: OT Security Lead', tier: 'ot-arch', kind: 'simulation', mode: 'simulation', ref: 'ot-lead-exam', minutes: 28, par: 0, access: 'plus',
+    exam: true, promotes: 'otlead', passTier: 2,
+    blurb: 'A programme budget, a regulator and an operations manager who has seen security projects come and go. Decide where the money goes and what to say. Silver or better to pass.',
+    competencies: { safety: 0.3, zones: 0.3, legacy: 0.2, reporting: 0.2 },
+    unlock: { rank: 'senior', passedTier: { 'ot-arch': 2 }, mastery: { safety: 60, zones: 60 }, masteryScope: ['ot-found', 'ot-prac', 'ot-lead', 'ot-arch'] },
+  },
+  {
     id: 'cloud-architect-exam', title: 'Promotion exam: Cloud Security Architect', tier: 'cloud-arch', kind: 'simulation', mode: 'simulation', ref: 'cloud-architect-exam', minutes: 28, par: 0, access: 'plus',
     exam: true, promotes: 'architect', passTier: 2,
     blurb: "A rival's breach, a board that asks whether you are safe and a finance idea that would remove a control. Silver or better to pass.",
@@ -1197,6 +1281,10 @@ const DR_RANKS = [
     id: 'senior', name: 'Senior Incident Responder', blurb: 'You lead a response through the first hours, keep evidence from being lost to good intentions, and say only what you can show to a board, a regulator or a lawyer.',
     requires: { xp: 650, passedTier: { 'dr-lead': 3 }, mastery: { evidence: 60, timeline: 55 }, masteryScope: ['dr-found', 'dr-prac', 'dr-lead'], exam: 'dr-senior-exam' },
   },
+  {
+    id: 'irlead', name: 'Incident Response Lead', blurb: 'You judge a response team by what it prevents, run a review that finds causes rather than culprits, and lead people through two incidents at once without doing it all yourself.',
+    requires: { xp: 1000, passedTier: { 'dr-arch': 2 }, mastery: { evidence: 60, timeline: 60 }, masteryScope: ['dr-found', 'dr-prac', 'dr-lead', 'dr-arch'], exam: 'dr-lead-exam' },
+  },
 ];
 
 const GR_RANKS = [
@@ -1209,6 +1297,10 @@ const GR_RANKS = [
   {
     id: 'senior', name: 'Senior GRC Analyst', blurb: 'You set the question for the board, prove a claim before you make it, and tell the truth about compliance when a cleaner story is on offer.',
     requires: { xp: 650, passedTier: { 'gr-lead': 3 }, mastery: { risk: 60, policy: 55 }, masteryScope: ['gr-found', 'gr-prac', 'gr-lead'], exam: 'gr-senior-exam' },
+  },
+  {
+    id: 'headrisk', name: 'Head of Risk', blurb: 'You give the board a risk picture it can use, tell it the truth earlier than is comfortable, and hold a line of independence when the chief executive would like a delay.',
+    requires: { xp: 1000, passedTier: { 'gr-arch': 2 }, mastery: { risk: 60, policy: 60 }, masteryScope: ['gr-found', 'gr-prac', 'gr-lead', 'gr-arch'], exam: 'gr-lead-exam' },
   },
 ];
 
@@ -1223,6 +1315,10 @@ const TI_RANKS = [
     id: 'senior', name: 'Senior Intelligence Analyst', blurb: 'You tie collection to decisions, share within the rules, and give judgements that still stand afterwards, with an honest word about how sure you are.',
     requires: { xp: 650, passedTier: { 'ti-lead': 3 }, mastery: { sources: 60, analysis: 55 }, masteryScope: ['ti-found', 'ti-prac', 'ti-lead'], exam: 'ti-senior-exam' },
   },
+  {
+    id: 'intlead', name: 'Intelligence Lead', blurb: 'You give leaders calibrated judgements about the future, record the disagreement inside your team and verify an urgent warning outside the channel it arrived by.',
+    requires: { xp: 1000, passedTier: { 'ti-arch': 2 }, mastery: { sources: 60, analysis: 60 }, masteryScope: ['ti-found', 'ti-prac', 'ti-lead', 'ti-arch'], exam: 'ti-lead-exam' },
+  },
 ];
 
 const OT_RANKS = [
@@ -1235,6 +1331,10 @@ const OT_RANKS = [
   {
     id: 'senior', name: 'Senior OT Security Engineer', blurb: 'You separate a live plant in safe stages with a way back at every step, keep the plant owners in charge of timing, and tell the board plainly what is and is not protected.',
     requires: { xp: 650, passedTier: { 'ot-lead': 3 }, mastery: { safety: 60, zones: 55 }, masteryScope: ['ot-found', 'ot-prac', 'ot-lead'], exam: 'ot-senior-exam' },
+  },
+  {
+    id: 'otlead', name: 'OT Security Lead', blurb: 'You bring the safety case and the security case into one conversation, spend a programme budget where the plant is most improved and keep the operators as partners.',
+    requires: { xp: 1000, passedTier: { 'ot-arch': 2 }, mastery: { safety: 60, zones: 60 }, masteryScope: ['ot-found', 'ot-prac', 'ot-lead', 'ot-arch'], exam: 'ot-lead-exam' },
   },
 ];
 
@@ -1331,10 +1431,9 @@ export const PATHS = [
     headline: ["Find out ","what happened."],
     lead: "Decision-based practice in handling an incident and its evidence: what to do first, how to keep evidence usable, and how to say only what you can show. It does not teach attack techniques.",
     ranks: DR_RANKS,
-    tiers: ['dr-found', 'dr-prac', 'dr-lead'],
+    tiers: ['dr-found', 'dr-prac', 'dr-lead', 'dr-arch'],
     competencies: ['evidence','timeline','response','reporting'],
     roadmap: [
-      { id: 'dr-lead', title: "Incident Response Lead rank", note: "Running a response team, working with Legal and regulators, and leading a major incident from start to finish." },
       { id: 'dr-more', title: "More missions", note: "Memory and cloud forensics judgement, ransomware recovery decisions and incident exercises." },
     ],
   },
@@ -1344,10 +1443,9 @@ export const PATHS = [
     headline: ["Govern the ","risk."],
     lead: "Weigh risk honestly, check what people actually do against what a policy says, and tell management and regulators the truth. Rank is earned through mastery and a practical exam.",
     ranks: GR_RANKS,
-    tiers: ['gr-found', 'gr-prac', 'gr-lead'],
+    tiers: ['gr-found', 'gr-prac', 'gr-lead', 'gr-arch'],
     competencies: ['risk','policy','privacy','reporting'],
     roadmap: [
-      { id: 'gr-lead', title: "Head of Risk rank", note: "Running a risk programme, reporting to the board and managing regulators." },
       { id: 'gr-more', title: "More missions", note: "Third-party risk at scale, frameworks and certification judgement, and privacy impact assessments." },
     ],
   },
@@ -1357,10 +1455,9 @@ export const PATHS = [
     headline: ["Turn noise into ","judgement."],
     lead: "Weigh sources, separate fact from assessment, and brief people who must decide. Rank is earned through mastery and a practical exam.",
     ranks: TI_RANKS,
-    tiers: ['ti-found', 'ti-prac', 'ti-lead'],
+    tiers: ['ti-found', 'ti-prac', 'ti-lead', 'ti-arch'],
     competencies: ['sources','analysis','briefing','reporting'],
     roadmap: [
-      { id: 'ti-lead', title: "Intelligence Lead rank", note: "Running collection, sharing with partners and advising leaders on strategy." },
       { id: 'ti-more', title: "More missions", note: "Sector sharing groups, estimative language and intelligence-led exercises." },
     ],
   },
@@ -1370,10 +1467,9 @@ export const PATHS = [
     headline: ["Keep the plant ","safe."],
     lead: "Decision-based practice in protecting industrial systems: why safety and availability come first, how to protect what cannot be patched, and how to work with the people who run the plant. It does not teach attacks on control systems.",
     ranks: OT_RANKS,
-    tiers: ['ot-found', 'ot-prac', 'ot-lead'],
+    tiers: ['ot-found', 'ot-prac', 'ot-lead', 'ot-arch'],
     competencies: ['safety','zones','legacy','reporting'],
     roadmap: [
-      { id: 'ot-lead', title: "OT Security Lead rank", note: "Leading OT security programmes, designing segmented plant networks and working with regulators." },
       { id: 'ot-more', title: "More missions", note: "Functional safety, building and medical device security, and plant incident exercises." },
     ],
   },

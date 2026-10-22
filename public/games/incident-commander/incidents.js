@@ -30,6 +30,10 @@ import { DFIR_LEAD } from './incidents-dfir-lead.js';
 import { GRC_LEAD } from './incidents-grc-lead.js';
 import { TI_LEAD } from './incidents-ti-lead.js';
 import { OT_LEAD } from './incidents-ot-lead.js';
+import { DFIR_ARCH } from './incidents-dfir-arch.js';
+import { GRC_ARCH } from './incidents-grc-arch.js';
+import { TI_ARCH } from './incidents-ti-arch.js';
+import { OT_ARCH } from './incidents-ot-arch.js';
 
 const CORE = [
   // ─────────────────────────────────────────────────────────────
@@ -426,4 +430,4 @@ const CORE = [
 ];
 
 // Everything the game draws from.
-export const INCIDENTS = [...CORE, ...EXTRA, ...LEAD, ...VULN, ...NETWORK, ...PENTEST, ...ENGINEER, ...CLOUD, ...ENGINEER_LEAD, ...CLOUD_LEAD, ...NETWORK_LEAD, ...VULN_LEAD, ...PENTEST_LEAD, ...ENGINEER_ARCH, ...CLOUD_ARCH, ...PENTEST_ARCH, ...DFIR, ...GRC, ...TI, ...WEEKLY, ...OT, ...DFIR_LEAD, ...GRC_LEAD, ...TI_LEAD, ...OT_LEAD];
+export const INCIDENTS = [...CORE, ...EXTRA, ...LEAD, ...VULN, ...NETWORK, ...PENTEST, ...ENGINEER, ...CLOUD, ...ENGINEER_LEAD, ...CLOUD_LEAD, ...NETWORK_LEAD, ...VULN_LEAD, ...PENTEST_LEAD, ...ENGINEER_ARCH, ...CLOUD_ARCH, ...PENTEST_ARCH, ...DFIR, ...GRC, ...TI, ...WEEKLY, ...OT, ...DFIR_LEAD, ...GRC_LEAD, ...TI_LEAD, ...OT_LEAD, ...DFIR_ARCH, ...GRC_ARCH, ...TI_ARCH, ...OT_ARCH];
