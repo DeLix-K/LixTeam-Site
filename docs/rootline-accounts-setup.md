@@ -35,19 +35,19 @@ mission was played. These rules stop casual tampering and stop scores growing un
 
 ## Before you switch it on: things only you can do
 
-### 1. Use a dedicated Supabase project (strongly recommended)
+### 1. Create a dedicated Supabase project for ROOTLINE (decided)
 
-The project the waitlist uses (`fuhvcclwsbltqvribpsq`) is shared with the FitNFree app. Accounts there would be the **same
-logins** as FitNFree's, provider settings and redirect lists would affect FitNFree sign-in, and "delete my account" could
-delete a FitNFree login. Create a separate free project for ROOTLINE instead. The code supports either, but the delete
-function only removes the login itself when you set `allow_auth_user_delete` to `true`, which you should do only in the
-dedicated project.
+ROOTLINE gets its own Supabase project, separate from the one the waitlist and the FitNFree app use (`fuhvcclwsbltqvribpsq`),
+so the logins, provider settings and redirect lists never mix. Create a new free project (any name, for example `rootline`),
+pick a region close to your players, and keep its database password in your password manager. Only the **Project URL** and the
+**anon (public) key** ever go into the site. Do not paste the service-role key or an access token anywhere, including into a chat.
+Because the project is dedicated, step 2 also turns on full account deletion.
 
 ### 2. Review and run the SQL (in the dedicated project's SQL editor)
 
 1. Read `supabase/rootline/001_accounts.sql`. Edit the starter block-list (`rl_blocked_terms`) to suit.
 2. Run `001_accounts.sql`, then `002_missions.sql`. Both can be run again safely.
-3. To let "delete my account" remove the login too (dedicated project only):
+3. Because this project is dedicated to ROOTLINE, let "delete my account" remove the login too:
    `update public.rl_config set value = 'true' where key = 'allow_auth_user_delete';`
 
 ### 3. Authentication settings (Supabase dashboard)
