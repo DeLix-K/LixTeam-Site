@@ -12,8 +12,11 @@ import { buildMap, briefing, whatsNew, skillBoard } from '../core/map.js';
 import * as ach from '../core/achievements.js';
 import { PATHS, MEDALS } from '../core/missions.js';
 import { rankBadge, modeIcon, pathIcon, MODE_COLOUR } from '../core/art.js';
+import { initNav, syncIfSignedIn } from '../core/account-nav.js';
 
 shell.init({ addButton: false });
+initNav();
+syncIfSignedIn();
 settings.noteGame('levelup');
 
 const $ = (id) => document.getElementById(id);

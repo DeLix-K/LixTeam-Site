@@ -8,8 +8,10 @@ import * as career from './core/career.js';
 import * as streak from './core/streak.js';
 import { MISSIONS, MEDALS, PATHS, missionById } from './core/missions.js';
 import { CATALOG } from './workspace/catalog.js';
+import { initNav } from './core/account-nav.js';
 
 shell.init({ addButton: false });
+initNav();
 
 const $ = (id) => document.getElementById(id);
 const el = (tag, props = {}, ...kids) => {

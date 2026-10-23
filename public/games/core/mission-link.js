@@ -15,6 +15,7 @@ import * as profile from './profile.js';
 import * as ach from './achievements.js';
 import { skillScores, skillGains } from './map.js';
 import { modeInfo } from './modes.js';
+import { syncIfSignedIn } from './account-nav.js';
 
 const CAMPAIGN_URL = '/games/levelup/';
 const HOME_URL = '/games/levelup/';
@@ -75,6 +76,7 @@ export function report(mission, result) {
       achievements: earned.filter((id) => !before.ach.includes(id)),
     };
     ach.markSeen(earned);
+    syncIfSignedIn();
   }
   return res;
 }

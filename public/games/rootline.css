@@ -124,3 +124,6 @@ body.rl > .rl-nav { z-index: 6; }
 
 .rl-word { display: inline-block; }
 .rl-word b { color: var(--accent); font-weight: 800; }
+
+/* The Leaderboard and Account links are hidden until accounts are switched on. */
+.rl-links [hidden] { display: none; }
