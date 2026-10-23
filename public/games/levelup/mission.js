@@ -10,8 +10,10 @@ import { briefing } from '../core/map.js';
 import { modeInfo } from '../core/modes.js';
 import { MEDALS } from '../core/missions.js';
 import { modeIcon, MODE_COLOUR } from '../core/art.js';
+import { initNav } from '../core/account-nav.js';
 
 shell.init({ addButton: false });
+initNav();
 settings.noteGame('levelup');
 
 const root = document.getElementById('brief');
