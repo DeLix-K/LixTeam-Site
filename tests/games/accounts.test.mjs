@@ -42,7 +42,7 @@ await t('there is one mission row per career mission, worth what the game pays',
 });
 
 await t('the committed 002_missions.sql is up to date with the mission list', () => {
-  const file = readFileSync(ROOT + 'supabase/rootline/002_missions.sql', 'utf8');
+  const file = readFileSync(ROOT + 'supabase/rootline/002_missions.sql', 'utf8').replace(/\r/g, ''); // git on Windows may check files out with CRLF
   assert.equal(file, S.missionsSql(S.missionRows()), 'run: node tools/gen-rl-missions.mjs');
 });
 
