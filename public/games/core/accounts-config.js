@@ -15,7 +15,7 @@
 export const ACCOUNTS = {
   url: 'https://utbeawqwhrdawsstnyly.supabase.co',
   anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV0YmVhd3F3aHJkYXdzc3RueWx5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI3Nzc5ODYsImV4cCI6MjEwODM1Mzk4Nn0.nPEBmVlp0o7zD6gQqyNoXAbIyPlc5gEylBW2-iQM-WM',
-  providers: ['github'], // add each one only after it is enabled in Supabase; any of 'google', 'github', 'apple'
+  providers: ['github', 'google'], // add each one only after it is enabled in Supabase; any of 'google', 'github', 'apple'
 };
 
 // ROOTLINE Plus (paid plan). OFF until it is real: premium content exists, the billing functions are deployed, Stripe is
