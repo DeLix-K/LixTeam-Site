@@ -7,6 +7,8 @@ import * as settings from '../core/settings.js';
 import { initNav, showNickname } from '../core/account-nav.js';
 import { auth, enabled, myProfile, syncNow, syncState, localSummary, forgetSyncState, AuthError } from '../core/account.js';
 import { messageFor, nicknameProblem, safeNext } from '../core/sync.js';
+import { billingOn, myPlan, waitForPlus } from '../core/billing.js';
+import { planPanel } from '../core/plan-ui.js';
 
 shell.init({ addButton: false });
 settings.noteGame('levelup');
@@ -44,6 +46,19 @@ const nextPath = () => {
     return '';
   }
 };
+// Coming back from Stripe Checkout: ?billing=success or ?billing=cancelled. It only changes what we say; it grants nothing.
+let billingReturn = '';
+try {
+  const q = new URLSearchParams(location.search);
+  const b = q.get('billing');
+  if (b === 'success' || b === 'cancelled') billingReturn = b;
+  if (q.has('billing')) {
+    q.delete('billing'); // it only changes what we say, so it does not stay in the address bar
+    history.replaceState(null, '', location.pathname + (q.toString() ? '?' + q.toString() : ''));
+  }
+} catch {
+  billingReturn = '';
+}
 let leaving = false; // this page is signing out itself, so "signed out in another tab" does not apply
 const codeOf = (e) => (e instanceof AuthError ? e.code : 'unknown');
 const when = (ms) => (ms ? new Date(ms).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : '');
@@ -294,8 +309,47 @@ function viewProfileSetup() {
   show(card(...heading('Account', 'Choose your nickname', 'Signed in as ' + s.email), form));
 }
 
+// The ROOTLINE Plus section. Filled in after the page is up, from what the database says the player's plan is.
+function planSection() {
+  const slot = el('div', { id: 'ac-plan-slot' });
+  if (!billingOn()) return slot;
+  const fill = (p) => slot.replaceChildren(planPanel(p));
+  const note = (text, kind) => {
+    const p = el('p', { class: `ac-status ${kind || ''}`, role: 'status', id: 'ac-billing-note' });
+    p.textContent = text;
+    return p;
+  };
+  (async () => {
+    try {
+      if (billingReturn === 'success') {
+        slot.replaceChildren(el('section', { class: 'ac-sec' }, el('h2', { text: 'ROOTLINE Plus' }), note('Thank you. We are confirming your payment with Stripe. Plus turns on as soon as it is confirmed. This can take a minute.')));
+        const p = await waitForPlus();
+        billingReturn = '';
+        if (p) {
+          fill(p);
+          slot.prepend(note('Your payment is confirmed. ROOTLINE Plus is active.', 'good'));
+        } else {
+          fill(await myPlan());
+          slot.prepend(note('We have not had confirmation of your payment yet. If you were charged, Plus will turn on shortly. If it does not, contact us.', 'bad'));
+        }
+        return;
+      }
+      const p = await myPlan();
+      fill(p);
+      if (billingReturn === 'cancelled') {
+        slot.prepend(note('Checkout cancelled. You have not been charged.'));
+        billingReturn = '';
+      }
+    } catch {
+      slot.replaceChildren(el('section', { class: 'ac-sec' }, el('h2', { text: 'ROOTLINE Plus' }), note('We could not load your plan just now. Please try again in a moment.', 'bad')));
+    }
+  })();
+  return slot;
+}
+
 function viewDashboard(profile, banner) {
   const s = auth.session();
+  const planSlot = planSection();
   const note = status();
   if (banner) say(note, banner, 'good');
   const sync = syncState();
@@ -437,6 +491,7 @@ function viewDashboard(profile, banner) {
       el('section', { class: 'ac-sec' }, el('h2', { text: 'Leaderboard score' }), el('p', { class: 'ac-fine', text: 'Your score is self-reported: it is worked out from the progress saved in this browser, and the server checks it is possible (real missions, medals that only go up, and limits on how fast a score can grow). It is labelled that way on the board.' }), syncNote, el('div', { class: 'btn-row' }, syncBtn, el('a', { class: 'btn', href: '/games/levelup/leaderboard.html' }, 'View the leaderboard'))),
       el('section', { class: 'ac-sec' }, el('h2', { text: 'Nickname' }), nickForm, el('label', { class: 'ac-check', for: 'ac-vis' }, vis, el('span', { text: 'Show me on the public leaderboard' })), visNote),
       pwSection,
+      planSlot,
       el('section', { class: 'ac-sec' }, el('h2', { text: 'Your data' }), el('p', { class: 'ac-fine', text: 'You can download everything held about you, or sign out of this device.' }), el('div', { class: 'btn-row' }, exportBtn, outBtn), dataNote),
       el('section', { class: 'ac-sec danger' }, el('h2', { text: 'Delete my account' }), el('p', { class: 'ac-fine', text: 'This removes your nickname, your leaderboard results and your sign-in. It cannot be undone. Progress saved in this browser stays on this device.' }), field('Type DELETE to confirm', confirmIn), el('div', { class: 'btn-row' }, delBtn), delNote)
     )

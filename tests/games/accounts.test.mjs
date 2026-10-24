@@ -125,7 +125,8 @@ await t('every function is security definer with a fixed search_path, and only t
 });
 
 await t('every error code the database raises has a plain-language message', () => {
-  const codes = new Set([...sql.matchAll(/raise exception '([a-z_]+)'/g)].map((m) => m[1]));
+  const sql3 = readFileSync(ROOT + 'supabase/rootline/003_billing.sql', 'utf8');
+  const codes = new Set([...sql.matchAll(/raise exception '([a-z_]+)'/g), ...sql3.matchAll(/raise exception '([a-z_]+)'/g)].map((m) => m[1]));
   assert.ok(codes.size >= 10);
   const generic = S.messageFor('definitely-not-a-code');
   for (const c of codes) assert.notEqual(S.messageFor(c), generic, `${c} has a message`);
@@ -153,6 +154,16 @@ await t('accounts are off unless a project URL and key are set, and the policy a
   }
   for (const p of CFG.ACCOUNTS.providers) assert.ok(['google', 'github', 'apple'].includes(p));
   assert.ok(csp.includes("form-action 'self'") && !/connect-src[^;]*\*/.test(csp));
+});
+
+await t('ROOTLINE Plus stays off unless something real is on offer', () => {
+  const b = CFG.BILLING;
+  assert.equal(typeof b.enabled, 'boolean');
+  if (b.enabled) assert.ok(b.benefits.length > 0, 'an enabled plan lists what it actually gives');
+  assert.deepEqual(b.allowedHosts.filter((h) => !['checkout.stripe.com', 'billing.stripe.com'].includes(h)), [], 'only Stripe pages are followed');
+  assert.match(b.priceLabel, /5\.99/);
+  for (const x of b.benefits) assert.ok(typeof x === 'string' && x.length > 5);
+  if (!b.enabled) assert.equal(b.benefits.length, 0, 'no benefits are listed while billing is off');
 });
 
 // ── The sign-in client against a stand-in service ───────────────

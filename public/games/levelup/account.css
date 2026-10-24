@@ -96,3 +96,6 @@
 .lb-cta { padding: 16px 18px; border-radius: 16px; border: 1px solid var(--panel-border); background: var(--grad-brand-soft); max-width: 640px; }
 .lb-cta > p:first-child { margin: 0 0 4px; font-size: 16px; color: var(--text); }
 .lb-cta .btn-row { margin-top: 12px; }
+
+.ac-plan-state { margin: 0 0 6px; font-weight: 800; font-size: 18px; }
+.ac-plan[data-x], .ac-plan { position: relative; }

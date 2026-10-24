@@ -109,6 +109,12 @@ const MESSAGES = {
   weak_password: 'Choose a longer password (at least 10 characters).',
   user_exists: 'We could not create that account. If you already have one, try signing in.',
   rate_limited: 'Too many tries. Please wait a few minutes and try again.',
+  plus_required: 'That needs ROOTLINE Plus.',
+  subscription_active: 'Your ROOTLINE Plus subscription is still running. Cancel it first (Manage billing), then you can delete your account.',
+  already_subscribed: 'You already have ROOTLINE Plus.',
+  no_billing_account: 'There is no billing account to manage yet.',
+  billing_unavailable: 'Billing is not available right now. Nothing was charged. Please try again later.',
+  live_billing_not_allowed: 'Billing is not available right now. Nothing was charged.',
   network: 'We could not reach the server. Check your connection and try again.',
   unavailable: 'Accounts are not available right now.',
 };
