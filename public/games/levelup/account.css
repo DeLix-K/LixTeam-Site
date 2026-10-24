@@ -92,3 +92,7 @@
 /* Headings that take focus when a view changes do not need a ring around them. */
 .ac-card h1:focus, .lb-main h1:focus { outline: none; }
 .ac-sec .ac-check { margin-top: 12px; }
+
+.lb-cta { padding: 16px 18px; border-radius: 16px; border: 1px solid var(--panel-border); background: var(--grad-brand-soft); max-width: 640px; }
+.lb-cta > p:first-child { margin: 0 0 4px; font-size: 16px; color: var(--text); }
+.lb-cta .btn-row { margin-top: 12px; }

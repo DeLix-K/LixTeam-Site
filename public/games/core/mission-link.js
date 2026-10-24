@@ -15,7 +15,7 @@ import * as profile from './profile.js';
 import * as ach from './achievements.js';
 import { skillScores, skillGains } from './map.js';
 import { modeInfo } from './modes.js';
-import { syncIfSignedIn } from './account-nav.js';
+import { syncIfSignedIn, accountsOn, isSignedIn, accountUrl } from './account-nav.js';
 
 const CAMPAIGN_URL = '/games/levelup/';
 const HOME_URL = '/games/levelup/';
@@ -88,6 +88,17 @@ function el(tag, cls, text) {
   return e;
 }
 
+// For a guest who has just earned something: what "saved" means for them, and a way to a free account that comes back here.
+function savePanel() {
+  if (!accountsOn() || isSignedIn()) return null;
+  const box = el('div', 'mc-save');
+  box.append(el('strong', '', 'Keep this progress'), el('p', '', 'You are playing as a guest, so your progress is saved in this browser only and will not follow you to another device. A free account saves it, lets you appear on the leaderboard and picks up where you left off.'));
+  const a = el('a', 'btn', 'SAVE MY PROGRESS');
+  a.href = accountUrl('create', HOME_URL);
+  box.append(a);
+  return box;
+}
+
 function renderWeekly(container, res) {
   container.replaceChildren();
   container.hidden = false;
@@ -108,6 +119,8 @@ function renderWeekly(container, res) {
   const a = el('a', 'btn primary big', 'Back to Level Up');
   a.href = HOME_URL;
   box.append(a);
+  const save1 = res.tier > 0 ? savePanel() : null;
+  if (save1) box.append(save1);
   container.append(box);
 }
 
@@ -234,6 +247,8 @@ export function render(container, res) {
     row.append(n);
   }
   box.append(row);
+  const save2 = res.tier > 0 ? savePanel() : null;
+  if (save2) box.append(save2);
   container.append(box);
 }
 

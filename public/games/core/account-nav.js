@@ -15,6 +15,23 @@ export function syncIfSignedIn(delayMs = 1500) {
   }
 }
 
+export const accountsOn = () => !!(ACCOUNTS.url && ACCOUNTS.anonKey);
+export function isSignedIn() {
+  try {
+    return !!localStorage.getItem(SESSION_KEY);
+  } catch {
+    return false;
+  }
+}
+// The address of the account page, optionally opening on "Create account" and remembering where to come back to.
+export function accountUrl(mode, next) {
+  const q = new URLSearchParams();
+  if (mode) q.set('mode', mode);
+  if (next) q.set('next', next);
+  const s = q.toString();
+  return '/games/levelup/account.html' + (s ? '?' + s : '');
+}
+
 export function initNav() {
   const on = !!(ACCOUNTS.url && ACCOUNTS.anonKey);
   const board = document.getElementById('nav-board');

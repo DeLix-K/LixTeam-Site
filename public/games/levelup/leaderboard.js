@@ -4,7 +4,7 @@
 
 import * as shell from '../core/shell.js';
 import * as settings from '../core/settings.js';
-import { initNav } from '../core/account-nav.js';
+import { initNav, accountUrl } from '../core/account-nav.js';
 import { auth, enabled, syncNow, AuthError } from '../core/account.js';
 import { messageFor } from '../core/sync.js';
 import { PATHS } from '../core/missions.js';
@@ -58,7 +58,15 @@ function renderFoot(needsProfile) {
   if (!foot) return;
   const s = auth.session();
   foot.replaceChildren();
-  if (!s) foot.append(el('a', { class: 'btn primary', href: '/games/levelup/account.html' }, 'Sign in to join the leaderboard'), el('span', { class: 'ac-fine', text: 'Accounts are optional. The game works fully without one.' }));
+  if (!s) {
+    foot.append(
+      el('div', { class: 'lb-cta' },
+        el('p', { text: 'Want your name on the ROOTLINE leaderboard? Create a free account to save your scores, track your progress, and compete with other players.' }),
+        el('div', { class: 'btn-row' },
+          el('a', { class: 'btn primary', href: accountUrl('create', '/games/levelup/leaderboard.html') }, 'CREATE FREE ACCOUNT'),
+          el('a', { class: 'btn', href: accountUrl('signin', '/games/levelup/leaderboard.html') }, 'SIGN IN')),
+        el('p', { class: 'ac-fine', text: 'You can view the board and play every mission as a guest. An account is only needed to save your progress and appear here.' })));
+  }
   else if (needsProfile) foot.append(el('a', { class: 'btn primary', href: '/games/levelup/account.html' }, 'Choose a nickname to appear here'));
   else foot.append(el('a', { class: 'btn', href: '/games/levelup/account.html' }, 'Your account'));
 }

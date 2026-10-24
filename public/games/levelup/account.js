@@ -6,7 +6,7 @@ import * as shell from '../core/shell.js';
 import * as settings from '../core/settings.js';
 import { initNav, showNickname } from '../core/account-nav.js';
 import { auth, enabled, myProfile, syncNow, syncState, localSummary, forgetSyncState, AuthError } from '../core/account.js';
-import { messageFor, nicknameProblem } from '../core/sync.js';
+import { messageFor, nicknameProblem, safeNext } from '../core/sync.js';
 
 shell.init({ addButton: false });
 settings.noteGame('levelup');
@@ -23,6 +23,26 @@ const el = (tag, props = {}, ...kids) => {
   }
   for (const kid of kids) if (kid) n.append(typeof kid === 'string' ? document.createTextNode(kid) : kid);
   return n;
+};
+// Where to send the player once they are in: remembered across the sign-in redirect, and only ever a page of this site.
+const NEXT_KEY = 'lixteam.rootline.next.v1';
+const rememberNext = () => {
+  try {
+    const q = new URLSearchParams(location.search);
+    const n = safeNext(q.get('next'));
+    if (n) sessionStorage.setItem(NEXT_KEY, n);
+    return { mode: q.get('mode') === 'create' ? 'create' : 'signin' };
+  } catch {
+    return { mode: 'signin' };
+  }
+};
+const startParams = rememberNext();
+const nextPath = () => {
+  try {
+    return safeNext(sessionStorage.getItem(NEXT_KEY));
+  } catch {
+    return '';
+  }
 };
 let leaving = false; // this page is signing out itself, so "signed out in another tab" does not apply
 const codeOf = (e) => (e instanceof AuthError ? e.code : 'unknown');
@@ -147,9 +167,10 @@ function viewSignedOut(banner) {
     el('li', { text: 'An account is optional. Every mission, rank and medal works without one.' }),
     el('li', { text: 'It lets you appear on the leaderboard under a nickname you choose, and keep your result there.' }),
     el('li', { text: 'Your email and real name are never shown to other players.' }),
+    el('li', { text: 'Without an account your progress is saved in this browser only. It does not follow you to another device.' }),
     el('li', { text: 'Accounts are for people aged 16 and over.' })
   );
-  setMode('signin', true);
+  setMode(startParams.mode, true);
   show(card(...heading('Account', 'Join the leaderboard'), copy, el('div', { class: 'ac-tabs', role: 'group', 'aria-label': 'Sign in or create an account' }, tabSign, tabNew), form, auth.providers.length ? el('div', { class: 'ac-or' }, el('span', { text: 'or' })) : null, auth.providers.length ? providerBox : null));
 }
 
@@ -412,6 +433,7 @@ function viewDashboard(profile, banner) {
       ...heading('Account', profile.nickname, `Signed in as ${s.email || 'your account'}${s.provider && s.provider !== 'email' ? ' with ' + s.provider[0].toUpperCase() + s.provider.slice(1) : ''}.`),
       tiles,
       note,
+      nextPath() ? el('div', { class: 'btn-row' }, el('a', { class: 'btn primary big', id: 'ac-back', href: nextPath() }, 'Back to your game')) : null,
       el('section', { class: 'ac-sec' }, el('h2', { text: 'Leaderboard score' }), el('p', { class: 'ac-fine', text: 'Your score is self-reported: it is worked out from the progress saved in this browser, and the server checks it is possible (real missions, medals that only go up, and limits on how fast a score can grow). It is labelled that way on the board.' }), syncNote, el('div', { class: 'btn-row' }, syncBtn, el('a', { class: 'btn', href: '/games/levelup/leaderboard.html' }, 'View the leaderboard'))),
       el('section', { class: 'ac-sec' }, el('h2', { text: 'Nickname' }), nickForm, el('label', { class: 'ac-check', for: 'ac-vis' }, vis, el('span', { text: 'Show me on the public leaderboard' })), visNote),
       pwSection,

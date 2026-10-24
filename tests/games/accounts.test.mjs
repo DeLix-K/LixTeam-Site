@@ -88,6 +88,12 @@ await t('the fingerprint changes when a medal changes, not when order does', () 
   assert.notEqual(a, S.fingerprint({ x: 1 }));
 });
 
+await t('the return address after sign-in can only be a page of this site', () => {
+  for (const ok of ['/games/levelup/', '/games/levelup/leaderboard.html', '/games/levelup/mission.html?id=m01-triage']) assert.equal(S.safeNext(ok), ok);
+  for (const bad of ['', null, undefined, '//evil.example', 'https://evil.example/games/', '/\\evil.example', 'javascript:alert(1)', '/games/../admin', '/other/page', '/games//x', '/games/<script>', '/games/ x']) assert.equal(S.safeNext(bad), '', String(bad));
+  assert.ok(S.safeNext('/games/' + 'a'.repeat(400)).length <= 200 || S.safeNext('/games/' + 'a'.repeat(400)) === '');
+});
+
 await t('nickname checks in the browser match the database format', () => {
   for (const ok of ['abc', 'Ann_Analyst', 'a.b-c_1', 'x'.repeat(20), '9lives']) assert.equal(S.nicknameProblem(ok), '', ok);
   for (const bad of ['', 'ab', 'x'.repeat(21), '_abc', ' abc', 'a b c', "o'neil", 'emoji😀', 'a<b>c']) assert.notEqual(S.nicknameProblem(bad), '', JSON.stringify(bad));

@@ -82,6 +82,14 @@ export function nicknameProblem(text) {
   return '';
 }
 
+// Where to send a player after they sign in: only a page on this site under /games/, never another address.
+export function safeNext(value) {
+  const v = String(value || '');
+  if (!/^\/games\/[A-Za-z0-9._~\-\/?=&%]*$/.test(v)) return '';
+  if (v.includes('//') || v.includes('..')) return '';
+  return v.slice(0, 200);
+}
+
 // ── Plain-language text for the codes the server and the sign-in service return ─────────────────
 const MESSAGES = {
   age_required: 'You need to confirm you are 16 or older to use an account.',
