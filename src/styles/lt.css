@@ -262,3 +262,75 @@ body.lt-plain .lt-footer { margin-top: 72px; }
   .lt-wins .lt-win:nth-child(2) { display: none; }
   .lt-btn-row .lt-btn { flex: 1 1 100%; }
 }
+
+/* ═══ Depth and finish ═══════════════════════════════════════════
+   The 3D hero mark, tilting product visuals, the radar plane, the
+   open-slot cube, pointer spotlights and a little film grain. */
+
+/* Hero: copy on the left, the 3D mark on the right. */
+.lt-hero-grid { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 0.7fr); align-items: center; gap: clamp(16px, 3vw, 48px); }
+.lt-hero .lt-h1 { font-size: clamp(42px, 6.6vw, 96px); }
+.lt-hero-3d { position: relative; width: 100%; max-width: 540px; aspect-ratio: 1 / 1; justify-self: end; }
+.lt-hero-3d canvas { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; transition: opacity 1.2s var(--lt-ease); }
+.lt-hero-3d.ready canvas { opacity: 1; }
+.lt-hero-3d-fallback { position: absolute; inset: 0; display: grid; place-items: center; animation: lt-float 7s ease-in-out infinite; filter: drop-shadow(0 40px 60px rgba(163, 230, 53, 0.28)); transition: opacity 0.9s var(--lt-ease); }
+.lt-hero-3d-fallback .lt-logo { width: 46%; height: auto; }
+.lt-hero-3d.ready .lt-hero-3d-fallback { opacity: 0; }
+@keyframes lt-float { 0%, 100% { transform: translateY(0) rotate(-3deg); } 50% { transform: translateY(-14px) rotate(2deg); } }
+
+/* Glass finish: a bright hairline along the top edge of every panel. */
+.lt-board, .lt-card, .lt-win, .lt-cta { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.09); }
+.lt-btn-primary { background: linear-gradient(180deg, #c8f76a, #a3e635 55%, #8fd12a); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), inset 0 -1px 0 rgba(0, 0, 0, 0.18), 0 10px 34px -12px rgba(163, 230, 53, 0.55); }
+.lt-btn-primary:hover { background: linear-gradient(180deg, #d4fb82, #b4f043 55%, #9bdc34); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7), inset 0 -1px 0 rgba(0, 0, 0, 0.18), 0 14px 44px -10px rgba(163, 230, 53, 0.75); }
+
+/* Spotlight that follows the pointer (set by a small script). */
+[data-spot] { position: relative; }
+[data-spot]::after { content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; background: radial-gradient(420px circle at var(--mx, 50%) var(--my, 0%), rgba(255, 255, 255, 0.075), transparent 62%); opacity: 0; transition: opacity 0.35s var(--lt-ease); }
+[data-spot]:hover::after { opacity: 1; }
+
+/* Tilt: product visuals lean toward the pointer, with real depth between layers. */
+[data-tilt] { transform: perspective(1500px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)); transform-style: preserve-3d; transition: transform 0.7s var(--lt-ease); will-change: transform; }
+.lt-phones { transform-style: preserve-3d; }
+.lt-phones .lt-phone:nth-child(1) { transform: translateY(34px) rotate(-5deg) translateZ(10px); }
+.lt-phones .lt-phone:nth-child(2) { transform: translateY(-8px) translateZ(80px); box-shadow: 0 70px 110px -30px rgba(0, 0, 0, 0.95), 0 0 80px -20px rgba(163, 230, 53, 0.35); }
+.lt-phones .lt-phone:nth-child(3) { transform: translateY(34px) rotate(5deg) translateZ(10px); }
+.lt-wins { transform-style: preserve-3d; }
+.lt-wins .lt-win:nth-child(1) { transform: translateZ(0); }
+.lt-wins .lt-win:nth-child(2) { transform: translateZ(90px); box-shadow: 0 60px 100px -20px rgba(0, 0, 0, 0.95), 0 0 70px -20px rgba(56, 189, 248, 0.3); }
+
+/* Radar: the illustration lies on a tilted plane, with signal pins standing on it. */
+.lt-radar-stage { perspective: none; }
+.lt-radar-plane { position: relative; transform: perspective(1400px) rotateX(calc(52deg + var(--rx, 0deg))) rotateZ(calc(-16deg + var(--ry, 0deg) * -0.6)) scale(1.28); transform-style: preserve-3d; margin: -2% 0; }
+.lt-radar-plane .lt-radar { filter: drop-shadow(0 0 40px rgba(167, 139, 250, 0.35)); }
+.lt-pin { position: absolute; width: 0; height: 0; transform: rotateZ(16deg) rotateX(-52deg); transform-style: preserve-3d; }
+.lt-pin::before { content: ''; position: absolute; left: -0.5px; bottom: 0; width: 1px; height: var(--h, 70px); background: linear-gradient(to top, rgba(196, 181, 253, 0.95), transparent); }
+.lt-pin::after { content: ''; position: absolute; left: -5px; bottom: var(--h, 70px); width: 10px; height: 10px; border-radius: 50%; background: #ddd6fe; box-shadow: 0 0 0 4px rgba(167, 139, 250, 0.25), 0 0 24px 4px rgba(167, 139, 250, 0.7); animation: lt-bob 4.2s ease-in-out infinite; animation-delay: var(--d, 0s); }
+@keyframes lt-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+
+/* Open slot: a slowly turning glass cube. */
+.lt-slot { perspective: 760px; }
+.lt-cube { position: relative; width: 112px; height: 112px; transform-style: preserve-3d; animation: lt-spin 20s linear infinite; margin: 18px auto 30px; }
+.lt-cube span { position: absolute; inset: 0; border: 1px solid rgba(251, 191, 36, 0.6); background: linear-gradient(135deg, rgba(251, 191, 36, 0.12), rgba(251, 191, 36, 0.02)); box-shadow: inset 0 0 24px rgba(251, 191, 36, 0.15); }
+.lt-cube span:nth-child(1) { transform: translateZ(56px); }
+.lt-cube span:nth-child(2) { transform: rotateY(180deg) translateZ(56px); }
+.lt-cube span:nth-child(3) { transform: rotateY(90deg) translateZ(56px); }
+.lt-cube span:nth-child(4) { transform: rotateY(-90deg) translateZ(56px); }
+.lt-cube span:nth-child(5) { transform: rotateX(90deg) translateZ(56px); }
+.lt-cube span:nth-child(6) { transform: rotateX(-90deg) translateZ(56px); }
+@keyframes lt-spin { from { transform: rotateX(-24deg) rotateY(0deg); } to { transform: rotateX(-24deg) rotateY(360deg); } }
+
+/* Film grain: a faint noise over the whole page for a printed, expensive feel. */
+body.lt-page::after { content: ''; position: fixed; inset: 0; z-index: 40; pointer-events: none; opacity: 0.05; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .7 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+
+@media (max-width: 1020px) {
+  .lt-hero-grid { grid-template-columns: 1fr; }
+  .lt-hero-3d { max-width: 400px; justify-self: center; margin-top: 8px; }
+}
+@media (max-width: 600px) {
+  .lt-hero-3d { max-width: 300px; }
+  .lt-radar-plane { margin: -14% 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lt-hero-3d-fallback, .lt-cube, .lt-pin::after { animation: none; }
+  [data-tilt] { transition: none; }
+}

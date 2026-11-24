@@ -1,6 +1,7 @@
 ---
 import { Image } from 'astro:assets';
 import Base from '../layouts/Base.astro';
+import Logo from '../components/Logo.astro';
 import { company } from '../data/company';
 import { visibleProducts } from '../data/portfolio';
 
@@ -65,27 +66,38 @@ const principles = [
     <!-- Hero -->
     <section class="lt-hero">
       <div class="lt-wrap">
-        <div class="lt-hero-status" data-reveal><i></i> LixTeam · Digital product company</div>
-        <h1 class="lt-h1" data-reveal style="--d:60ms">
-          We build and operate<br /><span class="lt-fade">digital products.</span>
-        </h1>
-        <p class="lt-lead" data-reveal style="--d:120ms">
-          LixTeam designs, launches and runs software across health, security and AI. One small team,
-          a growing portfolio, and a habit of shipping.
-        </p>
-        <div class="lt-btn-row" data-reveal style="--d:180ms">
-          <a class="lt-btn lt-btn-primary" href="#portfolio">See the portfolio <span class="arrow" aria-hidden="true">→</span></a>
-          <a class="lt-btn" href="#approach">How we work</a>
+        <div class="lt-hero-grid">
+          <div class="lt-hero-copy">
+            <div class="lt-hero-status" data-reveal><i></i> LixTeam · Digital product company</div>
+            <h1 class="lt-h1" data-reveal style="--d:60ms">
+              We build and operate <span class="lt-fade">digital products.</span>
+            </h1>
+            <p class="lt-lead" data-reveal style="--d:120ms">
+              LixTeam designs, launches and runs software across health, security and AI. One small team,
+              a growing portfolio, and a habit of shipping.
+            </p>
+            <div class="lt-btn-row" data-reveal style="--d:180ms">
+              <a class="lt-btn lt-btn-primary" href="#portfolio">See the portfolio <span class="arrow" aria-hidden="true">→</span></a>
+              <a class="lt-btn" href="#approach">How we work</a>
+            </div>
+          </div>
+
+          <!-- The 3D mark. The logo SVG shows first, and stays if WebGL is unavailable
+               or the visitor prefers reduced motion with no GPU. -->
+          <div class="lt-hero-3d" id="hero3d" aria-hidden="true">
+            <div class="lt-hero-3d-fallback"><Logo size={200} /></div>
+            <canvas></canvas>
+          </div>
         </div>
 
-        <div class="lt-board" data-reveal style="--d:120ms">
+        <div class="lt-board" data-spot data-reveal style="--d:120ms">
           <div class="lt-board-bar">
             <span>Portfolio</span>
             <b>{visibleProducts.filter((p) => p.status.tone !== 'next').length} products · 1 slot open</b>
           </div>
           <div class="lt-board-grid">
             {visibleProducts.map((p) => (
-              <a class="lt-tile" data-tone={p.status.tone} style={`--accent:${p.accent}`} href={`#${p.id}`}>
+              <a class="lt-tile" data-spot data-tone={p.status.tone} style={`--accent:${p.accent}`} href={`#${p.id}`}>
                 <span class="glyph" aria-hidden="true">
                   {p.visual === 'fitnfree' && (
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l2-6 4 12 2-6h6" /></svg>
@@ -152,7 +164,7 @@ const principles = [
 
             <div class="lt-stage" data-reveal style="--d:100ms">
               {p.visual === 'fitnfree' && (
-                <div class="lt-phones">
+                <div class="lt-phones" data-tilt>
                   <div class="lt-phone"><Image src={ffCoach} alt="FitNFree AI Coach screen" width={420} loading="lazy" /></div>
                   <div class="lt-phone"><Image src={ffHome} alt="FitNFree home screen" width={480} loading="lazy" /></div>
                   <div class="lt-phone"><Image src={ffFood} alt="FitNFree nutrition screen" width={420} loading="lazy" /></div>
@@ -161,7 +173,7 @@ const principles = [
 
               {p.visual === 'rootline' && (
                 <div class="lt-stage-pad">
-                  <div class="lt-wins">
+                  <div class="lt-wins" data-tilt style="--rx:7deg;--ry:-13deg">
                     <div class="lt-win">
                       <div class="lt-win-bar"><i></i><i></i><i></i><span>ROOTLINE</span></div>
                       <Image src={rlLanding} alt="The ROOTLINE home screen with its two games" width={1100} loading="lazy" />
@@ -175,7 +187,8 @@ const principles = [
               )}
 
               {p.visual === 'radar' && (
-                <div class="lt-stage-pad">
+                <div class="lt-stage-pad lt-radar-stage">
+                  <div class="lt-radar-plane" data-tilt style="--rx:0deg;--ry:0deg">
                   <svg class="lt-radar" viewBox="0 0 600 420" role="img" aria-label="Illustration: signals from search, reviews, forums and video converge into a ranked list of opportunities">
                     <defs>
                       <linearGradient id="sw" x1="0" y1="0" x2="1" y2="0">
@@ -208,12 +221,19 @@ const principles = [
                     <text x="400" y="298">Video</text>
                     <text x="312" y="238" fill="#fff" style="fill:#fff">Ranked gaps</text>
                   </svg>
+                  <span class="lt-pin" style="left:67%;top:30%;--h:96px"></span>
+                  <span class="lt-pin" style="left:40%;top:70%;--h:70px;--d:-1.2s"></span>
+                  <span class="lt-pin" style="left:32.7%;top:35%;--h:54px;--d:-2.1s"></span>
+                  <span class="lt-pin" style="left:64.7%;top:65.7%;--h:78px;--d:-0.6s"></span>
+                  </div>
                 </div>
               )}
 
               {p.visual === 'next' && (
                 <div class="lt-slot">
-                  <div class="plus" aria-hidden="true">+</div>
+                  <div class="lt-cube" aria-hidden="true">
+                    <span></span><span></span><span></span><span></span><span></span><span></span>
+                  </div>
                   <p>Slot open<br />Next experiment: to be decided</p>
                 </div>
               )}
@@ -264,7 +284,7 @@ const principles = [
         </div>
         <div class="lt-bento">
           {principles.map((c, i) => (
-            <div class={`lt-card${c.wide ? ' wide' : ''}`} data-reveal style={`--d:${(i % 3) * 70}ms`}>
+            <div class={`lt-card${c.wide ? ' wide' : ''}`} data-spot data-reveal style={`--d:${(i % 3) * 70}ms`}>
               <span class="ico" aria-hidden="true">
                 {c.icon === 'team' && (
                   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2" /><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6" /><circle cx="17.5" cy="9" r="2.4" /><path d="M16.5 14.2c2.6.3 4.5 2.3 4.5 5.3" /></svg>
@@ -309,3 +329,52 @@ const principles = [
     </section>
   </main>
 </Base>
+
+<script>
+  // Spotlight that follows the pointer on cards and tiles, and gentle 3D tilt on
+  // the product visuals. Both are skipped for touch and for "reduce motion".
+  const fine = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  if (fine && !reduce) {
+    document.querySelectorAll<HTMLElement>('[data-spot]').forEach((el) => {
+      el.addEventListener('pointermove', (e) => {
+        const r = el.getBoundingClientRect();
+        el.style.setProperty('--mx', `${e.clientX - r.left}px`);
+        el.style.setProperty('--my', `${e.clientY - r.top}px`);
+      });
+    });
+
+    document.querySelectorAll<HTMLElement>('[data-tilt]').forEach((el) => {
+      const stage = (el.closest('.lt-stage') as HTMLElement) || el;
+      const base = { rx: parseFloat(el.style.getPropertyValue('--rx')) || 0, ry: parseFloat(el.style.getPropertyValue('--ry')) || 0 };
+      stage.addEventListener('pointermove', (e) => {
+        const r = stage.getBoundingClientRect();
+        const x = (e.clientX - r.left) / r.width - 0.5;
+        const y = (e.clientY - r.top) / r.height - 0.5;
+        el.style.setProperty('--ry', `${(base.ry + x * 16).toFixed(2)}deg`);
+        el.style.setProperty('--rx', `${(base.rx - y * 12).toFixed(2)}deg`);
+      });
+      stage.addEventListener('pointerleave', () => {
+        el.style.setProperty('--ry', `${base.ry}deg`);
+        el.style.setProperty('--rx', `${base.rx}deg`);
+      });
+    });
+  }
+
+  // The 3D logo in the hero. three.js is a separate download that only loads when
+  // the hero is on screen, so it never slows down the first paint.
+  const host = document.getElementById('hero3d');
+  const saveData = (navigator as any).connection?.saveData === true;
+  if (host && !saveData) {
+    const start = () => import('../scripts/hero3d.js').then((m) => m.initHero3D(host)).catch(() => {});
+    if ('IntersectionObserver' in window) {
+      const io = new IntersectionObserver((entries) => {
+        if (entries.some((e) => e.isIntersecting)) { io.disconnect(); start(); }
+      });
+      io.observe(host);
+    } else {
+      start();
+    }
+  }
+</script>
