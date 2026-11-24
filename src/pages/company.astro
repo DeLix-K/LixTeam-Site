@@ -1,0 +1,141 @@
+---
+import Base from '../layouts/Base.astro';
+import { company } from '../data/company';
+import { visibleProducts } from '../data/portfolio';
+
+const beliefs = [
+  {
+    title: 'Evidence before code',
+    text: 'We test whether people want something before we build it, and we stop when they do not. A small experiment that fails is a cheap result.',
+  },
+  {
+    title: 'Own the whole product',
+    text: 'The same small team designs it, builds it, ships it and answers the support email. That keeps the product honest and the loop short.',
+  },
+  {
+    title: 'Privacy and security are features',
+    text: 'We collect what a feature needs and no more, say so in plain language, and enforce access rules at the database rather than trusting the interface.',
+  },
+  {
+    title: 'AI assists, people decide',
+    text: 'AI is useful and we use it, with permission asked before personal data is shared and a person approving anything published in our name.',
+  },
+  {
+    title: 'Stay small and focused',
+    text: 'We would rather run a few products well than collect many we cannot look after. New ideas earn a slot.',
+  },
+];
+
+const tools = ['React Native', 'Expo', 'TypeScript', 'Astro', 'Supabase', 'PostgreSQL', 'Stripe', 'Vercel', 'Anthropic Claude'];
+---
+
+<Base
+  title="Company"
+  description="LixTeam is a small technology company that builds and operates digital products across health, security and AI."
+  variant="lt"
+>
+  <main>
+    <section class="lt-hero" style="padding-bottom:clamp(40px,6vw,80px)">
+      <div class="lt-wrap">
+        <p class="lt-eyebrow" data-reveal>Company</p>
+        <h1 class="lt-h1" data-reveal style="--d:60ms">A company<br /><span class="lt-fade">that ships.</span></h1>
+        <p class="lt-lead" data-reveal style="--d:120ms">
+          {company.name} is a small technology company. We build digital products, put them in front of
+          real people, and keep running them.
+        </p>
+      </div>
+    </section>
+
+    <section class="lt-section" style="padding-top:clamp(40px,6vw,80px)">
+      <div class="lt-wrap lt-twocol">
+        <div data-reveal>
+          <p class="lt-eyebrow">What we do</p>
+          <h2 class="lt-h3">A product company,<br />not an agency.</h2>
+        </div>
+        <div class="lt-prose" data-reveal style="--d:80ms">
+          <p>
+            We pick a problem, build the product ourselves, and <strong>operate it</strong>: the support
+            inbox, the app-store reviews, the billing, the updates and the privacy requests. A product is
+            not finished when it launches.
+          </p>
+          <p>
+            Today that means a health companion app, a free cyber security training game and a
+            market-intelligence experiment. Tomorrow it may be something else entirely. The company is
+            built so a new business or technology can be added without starting from scratch.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section class="lt-section" style="padding-top:0">
+      <div class="lt-wrap lt-twocol">
+        <div data-reveal>
+          <p class="lt-eyebrow">What we believe</p>
+          <h2 class="lt-h3">Five habits we<br />do not skip.</h2>
+        </div>
+        <ol class="lt-list" style="list-style:none">
+          {beliefs.map((b, i) => (
+            <li data-reveal style={`--d:${i * 50}ms`}>
+              <span class="n">{String(i + 1).padStart(2, '0')}</span>
+              <div>
+                <h3>{b.title}</h3>
+                <p>{b.text}</p>
+              </div>
+            </li>
+          ))}
+        </ol>
+      </div>
+    </section>
+
+    <section class="lt-section lt-band">
+      <div class="lt-wrap lt-twocol">
+        <div data-reveal>
+          <p class="lt-eyebrow">The portfolio</p>
+          <h2 class="lt-h3">What is in it<br />right now.</h2>
+        </div>
+        <ul class="lt-list" data-reveal style="--d:80ms">
+          {visibleProducts.filter((p) => p.status.tone !== 'next').map((p) => (
+            <li style="grid-template-columns:1fr auto;align-items:center">
+              <div>
+                <h3><a href={p.links[0].href} style="color:inherit;text-decoration:none">{p.name}</a></h3>
+                <p>{p.tagline} {p.summary}</p>
+              </div>
+              <span class="lt-pill" data-tone={p.status.tone}><i></i>{p.status.label}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </section>
+
+    <section class="lt-section">
+      <div class="lt-wrap lt-twocol">
+        <div data-reveal>
+          <p class="lt-eyebrow">What we build with</p>
+          <h2 class="lt-h3">Tools we trust.</h2>
+        </div>
+        <div data-reveal style="--d:80ms">
+          <ul class="lt-tools">
+            {tools.map((t) => <li>{t}</li>)}
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="lt-section" id="contact" style="padding-top:0">
+      <div class="lt-wrap">
+        <div class="lt-cta" data-reveal>
+          <p class="lt-eyebrow" style="justify-content:center">Work with us</p>
+          <h2 class="lt-h2">Partnerships, ideas and questions.</h2>
+          <p class="lt-lead">
+            If you want to collaborate, have an idea that belongs in the lab, or need help with one of our
+            products, write to us.
+          </p>
+          <div class="lt-btn-row">
+            <a class="lt-btn lt-btn-primary" href={`mailto:${company.contactEmail}?subject=Hello%20LixTeam`}>{company.contactEmail} <span class="arrow" aria-hidden="true">→</span></a>
+            <a class="lt-btn" href="/#portfolio">See the portfolio</a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</Base>

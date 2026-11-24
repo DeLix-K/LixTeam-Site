@@ -1,0 +1,56 @@
+---
+import Logo from './Logo.astro';
+import { company } from '../data/company';
+import { visibleProducts } from '../data/portfolio';
+import { apps } from '../data/apps';
+
+const live = visibleProducts.filter((p) => p.status.tone !== 'next');
+---
+<footer class="lt-footer">
+  <div class="lt-wrap">
+    <div class="lt-footer-grid">
+      <div class="lt-footer-about">
+        <a class="lt-brand" href="/" aria-label={`${company.name} home`}>
+          <Logo size={28} />
+          <span>{company.name}</span>
+        </a>
+        <p>{company.tagline}</p>
+      </div>
+
+      <div>
+        <h4>Products</h4>
+        <ul>
+          {live.map((p) => <li><a href={p.links[0].href}>{p.name}</a></li>)}
+        </ul>
+      </div>
+
+      <div>
+        <h4>Company</h4>
+        <ul>
+          <li><a href="/#approach">Approach</a></li>
+          <li><a href="/company/">About</a></li>
+          <li><a href={`mailto:${company.contactEmail}`}>Contact</a></li>
+        </ul>
+      </div>
+
+      <div>
+        <h4>Legal &amp; help</h4>
+        <ul>
+          {apps.map((a) => (
+            <>
+              <li><a href={`/${a.slug}/privacy/`}>{a.name} privacy</a></li>
+              <li><a href={`/${a.slug}/terms/`}>{a.name} terms</a></li>
+              <li><a href={`/${a.slug}/support/`}>{a.name} support</a></li>
+            </>
+          ))}
+          <li><a href="/games/privacy/">ROOTLINE privacy</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="lt-footer-base">
+      <span>© {company.year} {company.name}. All rights reserved.</span>
+      <a href={`mailto:${company.contactEmail}`}>{company.contactEmail}</a>
+    </div>
+  </div>
+</footer>

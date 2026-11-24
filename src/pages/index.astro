@@ -2,65 +2,309 @@
 import { Image } from 'astro:assets';
 import Base from '../layouts/Base.astro';
 import { company } from '../data/company';
-import { apps } from '../data/apps';
+import { visibleProducts } from '../data/portfolio';
+
+import ffHome from '../assets/fitnfree/01-home.png';
+import ffCoach from '../assets/fitnfree/02-coach.png';
+import ffFood from '../assets/fitnfree/03-nutrition.png';
+import rlLanding from '../assets/rootline/landing.png';
+import rlWorkspace from '../assets/rootline/workspace.png';
+
+const steps = [
+  {
+    title: 'Test the question',
+    text: 'We start with a demand test: a page, a promise and a waitlist. If people do not care, we find out before we write the product.',
+  },
+  {
+    title: 'Build it properly',
+    text: 'Mobile, web and cloud, built to ship and to be maintained. Privacy, security and store rules are part of the build, not an afterthought.',
+  },
+  {
+    title: 'Operate it',
+    text: 'Launch is the start. We run support, subscriptions, reviews and updates, and watch how people actually use what we made.',
+  },
+  {
+    title: 'Compound',
+    text: 'What each product teaches us feeds the next one: tooling, design, content and an audience that already trusts us.',
+  },
+];
+
+const principles = [
+  {
+    wide: true,
+    icon: 'team',
+    title: 'Small team, high standards',
+    text: 'A few people who own whole products end to end. Fewer meetings, faster decisions, and nobody to hand a problem to.',
+  },
+  {
+    wide: true,
+    icon: 'spark',
+    title: 'AI with a human in the loop',
+    text: 'We use AI where it helps people, and ask permission before any personal data is sent to it. Anything that goes out under our name is approved by a person first.',
+  },
+  {
+    icon: 'lock',
+    title: 'Privacy you can read',
+    text: 'Plain-language policies, account deletion inside the app, and no advertising trackers.',
+  },
+  {
+    icon: 'shield',
+    title: 'Secure by default',
+    text: 'Access rules are enforced at the database, not just in the interface, and every integration gets the least access it needs.',
+  },
+  {
+    icon: 'loop',
+    title: 'Built to be operated',
+    text: 'Support, store compliance, billing and updates are part of the job, long after launch day.',
+  },
+];
 ---
 
-<Base title={company.name} description={`${company.name} builds apps that make everyday life a little easier. Meet FitNFree, our AI health companion.`}>
-  <main>
-    <div class="hero">
-      <div class="wrap">
-        <p class="eyebrow">{company.name}</p>
-        <h1>{company.tagline}</h1>
-        <p class="lead">
-          One small team, a growing set of apps. Each one has its own page here with everything you need:
-          what it does, how to get it, and how it looks after your data.
+<Base title={company.name} description={company.description} variant="lt">
+  <main id="top">
+    <!-- Hero -->
+    <section class="lt-hero">
+      <div class="lt-wrap">
+        <div class="lt-hero-status" data-reveal><i></i> LixTeam · Digital product company</div>
+        <h1 class="lt-h1" data-reveal style="--d:60ms">
+          We build and operate<br /><span class="lt-fade">digital products.</span>
+        </h1>
+        <p class="lt-lead" data-reveal style="--d:120ms">
+          LixTeam designs, launches and runs software across health, security and AI. One small team,
+          a growing portfolio, and a habit of shipping.
+        </p>
+        <div class="lt-btn-row" data-reveal style="--d:180ms">
+          <a class="lt-btn lt-btn-primary" href="#portfolio">See the portfolio <span class="arrow" aria-hidden="true">→</span></a>
+          <a class="lt-btn" href="#approach">How we work</a>
+        </div>
+
+        <div class="lt-board" data-reveal style="--d:120ms">
+          <div class="lt-board-bar">
+            <span>Portfolio</span>
+            <b>{visibleProducts.filter((p) => p.status.tone !== 'next').length} products · 1 slot open</b>
+          </div>
+          <div class="lt-board-grid">
+            {visibleProducts.map((p) => (
+              <a class="lt-tile" data-tone={p.status.tone} style={`--accent:${p.accent}`} href={`#${p.id}`}>
+                <span class="glyph" aria-hidden="true">
+                  {p.visual === 'fitnfree' && (
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l2-6 4 12 2-6h6" /></svg>
+                  )}
+                  {p.visual === 'rootline' && (
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z" /><path d="M9 12l2 2 4-4" /></svg>
+                  )}
+                  {p.visual === 'radar' && (
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="4.5" /><path d="M12 12l6-6" /></svg>
+                  )}
+                  {p.visual === 'next' && (
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 5v14M5 12h14" /></svg>
+                  )}
+                </span>
+                <span class="cat">{p.category}</span>
+                <h3>{p.name}</h3>
+                <p>{p.tagline}</p>
+                <span class="lt-pill" data-tone={p.status.tone}><i></i>{p.status.label}</span>
+              </a>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Portfolio -->
+    <section class="lt-section" id="portfolio">
+      <div class="lt-wrap">
+        <div class="lt-section-head" data-reveal>
+          <p class="lt-eyebrow">Portfolio</p>
+          <h2 class="lt-h2">Products we build and run.</h2>
+          <p class="lt-lead">
+            Each product is its own small business, with its own users, roadmap and support. Together they
+            share the tools, the lessons and the standards.
+          </p>
+        </div>
+
+        {visibleProducts.map((p, i) => (
+          <article class="lt-product" id={p.id} data-flip={i % 2 === 1 ? 'true' : 'false'} style={`--accent:${p.accent}`}>
+            <div class="lt-product-copy" data-reveal>
+              <div class="name">
+                <span class="cat">{p.category}</span>
+                <span class="lt-pill" data-tone={p.status.tone}><i></i>{p.status.label}</span>
+              </div>
+              <h3>{p.name}</h3>
+              <p class="sum"><strong style="color:var(--lt-text);font-weight:600">{p.tagline}</strong> {p.summary}</p>
+              {p.facts.length > 0 && (
+                <ul class="lt-facts">
+                  {p.facts.map((f) => <li>{f}</li>)}
+                </ul>
+              )}
+              <div class="lt-btn-row">
+                {p.links.map((l) => (
+                  <a
+                    class={`lt-btn${l.primary ? ' lt-btn-primary' : ''}`}
+                    href={l.href}
+                    {...(l.href.startsWith('http') ? { target: '_blank', rel: 'noopener' } : {})}
+                  >
+                    {l.label}{l.primary && <span class="arrow" aria-hidden="true">→</span>}
+                  </a>
+                ))}
+              </div>
+            </div>
+
+            <div class="lt-stage" data-reveal style="--d:100ms">
+              {p.visual === 'fitnfree' && (
+                <div class="lt-phones">
+                  <div class="lt-phone"><Image src={ffCoach} alt="FitNFree AI Coach screen" width={420} loading="lazy" /></div>
+                  <div class="lt-phone"><Image src={ffHome} alt="FitNFree home screen" width={480} loading="lazy" /></div>
+                  <div class="lt-phone"><Image src={ffFood} alt="FitNFree nutrition screen" width={420} loading="lazy" /></div>
+                </div>
+              )}
+
+              {p.visual === 'rootline' && (
+                <div class="lt-stage-pad">
+                  <div class="lt-wins">
+                    <div class="lt-win">
+                      <div class="lt-win-bar"><i></i><i></i><i></i><span>ROOTLINE</span></div>
+                      <Image src={rlLanding} alt="The ROOTLINE home screen with its two games" width={1100} loading="lazy" />
+                    </div>
+                    <div class="lt-win">
+                      <div class="lt-win-bar"><i></i><i></i><i></i><span>Workspace</span></div>
+                      <Image src={rlWorkspace} alt="A ROOTLINE case file list" width={760} loading="lazy" />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {p.visual === 'radar' && (
+                <div class="lt-stage-pad">
+                  <svg class="lt-radar" viewBox="0 0 600 420" role="img" aria-label="Illustration: signals from search, reviews, forums and video converge into a ranked list of opportunities">
+                    <defs>
+                      <linearGradient id="sw" x1="0" y1="0" x2="1" y2="0">
+                        <stop offset="0" stop-color="#a78bfa" stop-opacity="0" />
+                        <stop offset="1" stop-color="#a78bfa" stop-opacity="0.55" />
+                      </linearGradient>
+                    </defs>
+                    <g fill="none" stroke="rgba(255,255,255,0.12)">
+                      <circle cx="300" cy="210" r="60" />
+                      <circle cx="300" cy="210" r="120" />
+                      <circle cx="300" cy="210" r="180" />
+                      <path d="M300 20v380M110 210h380" stroke-dasharray="2 6" />
+                    </g>
+                    <path class="sweep" d="M300 210 L480 210 A180 180 0 0 0 437.4 93.6 Z" fill="url(#sw)" />
+                    <g fill="#a78bfa">
+                      <circle cx="300" cy="210" r="6" />
+                      <circle cx="402" cy="128" r="5" opacity="0.9" />
+                      <circle cx="196" cy="148" r="4" opacity="0.7" />
+                      <circle cx="240" cy="296" r="5" opacity="0.85" />
+                      <circle cx="388" cy="276" r="4" opacity="0.65" />
+                      <circle cx="146" cy="240" r="3.5" opacity="0.5" />
+                      <circle cx="448" cy="196" r="3.5" opacity="0.5" />
+                    </g>
+                    <g fill="none" stroke="rgba(167,139,250,0.5)" stroke-dasharray="3 5">
+                      <path d="M300 210L402 128M300 210L240 296M300 210L196 148" />
+                    </g>
+                    <text x="414" y="124">Search</text>
+                    <text x="86" y="140">Reviews</text>
+                    <text x="190" y="322">Forums</text>
+                    <text x="400" y="298">Video</text>
+                    <text x="312" y="238" fill="#fff" style="fill:#fff">Ranked gaps</text>
+                  </svg>
+                </div>
+              )}
+
+              {p.visual === 'next' && (
+                <div class="lt-slot">
+                  <div class="plus" aria-hidden="true">+</div>
+                  <p>Slot open<br />Next experiment: to be decided</p>
+                </div>
+              )}
+            </div>
+          </article>
+        ))}
+      </div>
+    </section>
+
+    <!-- Statement -->
+    <section class="lt-section lt-band">
+      <div class="lt-wrap">
+        <p class="big" data-reveal>
+          One small team. Many products. <span>Each one run like a real business.</span>
         </p>
       </div>
-    </div>
+    </section>
 
-    <section id="apps">
-      <div class="wrap">
-        <h2>Our apps</h2>
-        <p class="section-sub">More are on the way.</p>
-        <div class="app-grid">
-          {apps.map((app) => (
-            <a class="app-card" href={`/${app.slug}/`}>
-              <Image src={app.icon} alt={`${app.name} icon`} width={72} height={72} />
-              <div>
-                <h3>{app.name}</h3>
-                <p>{app.blurb}</p>
-                <span class="go">Learn more →</span>
-              </div>
-            </a>
+    <!-- Approach -->
+    <section class="lt-section" id="approach">
+      <div class="lt-wrap">
+        <div class="lt-section-head" data-reveal>
+          <p class="lt-eyebrow">Approach</p>
+          <h2 class="lt-h2">From question to product, on purpose.</h2>
+          <p class="lt-lead">
+            The same four moves every time, whether it is a fitness app, a training game or something we
+            have not announced yet.
+          </p>
+        </div>
+        <div class="lt-steps">
+          {steps.map((s, i) => (
+            <div class="lt-step" data-reveal style={`--d:${i * 80}ms`}>
+              <span class="num">{String(i + 1).padStart(2, '0')}</span>
+              <h3>{s.title}</h3>
+              <p>{s.text}</p>
+            </div>
           ))}
         </div>
       </div>
     </section>
 
-    <section id="games">
-      <div class="wrap">
-        <h2>Free games</h2>
-        <p class="section-sub">Short, hands-on cyber security training you can play in your browser. No sign-up, and nothing tracked.</p>
-        <a class="app-card games-card" href="/games/">
-          <span class="games-tile" aria-hidden="true">
-            <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"/><path d="M9 12l2 2 4-4"/></svg>
-          </span>
-          <div>
-            <h3>RootLine</h3>
-            <p>Spot phishing, run an incident, investigate evidence and resist social engineers. Earn medals, build skills and work up the career ladder.</p>
-            <span class="go">Play now →</span>
-          </div>
-        </a>
+    <!-- Principles -->
+    <section class="lt-section" id="principles" style="padding-top:0">
+      <div class="lt-wrap">
+        <div class="lt-section-head" data-reveal>
+          <p class="lt-eyebrow">How we think</p>
+          <h2 class="lt-h2">Standards that travel across products.</h2>
+        </div>
+        <div class="lt-bento">
+          {principles.map((c, i) => (
+            <div class={`lt-card${c.wide ? ' wide' : ''}`} data-reveal style={`--d:${(i % 3) * 70}ms`}>
+              <span class="ico" aria-hidden="true">
+                {c.icon === 'team' && (
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2" /><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6" /><circle cx="17.5" cy="9" r="2.4" /><path d="M16.5 14.2c2.6.3 4.5 2.3 4.5 5.3" /></svg>
+                )}
+                {c.icon === 'spark' && (
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z" /><path d="M19 16l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7z" /></svg>
+                )}
+                {c.icon === 'lock' && (
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10.5" width="14" height="10" rx="2.5" /><path d="M8 10.5V8a4 4 0 018 0v2.5" /></svg>
+                )}
+                {c.icon === 'shield' && (
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z" /></svg>
+                )}
+                {c.icon === 'loop' && (
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 10-2.6 5.9" /><path d="M20 5v5h-5" /></svg>
+                )}
+              </span>
+              <h3>{c.title}</h3>
+              <p>{c.text}</p>
+            </div>
+          ))}
+        </div>
       </div>
     </section>
 
-    <section id="contact">
-      <div class="wrap narrow">
-        <h2>Get in touch</h2>
-        <p class="section-sub">
-          Questions about an app, a privacy or data request, or just want to say hello? Email
-          <a href={`mailto:${company.contactEmail}`}>{company.contactEmail}</a>.
-        </p>
+    <!-- CTA -->
+    <section class="lt-section" id="contact" style="padding-top:0">
+      <div class="lt-wrap">
+        <div class="lt-cta" data-reveal>
+          <p class="lt-eyebrow" style="justify-content:center">Contact</p>
+          <h2 class="lt-h2">Building something? Let's talk.</h2>
+          <p class="lt-lead">
+            Questions about a product, a privacy or data request, a partnership, or an idea you think
+            belongs in the lab. We read everything.
+          </p>
+          <div class="lt-btn-row">
+            <a class="lt-btn lt-btn-primary" href={`mailto:${company.contactEmail}`}>{company.contactEmail} <span class="arrow" aria-hidden="true">→</span></a>
+            <a class="lt-btn" href="/company/">About LixTeam</a>
+          </div>
+        </div>
       </div>
     </section>
   </main>

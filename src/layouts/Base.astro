@@ -1,7 +1,9 @@
 ---
 import '../styles/global.css';
+import '../styles/lt.css';
+import SiteHeader from '../components/SiteHeader.astro';
+import SiteFooter from '../components/SiteFooter.astro';
 import { company } from '../data/company';
-import { apps } from '../data/apps';
 import Analytics from '@vercel/analytics/astro';
 
 interface Props {
@@ -13,9 +15,12 @@ interface Props {
   // waitlist demand-test pages turn it on, so the rest of the site, including
   // the legal pages, is not tracked.
   analytics?: boolean;
+  // 'lt' = the company pages (home, company): full-bleed sections.
+  // 'plain' = app, legal and support pages: the older centred layout.
+  variant?: 'lt' | 'plain';
 }
 
-const { title, description, noindex = false, analytics = false } = Astro.props;
+const { title, description, noindex = false, analytics = false, variant = 'plain' } = Astro.props;
 const fullTitle = title === company.name ? title : `${title} · ${company.name}`;
 ---
 
@@ -26,65 +31,40 @@ const fullTitle = title === company.name ? title : `${title} · ${company.name}`
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{fullTitle}</title>
     <meta name="description" content={description} />
-    <meta name="theme-color" content="#0a0a0a" />
+    <meta name="theme-color" content="#07080a" />
     {noindex && <meta name="robots" content="noindex" />}
     {analytics && <Analytics />}
     <meta property="og:title" content={fullTitle} />
     <meta property="og:description" content={description} />
     <meta property="og:type" content="website" />
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23a3e635'/%3E%3Ctext x='16' y='22' font-family='Arial' font-weight='900' font-size='15' text-anchor='middle' fill='%230a0a0a'%3ELT%3C/text%3E%3C/svg%3E" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%23a3e635'/%3E%3Cpath d='M9.5 8.5v15h7M15.5 8.5h8M19.5 8.5v15' fill='none' stroke='%230a0a0a' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E" />
+    <script is:inline>document.documentElement.classList.add('js');</script>
   </head>
-  <body>
-    <header class="site-header">
-      <div class="wrap">
-        <a class="brand" href="/">
-          <span class="brand-mark">LT</span>
-          {company.name}
-        </a>
-        <nav class="top-nav" aria-label="Main">
-          <a href="/#apps">Our apps</a>
-          <a href="/games/">Games</a>
-          <a href="/#contact">Contact</a>
-        </nav>
-      </div>
-    </header>
+  <body class={variant === 'lt' ? 'lt-page' : 'lt-plain'}>
+    <SiteHeader />
 
     <slot />
 
-    <footer class="site-footer">
-      <div class="wrap">
-        <div class="cols">
-          <div>
-            <h4>{company.name}</h4>
-            <p style="margin:0;max-width:280px">{company.tagline}</p>
-          </div>
-          <div>
-            <h4>Apps</h4>
-            <ul>
-              {apps.map((a) => <li><a href={`/${a.slug}/`}>{a.name}</a></li>)}
-            </ul>
-          </div>
-          <div>
-            <h4>Legal &amp; help</h4>
-            <ul>
-              {apps.map((a) => (
-                <>
-                  <li><a href={`/${a.slug}/privacy/`}>{a.name} Privacy</a></li>
-                  <li><a href={`/${a.slug}/terms/`}>{a.name} Terms</a></li>
-                  <li><a href={`/${a.slug}/support/`}>{a.name} Support</a></li>
-                </>
-              ))}
-            </ul>
-          </div>
-          <div>
-            <h4>Contact</h4>
-            <ul>
-              <li><a href={`mailto:${company.contactEmail}`}>{company.contactEmail}</a></li>
-            </ul>
-          </div>
-        </div>
-        <p class="copyright">© {company.year} {company.name}. All rights reserved.</p>
-      </div>
-    </footer>
+    <SiteFooter />
+
+    <script is:inline>
+      // Fade sections in as they scroll into view. Without JavaScript, or with
+      // "reduce motion" on, everything is simply visible.
+      (function () {
+        var els = document.querySelectorAll('[data-reveal]');
+        if (!els.length) return;
+        var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (reduce || !('IntersectionObserver' in window)) {
+          els.forEach(function (el) { el.classList.add('in'); });
+          return;
+        }
+        var io = new IntersectionObserver(function (entries) {
+          entries.forEach(function (e) {
+            if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
+          });
+        }, { rootMargin: '0px 0px -8% 0px', threshold: 0.08 });
+        els.forEach(function (el) { io.observe(el); });
+      })();
+    </script>
   </body>
 </html>
