@@ -23,7 +23,7 @@ export const fitnfree: AppInfo = {
   },
   webApp: { label: 'Try it on the web', url: 'https://fitnfree-lilac.vercel.app' },
   stores: {
-    ios: { label: 'App Store', url: null },
+    ios: { label: 'App Store', url: 'https://apps.apple.com/app/id6809598004' },
     android: { label: 'Google Play', url: null },
   },
   features: [

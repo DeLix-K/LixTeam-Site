@@ -1,9 +1,11 @@
 # LixTeam site
 
-One website for every app LixTeam publishes. Each app lives under its own path:
+The LixTeam company website: who we are, the product portfolio, and one section per product. Each app lives
+under its own path:
 
 ```
-/                       LixTeam home (lists all apps)
+/                       LixTeam home (company story and the portfolio)
+/company/               About the company
 /fitnfree/              FitNFree landing page
 /fitnfree/support/      Help and contact
 /fitnfree/privacy/      Privacy Policy
@@ -25,6 +27,16 @@ npm run build    # writes dist/
 ## Change company details
 
 Edit `src/data/company.ts` (name, tagline, contact email, year). Every page picks it up.
+
+## Add a product to the portfolio
+
+The home page, the company page and the footer are generated from `src/data/portfolio.ts`. Add one entry there
+(name, category, tagline, summary, three facts, a status that says where it really is today, links). Set
+`show: false` to hide a product without deleting it. A new product with its own pages (privacy, support) also
+needs the steps below.
+
+The design system lives in `src/styles/lt.css` (tokens at the top, everything prefixed `lt-`). Fonts are Geist and
+Geist Mono, self-hosted from npm, so the site's Content Security Policy needs no change.
 
 ## Add a new app
 

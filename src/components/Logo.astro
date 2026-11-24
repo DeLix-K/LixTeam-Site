@@ -1,0 +1,10 @@
+---
+// The LixTeam mark: an L and a T sharing one square. Pure SVG, no image file.
+interface Props { size?: number }
+const { size = 28 } = Astro.props;
+---
+<svg class="lt-logo" width={size} height={size} viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+  <rect width="32" height="32" rx="9" fill="#a3e635" />
+  <path d="M9.5 8.5v15h7" fill="none" stroke="#0a0a0a" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" />
+  <path d="M15.5 8.5h8M19.5 8.5v15" fill="none" stroke="#0a0a0a" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" />
+</svg>
