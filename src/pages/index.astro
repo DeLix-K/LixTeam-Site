@@ -11,7 +11,7 @@ import ffFood from '../assets/fitnfree/03-nutrition.png';
 import rlLanding from '../assets/rootline/landing.png';
 import rlWorkspace from '../assets/rootline/workspace.png';
 
-const heroLines = ['We build', 'and operate', 'digital products.'];
+const heroLines = ['We build and operate', 'digital products.'];
 
 const statement =
   'One small team. Several products. Each run like a real business, with support, billing, updates and someone accountable.';
@@ -73,14 +73,18 @@ const pad2 = (n: number) => String(n).padStart(2, '0');
       </div>
 
       <div class="lt-hero-main">
-        <p class="lt-hero-intro">
-          <b>LixTeam is a software company.</b> We design, launch and run products in health, security and AI.
-        </p>
         <h1 class="lt-display">
           {heroLines.map((l, i) => (
             <span class="lt-line"><span style={`--i:${i}`}>{l}</span></span>
           ))}
         </h1>
+        <p class="lt-hero-intro">
+          LixTeam is a software company. We design, launch and run products in health, security and AI.
+        </p>
+        <div class="lt-btn-row">
+          <a class="lt-btn lt-btn-primary" href="#portfolio">See the products <span class="arrow" aria-hidden="true">→</span></a>
+          <a class="lt-btn" href={`mailto:${company.contactEmail}`}>Contact</a>
+        </div>
       </div>
 
       <nav class="lt-hero-foot" aria-label="Products">
