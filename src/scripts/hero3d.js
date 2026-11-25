@@ -99,7 +99,7 @@ export function initHero3D(host) {
   const canvas = host.querySelector('canvas');
   if (!canvas) return;
 
-  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const reduce = document.documentElement.classList.contains('rm');
 
   let renderer;
   try {
@@ -194,7 +194,7 @@ export function initHero3D(host) {
   const limeLight = new PointLight(LIME, 38, 14, 2);
   limeLight.position.set(-3.6, -2.6, 3.2);
   scene.add(limeLight);
-  const rim = new PointLight(0x38bdf8, 26, 14, 2);
+  const rim = new PointLight(0xe6edff, 20, 14, 2);
   rim.position.set(4.2, 1.6, -1.4);
   scene.add(rim);
 
@@ -235,9 +235,12 @@ export function initHero3D(host) {
     cur.x += (target.x - cur.x) * Math.min(dt * 3, 1);
     cur.y += (target.y - cur.y) * Math.min(dt * 3, 1);
 
-    mark.rotation.y = -0.38 + Math.sin(t * 0.45) * 0.28 + cur.x * 0.5;
-    mark.rotation.x = 0.12 + Math.sin(t * 0.33) * 0.07 - cur.y * 0.32;
+    // Scrolling away from the hero turns the mark and shrinks it a little.
+    const s = Math.min(window.scrollY / window.innerHeight, 1.2);
+    mark.rotation.y = -0.38 + Math.sin(t * 0.45) * 0.28 + cur.x * 0.5 + s * 1.7;
+    mark.rotation.x = 0.12 + Math.sin(t * 0.33) * 0.07 - cur.y * 0.32 + s * 0.25;
     mark.position.y = Math.sin(t * 0.8) * 0.1;
+    mark.scale.setScalar(1 - s * 0.14);
     ringA.rotation.z += dt * 0.12;
     ringB.rotation.z -= dt * 0.07;
     dust.rotation.y += dt * 0.03;

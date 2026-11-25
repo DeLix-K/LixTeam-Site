@@ -11,143 +11,123 @@ import ffFood from '../assets/fitnfree/03-nutrition.png';
 import rlLanding from '../assets/rootline/landing.png';
 import rlWorkspace from '../assets/rootline/workspace.png';
 
+const heroLines = ['We build', 'and operate', 'digital products.'];
+
+const statement =
+  'One small team. Several products. Each run like a real business, with support, billing, updates and someone accountable.';
+const words = statement.split(' ');
+
 const steps = [
   {
     title: 'Test the question',
-    text: 'We start with a demand test: a page, a promise and a waitlist. If people do not care, we find out before we write the product.',
+    text: 'We start with a demand test: a page, a promise and a waitlist. If people do not care, we find out before we build.',
   },
   {
     title: 'Build it properly',
-    text: 'Mobile, web and cloud, built to ship and to be maintained. Privacy, security and store rules are part of the build, not an afterthought.',
+    text: 'Mobile, web and cloud, built to ship and to be maintained. Privacy, security and store rules are part of the build.',
   },
   {
     title: 'Operate it',
-    text: 'Launch is the start. We run support, subscriptions, reviews and updates, and watch how people actually use what we made.',
+    text: 'Launch is the start. We run support, subscriptions, reviews and updates, and watch how people really use it.',
   },
   {
     title: 'Compound',
-    text: 'What each product teaches us feeds the next one: tooling, design, content and an audience that already trusts us.',
+    text: 'What each product teaches us feeds the next one: tooling, design, content and an audience that already knows us.',
   },
 ];
 
 const principles = [
   {
-    wide: true,
-    icon: 'team',
-    title: 'Small team, high standards',
-    text: 'A few people who own whole products end to end. Fewer meetings, faster decisions, and nobody to hand a problem to.',
+    title: 'One team, whole product',
+    text: 'The people who design it build it, ship it and answer the support email. Nothing is handed over, so nothing gets lost.',
   },
   {
-    wide: true,
-    icon: 'spark',
-    title: 'AI with a human in the loop',
-    text: 'We use AI where it helps people, and ask permission before any personal data is sent to it. Anything that goes out under our name is approved by a person first.',
+    title: 'AI assists, people decide',
+    text: 'We use AI where it helps, and ask permission before personal data goes to it. Anything published in our name is approved by a person first.',
   },
   {
-    icon: 'lock',
     title: 'Privacy you can read',
     text: 'Plain-language policies, account deletion inside the app, and no advertising trackers.',
   },
   {
-    icon: 'shield',
     title: 'Secure by default',
-    text: 'Access rules are enforced at the database, not just in the interface, and every integration gets the least access it needs.',
+    text: 'Access rules are enforced at the database, not only in the interface, and every integration gets the least access it needs.',
   },
   {
-    icon: 'loop',
     title: 'Built to be operated',
     text: 'Support, store compliance, billing and updates are part of the job, long after launch day.',
   },
 ];
+
+const live = visibleProducts.filter((p) => p.status.tone !== 'next');
+const pad2 = (n: number) => String(n).padStart(2, '0');
 ---
 
 <Base title={company.name} description={company.description} variant="lt">
   <main id="top">
-    <!-- Hero -->
-    <section class="lt-hero">
-      <div class="lt-wrap">
-        <div class="lt-hero-grid">
-          <div class="lt-hero-copy">
-            <div class="lt-hero-status" data-reveal><i></i> LixTeam · Digital product company</div>
-            <h1 class="lt-h1" data-reveal style="--d:60ms">
-              We build and operate <span class="lt-fade">digital products.</span>
-            </h1>
-            <p class="lt-lead" data-reveal style="--d:120ms">
-              LixTeam designs, launches and runs software across health, security and AI. One small team,
-              a growing portfolio, and a habit of shipping.
-            </p>
-            <div class="lt-btn-row" data-reveal style="--d:180ms">
-              <a class="lt-btn lt-btn-primary" href="#portfolio">See the portfolio <span class="arrow" aria-hidden="true">→</span></a>
-              <a class="lt-btn" href="#approach">How we work</a>
-            </div>
-          </div>
+    <!-- 1 · Hero -->
+    <section class="lt-home-hero">
+      <div class="lt-hero-3d" id="hero3d" aria-hidden="true">
+        <div class="lt-hero-3d-fallback"><Logo size={200} /></div>
+        <canvas></canvas>
+      </div>
 
-          <!-- The 3D mark. The logo SVG shows first, and stays if WebGL is unavailable
-               or the visitor prefers reduced motion with no GPU. -->
-          <div class="lt-hero-3d" id="hero3d" aria-hidden="true">
-            <div class="lt-hero-3d-fallback"><Logo size={200} /></div>
-            <canvas></canvas>
-          </div>
-        </div>
+      <div class="lt-hero-main">
+        <p class="lt-hero-intro">
+          <b>LixTeam is a software company.</b> We design, launch and run products in health, security and AI.
+        </p>
+        <h1 class="lt-display">
+          {heroLines.map((l, i) => (
+            <span class="lt-line"><span style={`--i:${i}`}>{l}</span></span>
+          ))}
+        </h1>
+      </div>
 
-        <div class="lt-board" data-spot data-reveal style="--d:120ms">
-          <div class="lt-board-bar">
-            <span>Portfolio</span>
-            <b>{visibleProducts.filter((p) => p.status.tone !== 'next').length} products · 1 slot open</b>
-          </div>
-          <div class="lt-board-grid">
-            {visibleProducts.map((p) => (
-              <a class="lt-tile" data-spot data-tone={p.status.tone} style={`--accent:${p.accent}`} href={`#${p.id}`}>
-                <span class="glyph" aria-hidden="true">
-                  {p.visual === 'fitnfree' && (
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l2-6 4 12 2-6h6" /></svg>
-                  )}
-                  {p.visual === 'rootline' && (
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z" /><path d="M9 12l2 2 4-4" /></svg>
-                  )}
-                  {p.visual === 'radar' && (
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="4.5" /><path d="M12 12l6-6" /></svg>
-                  )}
-                  {p.visual === 'next' && (
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 5v14M5 12h14" /></svg>
-                  )}
-                </span>
-                <span class="cat">{p.category}</span>
-                <h3>{p.name}</h3>
-                <p>{p.tagline}</p>
-                <span class="lt-pill" data-tone={p.status.tone}><i></i>{p.status.label}</span>
-              </a>
-            ))}
-          </div>
-        </div>
+      <nav class="lt-hero-foot" aria-label="Products">
+        {live.map((p) => (
+          <a href={p.links[0].href}>
+            <span class="nm">{p.name}<span class="go" aria-hidden="true">↗</span></span>
+            <span class="lt-status" data-tone={p.status.tone}><i></i>{p.status.label}</span>
+          </a>
+        ))}
+        <div class="cue"><span>Scroll <i></i></span></div>
+      </nav>
+    </section>
+
+    <!-- 2 · Statement -->
+    <section class="lt-statement" data-progress="pin" aria-label="About LixTeam">
+      <div class="lt-statement-in">
+        <p class="lt-label">Who we are</p>
+        <p class="big" style={`--n:${words.length}`}>
+          {words.map((w, i) => (<><span class="w" style={`--i:${i}`}>{w}</span>{' '}</>))}
+        </p>
       </div>
     </section>
 
-    <!-- Portfolio -->
-    <section class="lt-section" id="portfolio">
-      <div class="lt-wrap">
-        <div class="lt-section-head" data-reveal>
-          <p class="lt-eyebrow">Portfolio</p>
-          <h2 class="lt-h2">Products we build and run.</h2>
-          <p class="lt-lead">
-            Each product is its own small business, with its own users, roadmap and support. Together they
-            share the tools, the lessons and the standards.
-          </p>
-        </div>
+    <!-- 3 · Portfolio: one pinned screen per product -->
+    <section class="lt-story" id="portfolio" data-story style={`--n:${visibleProducts.length}`}>
+      <div class="lt-story-pin" data-progress="pin-inner">
+        <header class="lt-story-head">
+          <h2 class="lt-h2">Products we build and run</h2>
+          <p>Each product is its own small business, with its own users, roadmap and support. They share tools, lessons and standards.</p>
+        </header>
 
         {visibleProducts.map((p, i) => (
-          <article class="lt-product" id={p.id} data-flip={i % 2 === 1 ? 'true' : 'false'} style={`--accent:${p.accent}`}>
-            <div class="lt-product-copy" data-reveal>
-              <div class="name">
-                <span class="cat">{p.category}</span>
-                <span class="lt-pill" data-tone={p.status.tone}><i></i>{p.status.label}</span>
+          <article class={`lt-item${i === 0 ? ' is-active' : ''}`} id={`p-${p.id}`} style={`--accent:${p.accent}`}>
+            <div class="lt-item-copy">
+              <div class="lt-item-top">
+                <span class="idx lt-dot">{pad2(i + 1)}<small>/{pad2(visibleProducts.length)}</small></span>
+                <span class="lt-status" data-tone={p.status.tone}><i></i>{p.status.label}</span>
               </div>
               <h3>{p.name}</h3>
-              <p class="sum"><strong style="color:var(--lt-text);font-weight:600">{p.tagline}</strong> {p.summary}</p>
-              {p.facts.length > 0 && (
+              <p class="tag">{p.tagline}</p>
+              <p class="sum">{p.summary}</p>
+              {p.facts.length > 0 ? (
                 <ul class="lt-facts">
                   {p.facts.map((f) => <li>{f}</li>)}
                 </ul>
+              ) : (
+                <ul class="lt-facts"><li>{p.category}</li></ul>
               )}
               <div class="lt-btn-row">
                 {p.links.map((l) => (
@@ -162,70 +142,66 @@ const principles = [
               </div>
             </div>
 
-            <div class="lt-stage" data-reveal style="--d:100ms">
+            <div class="lt-item-vis lt-stage">
               {p.visual === 'fitnfree' && (
                 <div class="lt-phones" data-tilt>
-                  <div class="lt-phone"><Image src={ffCoach} alt="FitNFree AI Coach screen" width={420} loading="lazy" /></div>
-                  <div class="lt-phone"><Image src={ffHome} alt="FitNFree home screen" width={480} loading="lazy" /></div>
-                  <div class="lt-phone"><Image src={ffFood} alt="FitNFree nutrition screen" width={420} loading="lazy" /></div>
+                  <div class="lt-phone"><Image src={ffCoach} alt="FitNFree AI Coach screen" width={520} loading="lazy" /></div>
+                  <div class="lt-phone"><Image src={ffHome} alt="FitNFree home screen" width={580} loading="lazy" /></div>
+                  <div class="lt-phone"><Image src={ffFood} alt="FitNFree nutrition screen" width={520} loading="lazy" /></div>
                 </div>
               )}
 
               {p.visual === 'rootline' && (
-                <div class="lt-stage-pad">
-                  <div class="lt-wins" data-tilt style="--rx:7deg;--ry:-13deg">
-                    <div class="lt-win">
-                      <div class="lt-win-bar"><i></i><i></i><i></i><span>ROOTLINE</span></div>
-                      <Image src={rlLanding} alt="The ROOTLINE home screen with its two games" width={1100} loading="lazy" />
-                    </div>
-                    <div class="lt-win">
-                      <div class="lt-win-bar"><i></i><i></i><i></i><span>Workspace</span></div>
-                      <Image src={rlWorkspace} alt="A ROOTLINE case file list" width={760} loading="lazy" />
-                    </div>
+                <div class="lt-wins" data-tilt style="--rx:7deg;--ry:-13deg">
+                  <div class="lt-win">
+                    <div class="lt-win-bar"><i></i><i></i><i></i><span>ROOTLINE</span></div>
+                    <Image src={rlLanding} alt="The ROOTLINE home screen with its two games" width={1200} loading="lazy" />
+                  </div>
+                  <div class="lt-win">
+                    <div class="lt-win-bar"><i></i><i></i><i></i><span>Workspace</span></div>
+                    <Image src={rlWorkspace} alt="A ROOTLINE case file list" width={800} loading="lazy" />
                   </div>
                 </div>
               )}
 
               {p.visual === 'radar' && (
-                <div class="lt-stage-pad lt-radar-stage">
-                  <div class="lt-radar-plane" data-tilt style="--rx:0deg;--ry:0deg">
+                <div class="lt-radar-plane" data-tilt style="--rx:0deg;--ry:0deg">
                   <svg class="lt-radar" viewBox="0 0 600 420" role="img" aria-label="Illustration: signals from search, reviews, forums and video converge into a ranked list of opportunities">
                     <defs>
                       <linearGradient id="sw" x1="0" y1="0" x2="1" y2="0">
                         <stop offset="0" stop-color="#a78bfa" stop-opacity="0" />
-                        <stop offset="1" stop-color="#a78bfa" stop-opacity="0.55" />
+                        <stop offset="1" stop-color="#a78bfa" stop-opacity="0.5" />
                       </linearGradient>
                     </defs>
-                    <g fill="none" stroke="rgba(255,255,255,0.12)">
+                    <g fill="none" stroke="rgba(236,235,229,0.16)">
                       <circle cx="300" cy="210" r="60" />
                       <circle cx="300" cy="210" r="120" />
                       <circle cx="300" cy="210" r="180" />
                       <path d="M300 20v380M110 210h380" stroke-dasharray="2 6" />
                     </g>
                     <path class="sweep" d="M300 210 L480 210 A180 180 0 0 0 437.4 93.6 Z" fill="url(#sw)" />
-                    <g fill="#a78bfa">
-                      <circle cx="300" cy="210" r="6" />
-                      <circle cx="402" cy="128" r="5" opacity="0.9" />
-                      <circle cx="196" cy="148" r="4" opacity="0.7" />
-                      <circle cx="240" cy="296" r="5" opacity="0.85" />
-                      <circle cx="388" cy="276" r="4" opacity="0.65" />
-                      <circle cx="146" cy="240" r="3.5" opacity="0.5" />
-                      <circle cx="448" cy="196" r="3.5" opacity="0.5" />
+                    <g fill="#c4b5fd">
+                      <circle cx="300" cy="210" r="5" />
+                      <circle cx="402" cy="128" r="4" />
+                      <circle cx="196" cy="148" r="3.5" opacity="0.7" />
+                      <circle cx="240" cy="296" r="4" opacity="0.85" />
+                      <circle cx="388" cy="276" r="3.5" opacity="0.65" />
+                      <circle cx="146" cy="240" r="3" opacity="0.5" />
+                      <circle cx="448" cy="196" r="3" opacity="0.5" />
                     </g>
-                    <g fill="none" stroke="rgba(167,139,250,0.5)" stroke-dasharray="3 5">
+                    <g fill="none" stroke="rgba(196,181,253,0.45)" stroke-dasharray="3 5">
                       <path d="M300 210L402 128M300 210L240 296M300 210L196 148" />
                     </g>
                     <text x="414" y="124">Search</text>
                     <text x="86" y="140">Reviews</text>
                     <text x="190" y="322">Forums</text>
                     <text x="400" y="298">Video</text>
-                    <text x="312" y="238" fill="#fff" style="fill:#fff">Ranked gaps</text>
+                    <text x="312" y="238" style="fill:#ecebe5">Ranked gaps</text>
                   </svg>
                   <span class="lt-pin" style="left:67%;top:30%;--h:96px"></span>
                   <span class="lt-pin" style="left:40%;top:70%;--h:70px;--d:-1.2s"></span>
                   <span class="lt-pin" style="left:32.7%;top:35%;--h:54px;--d:-2.1s"></span>
                   <span class="lt-pin" style="left:64.7%;top:65.7%;--h:78px;--d:-0.6s"></span>
-                  </div>
                 </div>
               )}
 
@@ -240,33 +216,25 @@ const principles = [
             </div>
           </article>
         ))}
-      </div>
-    </section>
 
-    <!-- Statement -->
-    <section class="lt-section lt-band">
-      <div class="lt-wrap">
-        <p class="big" data-reveal>
-          One small team. Many products. <span>Each one run like a real business.</span>
-        </p>
-      </div>
-    </section>
-
-    <!-- Approach -->
-    <section class="lt-section" id="approach">
-      <div class="lt-wrap">
-        <div class="lt-section-head" data-reveal>
-          <p class="lt-eyebrow">Approach</p>
-          <h2 class="lt-h2">From question to product, on purpose.</h2>
-          <p class="lt-lead">
-            The same four moves every time, whether it is a fitness app, a training game or something we
-            have not announced yet.
-          </p>
+        <div class="lt-story-rail" aria-hidden="true">
+          {visibleProducts.map((p, i) => <b class={i === 0 ? 'on' : ''}></b>)}
         </div>
-        <div class="lt-steps">
+      </div>
+    </section>
+
+    <!-- 4 · Method -->
+    <section class="lt-method" id="approach" data-progress="view">
+      <div>
+        <p class="lt-label" style="margin-bottom:28px">Method</p>
+        <h2>From question to product, on purpose.</h2>
+      </div>
+      <div class="lt-method-track">
+        <div class="lt-method-line"></div>
+        <div class="lt-method-steps">
           {steps.map((s, i) => (
-            <div class="lt-step" data-reveal style={`--d:${i * 80}ms`}>
-              <span class="num">{String(i + 1).padStart(2, '0')}</span>
+            <div class="lt-m-step" style={`--i:${i}`}>
+              <span class="n lt-dot">{pad2(i + 1)}</span>
               <h3>{s.title}</h3>
               <p>{s.text}</p>
             </div>
@@ -275,76 +243,46 @@ const principles = [
       </div>
     </section>
 
-    <!-- Principles -->
-    <section class="lt-section" id="principles" style="padding-top:0">
-      <div class="lt-wrap">
-        <div class="lt-section-head" data-reveal>
-          <p class="lt-eyebrow">How we think</p>
-          <h2 class="lt-h2">Standards that travel across products.</h2>
-        </div>
-        <div class="lt-bento">
-          {principles.map((c, i) => (
-            <div class={`lt-card${c.wide ? ' wide' : ''}`} data-spot data-reveal style={`--d:${(i % 3) * 70}ms`}>
-              <span class="ico" aria-hidden="true">
-                {c.icon === 'team' && (
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2" /><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6" /><circle cx="17.5" cy="9" r="2.4" /><path d="M16.5 14.2c2.6.3 4.5 2.3 4.5 5.3" /></svg>
-                )}
-                {c.icon === 'spark' && (
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z" /><path d="M19 16l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7z" /></svg>
-                )}
-                {c.icon === 'lock' && (
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10.5" width="14" height="10" rx="2.5" /><path d="M8 10.5V8a4 4 0 018 0v2.5" /></svg>
-                )}
-                {c.icon === 'shield' && (
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z" /></svg>
-                )}
-                {c.icon === 'loop' && (
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 10-2.6 5.9" /><path d="M20 5v5h-5" /></svg>
-                )}
-              </span>
-              <h3>{c.title}</h3>
-              <p>{c.text}</p>
-            </div>
-          ))}
-        </div>
+    <!-- 5 · Principles -->
+    <section class="lt-index" id="principles">
+      <div class="lt-index-head" data-reveal>
+        <p class="lt-label" style="margin-bottom:28px">How we work</p>
+        <h2>Five rules that travel from product to product.</h2>
       </div>
+      <ul class="lt-rows">
+        {principles.map((c, i) => (
+          <li class="lt-row" data-reveal style={`--d:${i * 70}ms`}>
+            <span class="n lt-dot">{pad2(i + 1)}</span>
+            <h3>{c.title}</h3>
+            <p>{c.text}</p>
+          </li>
+        ))}
+      </ul>
     </section>
 
-    <!-- CTA -->
-    <section class="lt-section" id="contact" style="padding-top:0">
-      <div class="lt-wrap">
-        <div class="lt-cta" data-reveal>
-          <p class="lt-eyebrow" style="justify-content:center">Contact</p>
-          <h2 class="lt-h2">Building something? Let's talk.</h2>
-          <p class="lt-lead">
-            Questions about a product, a privacy or data request, a partnership, or an idea you think
-            belongs in the lab. We read everything.
-          </p>
-          <div class="lt-btn-row">
-            <a class="lt-btn lt-btn-primary" href={`mailto:${company.contactEmail}`}>{company.contactEmail} <span class="arrow" aria-hidden="true">→</span></a>
-            <a class="lt-btn" href="/company/">About LixTeam</a>
-          </div>
-        </div>
+    <!-- 6 · Contact -->
+    <section class="lt-contact" id="contact">
+      <div data-reveal>
+        <p class="lt-label" style="margin-bottom:28px">Contact</p>
+        <h2>Building something? Write to us.</h2>
+      </div>
+      <div class="lt-contact-row" data-reveal style="--d:120ms">
+        <a class="lt-mail" href={`mailto:${company.contactEmail}`}>{company.contactEmail}<span class="arrow" aria-hidden="true">↗</span></a>
+        <p class="lt-contact-note">Questions about a product, a privacy request, a partnership, or an idea you think belongs in the lab. We read everything.</p>
       </div>
     </section>
   </main>
 </Base>
 
 <script>
-  // Spotlight that follows the pointer on cards and tiles, and gentle 3D tilt on
-  // the product visuals. Both are skipped for touch and for "reduce motion".
+  import { initScroll } from '../scripts/scroll.js';
+  initScroll();
+
+  // Gentle 3D lean on the product visuals. Skipped for touch and for "reduce motion".
   const fine = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
-  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const reduce = document.documentElement.classList.contains('rm');
 
   if (fine && !reduce) {
-    document.querySelectorAll<HTMLElement>('[data-spot]').forEach((el) => {
-      el.addEventListener('pointermove', (e) => {
-        const r = el.getBoundingClientRect();
-        el.style.setProperty('--mx', `${e.clientX - r.left}px`);
-        el.style.setProperty('--my', `${e.clientY - r.top}px`);
-      });
-    });
-
     document.querySelectorAll<HTMLElement>('[data-tilt]').forEach((el) => {
       const stage = (el.closest('.lt-stage') as HTMLElement) || el;
       const base = { rx: parseFloat(el.style.getPropertyValue('--rx')) || 0, ry: parseFloat(el.style.getPropertyValue('--ry')) || 0 };
@@ -362,8 +300,8 @@ const principles = [
     });
   }
 
-  // The 3D logo in the hero. three.js is a separate download that only loads when
-  // the hero is on screen, so it never slows down the first paint.
+  // The 3D logo. three.js is a separate download that only loads when the hero
+  // is on screen, so it never slows down the first paint.
   const host = document.getElementById('hero3d');
   const saveData = (navigator as any).connection?.saveData === true;
   if (host && !saveData) {

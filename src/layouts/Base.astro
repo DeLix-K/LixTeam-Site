@@ -38,7 +38,11 @@ const fullTitle = title === company.name ? title : `${title} · ${company.name}`
     <meta property="og:description" content={description} />
     <meta property="og:type" content="website" />
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%23a3e635'/%3E%3Cpath d='M9.5 8.5v15h7M15.5 8.5h8M19.5 8.5v15' fill='none' stroke='%230a0a0a' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E" />
-    <script is:inline>document.documentElement.classList.add('js');</script>
+    <script is:inline>
+      document.documentElement.classList.add('js');
+      // Visitors who ask their device for less motion get a calm, static page.
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) document.documentElement.classList.add('rm');
+    </script>
   </head>
   <body class={variant === 'lt' ? 'lt-page' : 'lt-plain'}>
     <SiteHeader />
@@ -51,9 +55,16 @@ const fullTitle = title === company.name ? title : `${title} · ${company.name}`
       // Fade sections in as they scroll into view. Without JavaScript, or with
       // "reduce motion" on, everything is simply visible.
       (function () {
+        // The company pages have a see-through header that turns solid on scroll.
+        var h = document.querySelector('.lt-header');
+        if (h && document.body.classList.contains('lt-page')) {
+          var f = function () { h.classList.toggle('scrolled', window.scrollY > 24); };
+          f();
+          window.addEventListener('scroll', f, { passive: true });
+        }
         var els = document.querySelectorAll('[data-reveal]');
         if (!els.length) return;
-        var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        var reduce = document.documentElement.classList.contains('rm');
         if (reduce || !('IntersectionObserver' in window)) {
           els.forEach(function (el) { el.classList.add('in'); });
           return;
