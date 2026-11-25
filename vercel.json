@@ -1,4 +1,10 @@
 {
+  "redirects": [
+    { "source": "/fitnfree", "destination": "/products/fitnfree/", "permanent": true },
+    { "source": "/fitnfree/", "destination": "/products/fitnfree/", "permanent": true },
+    { "source": "/company", "destination": "/about/", "permanent": true },
+    { "source": "/company/", "destination": "/about/", "permanent": true }
+  ],
   "headers": [
     {
       "source": "/(.*)",

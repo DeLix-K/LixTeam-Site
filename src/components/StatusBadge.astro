@@ -1,0 +1,10 @@
+---
+import { statusText, type ProductStatus } from '../data/products';
+
+interface Props {
+  status: ProductStatus;
+  label?: string;
+}
+const { status, label } = Astro.props;
+---
+<span class="lt-status" data-status={status}><i></i>{label ?? statusText[status]}</span>

@@ -15,13 +15,20 @@ interface Props {
   // waitlist demand-test pages turn it on, so the rest of the site, including
   // the legal pages, is not tracked.
   analytics?: boolean;
-  // 'lt' = the company pages (home, company): full-bleed sections.
+  // 'lt' = the company pages (home, products, about, contact): full-bleed sections.
   // 'plain' = app, legal and support pages: the older centred layout.
   variant?: 'lt' | 'plain';
+  // A product's visual theme, applied to the whole page ('fitnfree' | 'rootline').
+  theme?: 'fitnfree' | 'rootline';
+  // Social sharing image, a path under /public. Defaults to the LixTeam card.
+  image?: string;
 }
 
-const { title, description, noindex = false, analytics = false, variant = 'plain' } = Astro.props;
-const fullTitle = title === company.name ? title : `${title} · ${company.name}`;
+const { title, description, noindex = false, analytics = false, variant = 'plain', theme, image = '/og.png' } = Astro.props;
+const fullTitle = title === company.name ? `${company.name}: building digital products` : `${title} · ${company.name}`;
+const canonical = new URL(Astro.url.pathname, company.siteUrl).href;
+const ogImage = new URL(image, company.siteUrl).href;
+const bodyClass = [variant === 'lt' ? 'lt-page' : 'lt-plain', theme ? `lt-theme-${theme}` : ''].join(' ').trim();
 ---
 
 <!doctype html>
@@ -31,20 +38,31 @@ const fullTitle = title === company.name ? title : `${title} · ${company.name}`
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{fullTitle}</title>
     <meta name="description" content={description} />
-    <meta name="theme-color" content="#07080a" />
+    <link rel="canonical" href={canonical} />
+    <meta name="theme-color" content="#09090b" />
     {noindex && <meta name="robots" content="noindex" />}
     {analytics && <Analytics />}
+    <meta property="og:site_name" content={company.name} />
     <meta property="og:title" content={fullTitle} />
     <meta property="og:description" content={description} />
     <meta property="og:type" content="website" />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={ogImage} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="LixTeam, a technology company building digital products" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={fullTitle} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogImage} />
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%23a3e635'/%3E%3Cpath d='M9.5 8.5v15h7M15.5 8.5h8M19.5 8.5v15' fill='none' stroke='%230a0a0a' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E" />
+    <slot name="head" />
     <script is:inline>
       document.documentElement.classList.add('js');
-      // Visitors who ask their device for less motion get a calm, static page.
-      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) document.documentElement.classList.add('rm');
     </script>
   </head>
-  <body class={variant === 'lt' ? 'lt-page' : 'lt-plain'}>
+  <body class={bodyClass}>
+    {variant === 'lt' && <a class="lt-skip" href="#main">Skip to content</a>}
     <SiteHeader />
 
     <slot />
@@ -52,19 +70,19 @@ const fullTitle = title === company.name ? title : `${title} · ${company.name}`
     <SiteFooter />
 
     <script is:inline>
-      // Fade sections in as they scroll into view. Without JavaScript, or with
-      // "reduce motion" on, everything is simply visible.
       (function () {
         // The company pages have a see-through header that turns solid on scroll.
         var h = document.querySelector('.lt-header');
         if (h && document.body.classList.contains('lt-page')) {
-          var f = function () { h.classList.toggle('scrolled', window.scrollY > 24); };
+          var f = function () { h.classList.toggle('scrolled', window.scrollY > 16); };
           f();
           window.addEventListener('scroll', f, { passive: true });
         }
+        // Fade sections in as they scroll into view. Without JavaScript, or with
+        // "reduce motion" on, everything is simply visible.
         var els = document.querySelectorAll('[data-reveal]');
         if (!els.length) return;
-        var reduce = document.documentElement.classList.contains('rm');
+        var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         if (reduce || !('IntersectionObserver' in window)) {
           els.forEach(function (el) { el.classList.add('in'); });
           return;
@@ -73,7 +91,7 @@ const fullTitle = title === company.name ? title : `${title} · ${company.name}`
           entries.forEach(function (e) {
             if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
           });
-        }, { rootMargin: '0px 0px -8% 0px', threshold: 0.08 });
+        }, { rootMargin: '0px 0px -6% 0px', threshold: 0.06 });
         els.forEach(function (el) { io.observe(el); });
       })();
     </script>

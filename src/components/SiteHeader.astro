@@ -4,10 +4,9 @@ import { company } from '../data/company';
 
 const path = Astro.url.pathname;
 const links = [
-  { label: 'Products', href: '/#portfolio', match: (p: string) => false },
-  { label: 'Approach', href: '/#approach', match: (p: string) => false },
-  { label: 'Company', href: '/company/', match: (p: string) => p.startsWith('/company') },
-  { label: 'Games', href: '/games/', match: (p: string) => p.startsWith('/games') },
+  { label: 'Products', href: '/products/', match: (p: string) => p.startsWith('/products') || p.startsWith('/games') },
+  { label: 'About', href: '/about/', match: (p: string) => p.startsWith('/about') },
+  { label: 'Contact', href: '/contact/', match: (p: string) => p.startsWith('/contact') },
 ];
 ---
 <header class="lt-header">
@@ -24,14 +23,13 @@ const links = [
     </nav>
 
     <div class="lt-header-cta">
-      <a class="lt-btn lt-btn-sm" href={`mailto:${company.contactEmail}`}>Contact</a>
+      <a class="lt-btn lt-btn-sm lt-btn-light" href="/products/">Explore products</a>
     </div>
 
     <details class="lt-menu">
       <summary aria-label="Menu"><span></span><span></span></summary>
       <div class="lt-menu-panel">
         {links.map((l) => <a href={l.href}>{l.label}</a>)}
-        <a href={`mailto:${company.contactEmail}`}>Contact</a>
       </div>
     </details>
   </div>

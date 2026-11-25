@@ -1,0 +1,22 @@
+---
+interface Props {
+  title: string;
+  text?: string;
+  primary: { label: string; href: string; external?: boolean };
+  secondary?: { label: string; href: string };
+}
+const { title, text, primary, secondary } = Astro.props;
+const ext = primary.external ? { target: '_blank', rel: 'noopener' } : {};
+---
+<section class="lt-section" style="padding-top:0">
+  <div class="lt-wrap">
+    <div class="lt-cta" data-reveal>
+      <h2 class="lt-h2">{title}</h2>
+      {text && <p class="lt-lead">{text}</p>}
+      <div class="lt-btn-row">
+        <a class="lt-btn lt-btn-primary" href={primary.href} {...ext}>{primary.label} <span class="arrow" aria-hidden="true">→</span></a>
+        {secondary && <a class="lt-btn" href={secondary.href}>{secondary.label}</a>}
+      </div>
+    </div>
+  </div>
+</section>

@@ -1,0 +1,227 @@
+---
+import { Image } from 'astro:assets';
+import Base from '../../layouts/Base.astro';
+import FeatureIcon from '../../components/FeatureIcon.astro';
+import SectionHead from '../../components/SectionHead.astro';
+import FaqList from '../../components/FaqList.astro';
+import CtaBand from '../../components/CtaBand.astro';
+import { fitnfree as app } from '../../apps/fitnfree/app';
+import { company } from '../../data/company';
+
+const [home, coach, nutrition, exercises] = app.screenshots;
+const ios = app.stores.ios.url!;
+
+// The product areas, each tied to a real screen.
+const showcases = [
+  {
+    eyebrow: 'AI coach',
+    title: 'A coach that reads how you are doing before it speaks.',
+    text: 'It looks at your sleep, mood and streak, then gives you a daily briefing and notes after a workout. Talk to it by voice, and pick a style: Encouraging, Strict or Data-Focused.',
+    points: ['Daily briefing and post-workout insights', 'Replies read back to you if you want', 'Not medical advice: general fitness and wellness information'],
+    shots: [coach, home],
+  },
+  {
+    eyebrow: 'Nutrition',
+    title: 'Log a meal in seconds, with real nutrition data behind it.',
+    text: 'Search foods backed by USDA data, snap a photo of a meal or scan a barcode. Your daily calorie and protein targets come from your own stats.',
+    points: ['Food search, photo and barcode logging', 'Daily calorie and protein targets', 'Free to start'],
+    shots: [nutrition],
+  },
+  {
+    eyebrow: 'Training',
+    title: 'Plans built around the equipment you actually have.',
+    text: 'Home, gym or outdoors. Point your camera at gym equipment for an instant workout, browse the exercise library, and keep going with streaks, badges and squad challenges.',
+    points: ['Home, gym and outdoor plans', 'An exercise library to build workouts from', 'Streaks, badges and challenges'],
+    shots: [exercises],
+  },
+];
+
+const more = [
+  { t: 'Body log', d: 'Record weight, body fat and measurements, see trends on a chart and set a goal weight. Progress photos stay on your phone and are never uploaded.' },
+  { t: 'Personal records', d: 'Log a set that beats your best and you get a badge. See every record in one list under Progress.' },
+  { t: 'Interval clock and rest timer', d: 'Tabata, boxing rounds, HIIT, EMOM or your own intervals, plus an optional countdown after each set.' },
+  { t: 'Home screen and wrist', d: 'A streak widget for your iPhone home screen (iOS 17 or later) and an Apple Watch app (watchOS 10 or later).' },
+  { t: 'Friends, if you want them', d: 'Add friends, see when they train and send a cheer. It is off until you turn it on, and you choose what is shared.' },
+  { t: 'Your data, exportable', d: 'Download everything you have logged as a file (JSON or spreadsheet) from your Profile.' },
+];
+
+const steps = [
+  { t: 'Tell it about you', d: 'Add your goals and stats once. Targets and plans start from them.' },
+  { t: 'Train, eat, sleep, check in', d: 'Log workouts, meals, sleep and mood in one place, in a few taps.' },
+  { t: 'Let the coach adapt', d: 'The coach reads it all and adjusts, instead of handing you the same plan every day.' },
+];
+
+const appLd = JSON.stringify({
+  '@context': 'https://schema.org',
+  '@type': 'MobileApplication',
+  name: app.name,
+  applicationCategory: 'HealthApplication',
+  operatingSystem: 'iOS',
+  url: `${company.siteUrl}/products/fitnfree/`,
+  downloadUrl: ios,
+  publisher: { '@type': 'Organization', name: company.name },
+});
+---
+
+<Base
+  title="FitNFree: AI fitness and wellness app"
+  description="FitNFree brings workouts, nutrition, sleep and daily habits into one app with an AI coach that adapts to how you are doing. On the App Store."
+  variant="lt"
+  theme="fitnfree"
+  image="/og-fitnfree.png"
+>
+  <script slot="head" type="application/ld+json" set:html={appLd} />
+  <main id="main">
+    <!-- Hero -->
+    <section class="lt-phero">
+      <div class="lt-wrap lt-phero-grid">
+        <div>
+          <div class="lt-brandline">
+            <Image src={app.icon} alt="" width={88} height={88} />
+            <strong>FitNFree</strong>
+          </div>
+          <h1 class="lt-h1">Your fitness and wellness <em>journey, brought together.</em></h1>
+          <p class="lt-lead">{app.blurb} It is free to start.</p>
+          <div class="lt-btn-row">
+            <a class="lt-store" href={ios} target="_blank" rel="noopener" aria-label="Download FitNFree on the App Store">
+              <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zM15.53 3.83c.843-1.012 1.4-2.427 1.245-3.83-1.207.052-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.559-1.701"/></svg>
+              <div><small>Download on the</small><span>App Store</span></div>
+            </a>
+            {app.webApp && <a class="lt-btn" href={app.webApp.url} target="_blank" rel="noopener">{app.webApp.label} <span class="arrow" aria-hidden="true">→</span></a>}
+          </div>
+          <ul class="lt-chips" aria-label="At a glance">
+            {app.hero.facts.map((f) => <li>{f}</li>)}
+          </ul>
+        </div>
+
+        <div class="lt-phones-row">
+          <div class="lt-phone"><Image src={coach.src} alt={coach.alt} width={420} loading="eager" /></div>
+          <div class="lt-phone"><Image src={home.src} alt={home.alt} width={420} loading="eager" /></div>
+          <div class="lt-phone"><Image src={nutrition.src} alt={nutrition.alt} width={420} loading="eager" /></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Everything in one place -->
+    <section class="lt-section lt-band" id="features">
+      <div class="lt-wrap">
+        <SectionHead
+          eyebrow="Features"
+          title="Everything in one place."
+          text="Stop juggling separate apps for training, food, sleep and mood."
+        />
+        <div class="lt-grid-3">
+          {app.features.map((f, i) => (
+            <div class="lt-tile" data-reveal style={`--d:${(i % 3) * 60}ms`}>
+              <span class="ico"><FeatureIcon name={f.icon} /></span>
+              <h3>{f.title}</h3>
+              <p>{f.summary}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    <!-- Feature demonstrations -->
+    <section class="lt-section">
+      <div class="lt-wrap">
+        {showcases.map((s, i) => (
+          <div class={`lt-split${i % 2 ? ' flip' : ''}`}>
+            <div data-reveal>
+              <p class="lt-eyebrow">{s.eyebrow}</p>
+              <h2 class="lt-h2" style="font-size:clamp(28px,3.2vw,44px)">{s.title}</h2>
+              <p class="lt-lead" style="margin-bottom:24px">{s.text}</p>
+              <ul class="lt-ticks" style="--c:var(--lt-accent)">
+                {s.points.map((p) => <li>{p}</li>)}
+              </ul>
+            </div>
+            <div class="lt-phones-row" data-reveal style="--d:100ms">
+              {s.shots.map((sh) => (
+                <div class="lt-phone"><Image src={sh.src} alt={sh.alt} width={420} /></div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+
+    <!-- More in the app: everything here is in the current App Store release (1.0.1). -->
+    <section class="lt-section lt-band" id="more">
+      <div class="lt-wrap">
+        <SectionHead
+          eyebrow="And more"
+          title="Built for the long run."
+          text="Tracking, timers and a streak that follows you from your phone to your wrist."
+        />
+        <div class="lt-grid-3">
+          {more.map((m, i) => (
+            <div class="lt-tile" data-reveal style={`--d:${(i % 3) * 60}ms`}>
+              <h3>{m.t}</h3>
+              <p>{m.d}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    <!-- How it works -->
+    <section class="lt-section" id="how">
+      <div class="lt-wrap">
+        <SectionHead eyebrow="How it works" title="Three steps, then it learns you." />
+        <ol class="lt-steps" data-reveal>
+          {steps.map((s) => (
+            <li>
+              <h3>{s.t}</h3>
+              <p>{s.d}</p>
+            </li>
+          ))}
+        </ol>
+      </div>
+    </section>
+
+    <!-- Pricing -->
+    {app.pricing && (
+      <section class="lt-section" id="pricing">
+        <div class="lt-wrap">
+          <SectionHead eyebrow="Pricing" title="Free to start. Upgrade only if you want more." text="Cancel any time." center />
+          <div class="lt-plans">
+            <div class="lt-plan" data-reveal>
+              <h3>{app.pricing.free.title}</h3>
+              <p class="price">{app.pricing.free.price}</p>
+              <ul class="lt-ticks">{app.pricing.free.points.map((p) => <li>{p}</li>)}</ul>
+            </div>
+            <div class="lt-plan feature" data-reveal style="--d:80ms">
+              <h3>{app.pricing.premium.title}</h3>
+              <p class="price">{app.pricing.premium.price}</p>
+              <ul class="lt-ticks">{app.pricing.premium.points.map((p) => <li>{p}</li>)}</ul>
+              {app.pricing.premium.note && <p class="note">{app.pricing.premium.note}</p>}
+            </div>
+          </div>
+        </div>
+      </section>
+    )}
+
+    <!-- Health disclaimer -->
+    <section class="lt-section" style="padding-top:0;padding-bottom:clamp(40px,6vw,72px)">
+      <div class="lt-wrap">
+        <p class="lt-notice" data-reveal><strong>A note on health.</strong> {app.notice}</p>
+      </div>
+    </section>
+
+    <!-- FAQ -->
+    <section class="lt-section lt-band" id="faq">
+      <div class="lt-wrap">
+        <SectionHead eyebrow="Questions" title="Good to know." center />
+        <FaqList items={app.faqs} />
+        <p style="text-align:center;margin-top:32px"><a class="lt-link" href={`/${app.slug}/support/`}>More help and contact <span class="arrow" aria-hidden="true">→</span></a></p>
+      </div>
+    </section>
+
+    <CtaBand
+      title="Start your journey with FitNFree."
+      text="Free to start. It takes a minute to set up."
+      primary={{ label: 'Download on the App Store', href: ios, external: true }}
+      secondary={app.webApp ? { label: app.webApp.label, href: app.webApp.url } : undefined}
+    />
+  </main>
+</Base>

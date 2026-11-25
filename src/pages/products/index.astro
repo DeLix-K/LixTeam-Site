@@ -1,0 +1,79 @@
+---
+import Base from '../../layouts/Base.astro';
+import ProductCard from '../../components/ProductCard.astro';
+import SectionHead from '../../components/SectionHead.astro';
+import StatusBadge from '../../components/StatusBadge.astro';
+import CtaBand from '../../components/CtaBand.astro';
+import { liveProducts, visibleProducts, upcomingProducts } from '../../data/products';
+
+const inDev = visibleProducts.filter((p) => p.status === 'in-development');
+---
+
+<Base
+  title="Products"
+  description="The LixTeam portfolio: FitNFree, an AI fitness and wellness app, and ROOTLINE, a hands-on cybersecurity training game."
+  variant="lt"
+>
+  <main id="main">
+    <section class="lt-pagehead">
+      <div class="lt-wrap">
+        <p class="lt-eyebrow" data-reveal>Products</p>
+        <h1 class="lt-h1" data-reveal style="--d:60ms">Products built to be used.</h1>
+        <p class="lt-lead" data-reveal style="--d:120ms">
+          Everything we have released, and what is being tested. Each product has its own page, its own
+          support and its own privacy policy.
+        </p>
+      </div>
+    </section>
+
+    <section class="lt-section" style="padding-top:0">
+      <div class="lt-wrap">
+        <div class="lt-cards">
+          {liveProducts.map((p, i) => <ProductCard product={p} eager={i < 2} />)}
+        </div>
+      </div>
+    </section>
+
+    {inDev.length > 0 && (
+      <section class="lt-section" style="padding-top:0">
+        <div class="lt-wrap">
+          <SectionHead title="In development" />
+          <div class="lt-cards">{inDev.map((p) => <ProductCard product={p} />)}</div>
+        </div>
+      </section>
+    )}
+
+    {upcomingProducts.length > 0 && (
+      <section class="lt-section lt-band">
+        <div class="lt-wrap">
+          <SectionHead
+            eyebrow="In the lab"
+            title="Not built yet."
+            text="These are experiments. We are finding out whether people want them before we build them."
+          />
+          <div class="lt-rows" data-reveal>
+            {upcomingProducts.map((p) => (
+              <div class="lt-row">
+                <div>
+                  <h3>{p.name}</h3>
+                  <p>{p.summary}</p>
+                </div>
+                <div style="display:flex;gap:20px;align-items:center;flex-wrap:wrap">
+                  <StatusBadge status={p.status} label={p.statusLabel} />
+                  {p.page && <a class="lt-link" href={p.page}>{p.cta.label} <span class="arrow" aria-hidden="true">→</span></a>}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+    )}
+
+    <CtaBand
+      title="Have an idea, or want to work together?"
+      text="We are open to partnerships and to new ideas that belong in the lab."
+      primary={{ label: 'Contact LixTeam', href: '/contact/' }}
+      secondary={{ label: 'About LixTeam', href: '/about/' }}
+    />
+  </main>
+</Base>

@@ -1,0 +1,48 @@
+---
+import Base from '../layouts/Base.astro';
+import { company } from '../data/company';
+
+// There is no form backend, so each enquiry type opens the visitor's email app
+// with the right subject. The address is in src/data/company.ts.
+const mail = (subject: string) => `mailto:${company.contactEmail}?subject=${encodeURIComponent(subject)}`;
+
+const topics = [
+  { t: 'General enquiries', d: 'Questions about LixTeam, our products or how we work.', href: mail('General enquiry') },
+  { t: 'Product support', d: 'Something wrong with FitNFree or ROOTLINE? Tell us what happened and on which device.', href: mail('Product support') },
+  { t: 'Partnerships', d: 'Collaborations, integrations or working on something together.', href: mail('Partnership') },
+  { t: 'Business opportunities', d: 'An idea, a problem worth solving, or a business we should know about.', href: mail('Business opportunity') },
+];
+---
+
+<Base
+  title="Contact"
+  description="Contact LixTeam about general enquiries, product support, partnerships and business opportunities."
+  variant="lt"
+>
+  <main id="main">
+    <section class="lt-pagehead">
+      <div class="lt-wrap">
+        <p class="lt-eyebrow" data-reveal>Contact</p>
+        <h1 class="lt-h1" data-reveal style="--d:60ms">Let's talk.</h1>
+        <p class="lt-lead" data-reveal style="--d:120ms">Choose what your message is about and your email app opens with the subject filled in.</p>
+      </div>
+    </section>
+
+    <section class="lt-section" style="padding-top:0">
+      <div class="lt-wrap">
+        <div class="lt-topics">
+          {topics.map((x, i) => (
+            <a class="lt-topic" href={x.href} data-reveal style={`--d:${(i % 2) * 60}ms`}>
+              <h3>{x.t} <span class="arrow" aria-hidden="true">↗</span></h3>
+              <p>{x.d}</p>
+            </a>
+          ))}
+        </div>
+        <p class="lt-mailline">
+          Or write to <a href={`mailto:${company.contactEmail}`}>{company.contactEmail}</a>. For FitNFree help
+          articles, see <a href="/fitnfree/support/">FitNFree support</a>.
+        </p>
+      </div>
+    </section>
+  </main>
+</Base>

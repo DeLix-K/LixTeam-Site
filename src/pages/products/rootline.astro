@@ -1,0 +1,191 @@
+---
+import { Image } from 'astro:assets';
+import Base from '../../layouts/Base.astro';
+import SectionHead from '../../components/SectionHead.astro';
+import FaqList from '../../components/FaqList.astro';
+import CtaBand from '../../components/CtaBand.astro';
+import { getProduct } from '../../data/products';
+
+const p = getProduct('rootline')!;
+const workspace = p.hero!;
+const landing = p.gallery[0];
+
+const games = [
+  {
+    tag: 'Game 01 · Simulation',
+    name: 'Hands-on Cyber Workspace',
+    line: 'Investigate. Analyse. Respond.',
+    text: 'Enter the operations floor. Investigate threats, analyse evidence, and respond to live-style cyber incidents.',
+    href: '/games/workspace/',
+    cta: 'Open the workspace',
+  },
+  {
+    tag: 'Game 02 · Progression',
+    name: 'Level Up in Cyber Security',
+    line: 'Complete missions. Build skills. Advance.',
+    text: 'Take on missions, sharpen your skills, earn XP, and progress through your cybersecurity journey.',
+    href: '/games/levelup/',
+    cta: 'Start levelling up',
+  },
+];
+
+const steps = [
+  { t: 'Use the tools', d: 'Search the logs, open the people, machines and files involved, follow the process tree and the network map.' },
+  { t: 'Pin what matters', d: 'Pin the events that prove what happened to your case timeline. Pinning noise costs you.' },
+  { t: 'Act, but proportionately', d: 'Every action takes time and the attacker is still working. Shutting down the wrong thing hurts the business.' },
+  { t: 'File your report', d: 'Say what happened, who and what was affected, and how it began.' },
+];
+
+const features = [
+  { n: '01', t: 'A hands-on workspace', d: 'A simulated workplace with real tools. There are no multiple-choice questions to get through: you investigate and you decide.' },
+  { n: '02', t: 'Simulated incident investigation', d: 'Work live-style incidents against a moving clock, in 11 simulated workplaces from a SOC to a water plant.' },
+  { n: '03', t: 'Evidence analysis', d: 'Read the logs and artefacts, separate signal from noise, and build a timeline of what actually happened.' },
+  { n: '04', t: 'Threat investigation and response', d: 'Investigate the threat, then respond: contain it without breaking the business.' },
+  { n: '05', t: 'Mission progression', d: '133 missions across 10 career paths, so there is always a next step.' },
+  { n: '06', t: 'XP, achievements and ranks', d: 'Earn XP, ranks and medals as you climb a career-style ladder.' },
+];
+
+const audience = [
+  { t: 'Cybersecurity beginners', d: 'Learn how an incident unfolds by working one, instead of reading about it.' },
+  { t: 'Students', d: 'Practise the thinking behind the theory, free and in the browser.' },
+  { t: 'Career changers', d: 'Try the work and see which part of security suits you, across 10 career paths.' },
+  { t: 'Aspiring SOC analysts', d: 'Triage alerts, investigate and write up an incident the way an analyst would.' },
+];
+
+const faqs = [
+  { q: 'Is ROOTLINE free?', a: 'Yes. It is free to play and you do not need an account.' },
+  { q: 'Where is my progress saved?', a: 'In your own browser, on your device. An optional account lets you appear on the leaderboard. The privacy notice explains exactly what is stored.' },
+  { q: 'Is it the same as real work experience or a certification?', a: 'No. ROOTLINE is a training game with simulated scenarios. It can help you practise and learn, but it is not professional experience and it is not an industry certification.' },
+  { q: 'Do I need to install anything?', a: 'No. It runs in your browser.' },
+];
+---
+
+<Base
+  title="ROOTLINE: learn cybersecurity by doing"
+  description="ROOTLINE is a free, hands-on cybersecurity simulator. Investigate simulated incidents with real tools, analyse evidence, respond, and climb a ladder of missions and ranks."
+  variant="lt"
+  theme="rootline"
+  image="/og-rootline.png"
+>
+  <main id="main">
+    <!-- Hero -->
+    <section class="lt-phero">
+      <div class="lt-wrap lt-phero-grid">
+        <div style="position:relative;z-index:1">
+          <p class="lt-eyebrow">ROOTLINE · Cyber range</p>
+          <h1 class="lt-h1">Learn cybersecurity by <em>doing,</em> not just watching.</h1>
+          <p class="lt-lead">{p.description} It is free, and it runs in your browser.</p>
+          <div class="lt-btn-row">
+            <a class="lt-btn lt-btn-primary" href="/games/">Play ROOTLINE free <span class="arrow" aria-hidden="true">→</span></a>
+            <a class="lt-btn" href="#how">See how it plays</a>
+          </div>
+          <ul class="lt-chips" aria-label="At a glance">
+            <li>11 simulated workplaces</li>
+            <li>10 career paths</li>
+            <li>133 missions</li>
+            <li>Free, no account needed</li>
+          </ul>
+        </div>
+
+        <div class="lt-stage" style="position:relative;z-index:1">
+          <div class="lt-window">
+            <div class="lt-window-bar"><i></i><i></i><i></i></div>
+            <Image src={workspace.src} alt={workspace.alt} width={1100} loading="eager" />
+          </div>
+          <div class="lt-window" style="left:auto;right:0;top:auto;bottom:0;width:58%;transform:rotate(1.4deg)">
+            <div class="lt-window-bar"><i></i><i></i><i></i></div>
+            <Image src={landing.src} alt={landing.alt} width={700} loading="eager" />
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Two games -->
+    <section class="lt-section lt-band">
+      <div class="lt-wrap">
+        <SectionHead eyebrow="Two ways to train" title="One cyber range. Two games." />
+        <div class="lt-grid-2">
+          {games.map((g, i) => (
+            <a class="lt-topic" href={g.href} data-reveal style={`--d:${i * 70}ms`}>
+              <p class="lt-eyebrow" style="margin:0">{g.tag}</p>
+              <h3>{g.name} <span class="arrow" aria-hidden="true">↗</span></h3>
+              <p style="color:var(--lt-text);font-weight:500">{g.line}</p>
+              <p>{g.text}</p>
+              <span class="lt-link" style="align-self:flex-start;margin-top:8px">{g.cta}</span>
+            </a>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    <!-- Gameplay -->
+    <section class="lt-section" id="how">
+      <div class="lt-wrap">
+        <SectionHead
+          eyebrow="Gameplay"
+          title="Four moves in every case."
+          text="Each case file is a simulated workplace with a problem in it. You work it the way an analyst would."
+        />
+        <ol class="lt-steps four" data-reveal>
+          {steps.map((s) => (
+            <li>
+              <h3>{s.t}</h3>
+              <p>{s.d}</p>
+            </li>
+          ))}
+        </ol>
+      </div>
+    </section>
+
+    <!-- Features -->
+    <section class="lt-section lt-band" id="features">
+      <div class="lt-wrap">
+        <SectionHead eyebrow="What is inside" title="A range that behaves like the real thing." />
+        <div class="lt-grid-3">
+          {features.map((f, i) => (
+            <div class="lt-tile" data-reveal style={`--d:${(i % 3) * 60}ms`}>
+              <span class="n">{f.n}</span>
+              <h3>{f.t}</h3>
+              <p>{f.d}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    <!-- Audience -->
+    <section class="lt-section" id="who">
+      <div class="lt-wrap">
+        <SectionHead eyebrow="Who it is for" title="Built for people who learn by doing." />
+        <div class="lt-grid-2">
+          {audience.map((a, i) => (
+            <div class="lt-tile" data-reveal style={`--d:${(i % 2) * 60}ms`}>
+              <h3>{a.t}</h3>
+              <p>{a.d}</p>
+            </div>
+          ))}
+        </div>
+        <p class="lt-notice" style="margin-top:32px" data-reveal>
+          <strong>Be clear about what it is.</strong> ROOTLINE is a training game with simulated scenarios. It
+          is not professional work experience and it is not an industry certification.
+        </p>
+      </div>
+    </section>
+
+    <!-- FAQ -->
+    <section class="lt-section lt-band">
+      <div class="lt-wrap">
+        <SectionHead eyebrow="Questions" title="Good to know." center />
+        <FaqList items={faqs} />
+        <p style="text-align:center;margin-top:32px"><a class="lt-link" href="/games/privacy/">ROOTLINE privacy notice <span class="arrow" aria-hidden="true">→</span></a></p>
+      </div>
+    </section>
+
+    <CtaBand
+      title="Step onto the range."
+      text="Free to play, in your browser, no account needed."
+      primary={{ label: 'Play ROOTLINE free', href: '/games/' }}
+      secondary={{ label: 'All LixTeam products', href: '/products/' }}
+    />
+  </main>
+</Base>

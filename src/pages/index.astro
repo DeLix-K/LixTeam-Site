@@ -1,322 +1,144 @@
 ---
 import { Image } from 'astro:assets';
 import Base from '../layouts/Base.astro';
-import Logo from '../components/Logo.astro';
+import ProductCard from '../components/ProductCard.astro';
+import SectionHead from '../components/SectionHead.astro';
+import StatusBadge from '../components/StatusBadge.astro';
+import CtaBand from '../components/CtaBand.astro';
 import { company } from '../data/company';
-import { visibleProducts } from '../data/portfolio';
+import { getProduct, liveProducts, upcomingProducts } from '../data/products';
 
-import ffHome from '../assets/fitnfree/01-home.png';
-import ffCoach from '../assets/fitnfree/02-coach.png';
-import ffFood from '../assets/fitnfree/03-nutrition.png';
-import rlLanding from '../assets/rootline/landing.png';
-import rlWorkspace from '../assets/rootline/workspace.png';
+const rootline = getProduct('rootline')!;
+const fitnfree = getProduct('fitnfree')!;
 
-const heroLines = ['We build and operate', 'digital products.'];
-
-const statement =
-  'One small team. Several products. Each run like a real business, with support, billing, updates and someone accountable.';
-const words = statement.split(' ');
-
-const steps = [
-  {
-    title: 'Test the question',
-    text: 'We start with a demand test: a page, a promise and a waitlist. If people do not care, we find out before we build.',
-  },
-  {
-    title: 'Build it properly',
-    text: 'Mobile, web and cloud, built to ship and to be maintained. Privacy, security and store rules are part of the build.',
-  },
-  {
-    title: 'Operate it',
-    text: 'Launch is the start. We run support, subscriptions, reviews and updates, and watch how people really use it.',
-  },
-  {
-    title: 'Compound',
-    text: 'What each product teaches us feeds the next one: tooling, design, content and an audience that already knows us.',
-  },
+const areas = [
+  { name: 'Fitness & wellness', note: 'In the world today through FitNFree.' },
+  { name: 'Cybersecurity', note: 'In the world today through ROOTLINE.' },
+  { name: 'AI', note: 'Used inside our products, with people deciding.' },
+  { name: 'Emerging technology', note: 'Tested in the lab before it becomes a product.' },
 ];
 
-const principles = [
-  {
-    title: 'One team, whole product',
-    text: 'The people who design it build it, ship it and answer the support email. Nothing is handed over, so nothing gets lost.',
-  },
-  {
-    title: 'AI assists, people decide',
-    text: 'We use AI where it helps, and ask permission before personal data goes to it. Anything published in our name is approved by a person first.',
-  },
-  {
-    title: 'Privacy you can read',
-    text: 'Plain-language policies, account deletion inside the app, and no advertising trackers.',
-  },
-  {
-    title: 'Secure by default',
-    text: 'Access rules are enforced at the database, not only in the interface, and every integration gets the least access it needs.',
-  },
-  {
-    title: 'Built to be operated',
-    text: 'Support, store compliance, billing and updates are part of the job, long after launch day.',
-  },
-];
-
-const live = visibleProducts.filter((p) => p.status.tone !== 'next');
-const pad2 = (n: number) => String(n).padStart(2, '0');
+const orgLd = JSON.stringify({
+  '@context': 'https://schema.org',
+  '@type': 'Organization',
+  name: company.name,
+  url: company.siteUrl,
+  description: company.description,
+});
 ---
 
 <Base title={company.name} description={company.description} variant="lt">
-  <main id="top">
-    <!-- 1 · Hero -->
-    <section class="lt-home-hero">
-      <div class="lt-hero-3d" id="hero3d" aria-hidden="true">
-        <div class="lt-hero-3d-fallback"><Logo size={200} /></div>
-        <canvas></canvas>
-      </div>
-
-      <div class="lt-hero-main">
-        <h1 class="lt-display">
-          {heroLines.map((l, i) => (
-            <span class="lt-line"><span style={`--i:${i}`}>{l}</span></span>
-          ))}
-        </h1>
-        <p class="lt-hero-intro">
-          LixTeam is a software company. We design, launch and run products in health, security and AI.
-        </p>
-        <div class="lt-btn-row">
-          <a class="lt-btn lt-btn-primary" href="#portfolio">See the products <span class="arrow" aria-hidden="true">→</span></a>
-          <a class="lt-btn" href={`mailto:${company.contactEmail}`}>Contact</a>
+  <script slot="head" type="application/ld+json" set:html={orgLd} />
+  <main id="main">
+    <!-- Hero -->
+    <section class="lt-hero">
+      <div class="lt-wrap lt-hero-grid">
+        <div>
+          <p class="lt-eyebrow">LixTeam</p>
+          <h1 class="lt-h1">Building technology. Creating possibilities.</h1>
+          <p class="lt-hero-sub">Ideas into products. Innovation into impact.</p>
+          <p class="lt-lead">{company.description}</p>
+          <div class="lt-btn-row">
+            <a class="lt-btn lt-btn-light" href="/products/">Explore our products <span class="arrow" aria-hidden="true">→</span></a>
+            <a class="lt-btn" href="/about/">Discover LixTeam</a>
+          </div>
         </div>
-      </div>
 
-      <nav class="lt-hero-foot" aria-label="Products">
-        {live.map((p) => (
-          <a href={p.links[0].href}>
-            <span class="nm">{p.name}<span class="go" aria-hidden="true">↗</span></span>
-            <span class="lt-status" data-tone={p.status.tone}><i></i>{p.status.label}</span>
-          </a>
-        ))}
-        <div class="cue"><span>Scroll <i></i></span></div>
-      </nav>
-    </section>
-
-    <!-- 2 · Statement -->
-    <section class="lt-statement" data-progress="pin" aria-label="About LixTeam">
-      <div class="lt-statement-in">
-        <p class="lt-label">Who we are</p>
-        <p class="big" style={`--n:${words.length}`}>
-          {words.map((w, i) => (<><span class="w" style={`--i:${i}`}>{w}</span>{' '}</>))}
-        </p>
-      </div>
-    </section>
-
-    <!-- 3 · Portfolio: one pinned screen per product -->
-    <section class="lt-story" id="portfolio" data-story style={`--n:${visibleProducts.length}`}>
-      <div class="lt-story-pin" data-progress="pin-inner">
-        <header class="lt-story-head">
-          <h2 class="lt-h2">Products we build and run</h2>
-          <p>Each product is its own small business, with its own users, roadmap and support. They share tools, lessons and standards.</p>
-        </header>
-
-        {visibleProducts.map((p, i) => (
-          <article class={`lt-item${i === 0 ? ' is-active' : ''}`} id={`p-${p.id}`} style={`--accent:${p.accent}`}>
-            <div class="lt-item-copy">
-              <div class="lt-item-top">
-                <span class="idx lt-dot">{pad2(i + 1)}<small>/{pad2(visibleProducts.length)}</small></span>
-                <span class="lt-status" data-tone={p.status.tone}><i></i>{p.status.label}</span>
-              </div>
-              <h3>{p.name}</h3>
-              <p class="tag">{p.tagline}</p>
-              <p class="sum">{p.summary}</p>
-              {p.facts.length > 0 ? (
-                <ul class="lt-facts">
-                  {p.facts.map((f) => <li>{f}</li>)}
-                </ul>
-              ) : (
-                <ul class="lt-facts"><li>{p.category}</li></ul>
-              )}
-              <div class="lt-btn-row">
-                {p.links.map((l) => (
-                  <a
-                    class={`lt-btn${l.primary ? ' lt-btn-primary' : ''}`}
-                    href={l.href}
-                    {...(l.href.startsWith('http') ? { target: '_blank', rel: 'noopener' } : {})}
-                  >
-                    {l.label}{l.primary && <span class="arrow" aria-hidden="true">→</span>}
-                  </a>
-                ))}
-              </div>
-            </div>
-
-            <div class="lt-item-vis lt-stage">
-              {p.visual === 'fitnfree' && (
-                <div class="lt-phones" data-tilt>
-                  <div class="lt-phone"><Image src={ffCoach} alt="FitNFree AI Coach screen" width={520} loading="lazy" /></div>
-                  <div class="lt-phone"><Image src={ffHome} alt="FitNFree home screen" width={580} loading="lazy" /></div>
-                  <div class="lt-phone"><Image src={ffFood} alt="FitNFree nutrition screen" width={520} loading="lazy" /></div>
-                </div>
-              )}
-
-              {p.visual === 'rootline' && (
-                <div class="lt-wins" data-tilt style="--rx:7deg;--ry:-13deg">
-                  <div class="lt-win">
-                    <div class="lt-win-bar"><i></i><i></i><i></i><span>ROOTLINE</span></div>
-                    <Image src={rlLanding} alt="The ROOTLINE home screen with its two games" width={1200} loading="lazy" />
-                  </div>
-                  <div class="lt-win">
-                    <div class="lt-win-bar"><i></i><i></i><i></i><span>Workspace</span></div>
-                    <Image src={rlWorkspace} alt="A ROOTLINE case file list" width={800} loading="lazy" />
-                  </div>
-                </div>
-              )}
-
-              {p.visual === 'radar' && (
-                <div class="lt-radar-plane" data-tilt style="--rx:0deg;--ry:0deg">
-                  <svg class="lt-radar" viewBox="0 0 600 420" role="img" aria-label="Illustration: signals from search, reviews, forums and video converge into a ranked list of opportunities">
-                    <defs>
-                      <linearGradient id="sw" x1="0" y1="0" x2="1" y2="0">
-                        <stop offset="0" stop-color="#a78bfa" stop-opacity="0" />
-                        <stop offset="1" stop-color="#a78bfa" stop-opacity="0.5" />
-                      </linearGradient>
-                    </defs>
-                    <g fill="none" stroke="rgba(236,235,229,0.16)">
-                      <circle cx="300" cy="210" r="60" />
-                      <circle cx="300" cy="210" r="120" />
-                      <circle cx="300" cy="210" r="180" />
-                      <path d="M300 20v380M110 210h380" stroke-dasharray="2 6" />
-                    </g>
-                    <path class="sweep" d="M300 210 L480 210 A180 180 0 0 0 437.4 93.6 Z" fill="url(#sw)" />
-                    <g fill="#c4b5fd">
-                      <circle cx="300" cy="210" r="5" />
-                      <circle cx="402" cy="128" r="4" />
-                      <circle cx="196" cy="148" r="3.5" opacity="0.7" />
-                      <circle cx="240" cy="296" r="4" opacity="0.85" />
-                      <circle cx="388" cy="276" r="3.5" opacity="0.65" />
-                      <circle cx="146" cy="240" r="3" opacity="0.5" />
-                      <circle cx="448" cy="196" r="3" opacity="0.5" />
-                    </g>
-                    <g fill="none" stroke="rgba(196,181,253,0.45)" stroke-dasharray="3 5">
-                      <path d="M300 210L402 128M300 210L240 296M300 210L196 148" />
-                    </g>
-                    <text x="414" y="124">Search</text>
-                    <text x="86" y="140">Reviews</text>
-                    <text x="190" y="322">Forums</text>
-                    <text x="400" y="298">Video</text>
-                    <text x="312" y="238" style="fill:#ecebe5">Ranked gaps</text>
-                  </svg>
-                  <span class="lt-pin" style="left:67%;top:30%;--h:96px"></span>
-                  <span class="lt-pin" style="left:40%;top:70%;--h:70px;--d:-1.2s"></span>
-                  <span class="lt-pin" style="left:32.7%;top:35%;--h:54px;--d:-2.1s"></span>
-                  <span class="lt-pin" style="left:64.7%;top:65.7%;--h:78px;--d:-0.6s"></span>
-                </div>
-              )}
-
-              {p.visual === 'next' && (
-                <div class="lt-slot">
-                  <div class="lt-cube" aria-hidden="true">
-                    <span></span><span></span><span></span><span></span><span></span><span></span>
-                  </div>
-                  <p>Slot open<br />Next experiment: to be decided</p>
-                </div>
-              )}
-            </div>
-          </article>
-        ))}
-
-        <div class="lt-story-rail" aria-hidden="true">
-          {visibleProducts.map((p, i) => <b class={i === 0 ? 'on' : ''}></b>)}
+        <div class="lt-stage">
+          <div class="lt-window">
+            <div class="lt-window-bar"><i></i><i></i><i></i></div>
+            <Image src={rootline.hero!.src} alt={rootline.hero!.alt} width={1100} loading="eager" />
+          </div>
+          <div class="lt-phone">
+            <Image src={fitnfree.hero!.src} alt={fitnfree.hero!.alt} width={420} loading="eager" />
+          </div>
         </div>
       </div>
     </section>
 
-    <!-- 4 · Method -->
-    <section class="lt-method" id="approach" data-progress="view">
-      <div>
-        <p class="lt-label" style="margin-bottom:28px">Method</p>
-        <h2>From question to product, on purpose.</h2>
+    <!-- Products -->
+    <section class="lt-section" id="products" style="padding-top:clamp(24px,4vw,56px)">
+      <div class="lt-wrap">
+        <SectionHead
+          eyebrow="Products"
+          title="Two products, one team behind them."
+          text="Each product has its own identity and its own audience. Both are live today."
+        />
+        <div class="lt-cards">
+          {liveProducts.map((p) => <ProductCard product={p} />)}
+        </div>
       </div>
-      <div class="lt-method-track">
-        <div class="lt-method-line"></div>
-        <div class="lt-method-steps">
-          {steps.map((s, i) => (
-            <div class="lt-m-step" style={`--i:${i}`}>
-              <span class="n lt-dot">{pad2(i + 1)}</span>
-              <h3>{s.title}</h3>
-              <p>{s.text}</p>
+    </section>
+
+    <!-- Company -->
+    <section class="lt-section lt-band">
+      <div class="lt-wrap lt-twocol">
+        <div data-reveal>
+          <p class="lt-eyebrow">The company</p>
+          <h2 class="lt-h2">A product company, not an agency.</h2>
+        </div>
+        <div class="lt-prose" data-reveal style="--d:80ms">
+          <p>
+            We pick a problem, build the product ourselves, and <strong>operate it</strong>: the support inbox,
+            the app-store reviews, the billing, the updates and the privacy requests. A product is not
+            finished when it launches.
+          </p>
+          <p>
+            We want LixTeam to become a company with several useful products, each one small enough to look
+            after properly. Today that is a fitness and wellness app and a cybersecurity training game.
+          </p>
+          <p><a class="lt-link" href="/about/">About LixTeam <span class="arrow" aria-hidden="true">→</span></a></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Future -->
+    <section class="lt-section" id="future">
+      <div class="lt-wrap">
+        <SectionHead
+          eyebrow="What comes next"
+          title="A portfolio that is built to grow."
+          text="New ideas are tested the same way every time: a clear question, a small experiment, and a decision based on what people actually do. Nothing below is a promise, only what is in the lab."
+        />
+
+        <div class="lt-grid-2" style="margin-bottom:48px">
+          {areas.map((a, i) => (
+            <div class="lt-tile" data-reveal style={`--d:${i * 50}ms`}>
+              <h3>{a.name}</h3>
+              <p>{a.note}</p>
             </div>
           ))}
         </div>
+
+        <div class="lt-rows" data-reveal>
+          {upcomingProducts.map((p) => (
+            <div class="lt-row">
+              <div>
+                <h3>{p.name}</h3>
+                <p>{p.summary}</p>
+              </div>
+              <div style="display:flex;gap:20px;align-items:center;flex-wrap:wrap">
+                <StatusBadge status={p.status} label={p.statusLabel} />
+                {p.page && <a class="lt-link" href={p.page}>{p.cta.label} <span class="arrow" aria-hidden="true">→</span></a>}
+              </div>
+            </div>
+          ))}
+          <div class="lt-row">
+            <div>
+              <h3>Your idea</h3>
+              <p>Building something that needs a team behind it, or have a problem worth solving? We would like to hear it.</p>
+            </div>
+            <a class="lt-link" href="/contact/">Get in touch <span class="arrow" aria-hidden="true">→</span></a>
+          </div>
+        </div>
       </div>
     </section>
 
-    <!-- 5 · Principles -->
-    <section class="lt-index" id="principles">
-      <div class="lt-index-head" data-reveal>
-        <p class="lt-label" style="margin-bottom:28px">How we work</p>
-        <h2>Five rules that travel from product to product.</h2>
-      </div>
-      <ul class="lt-rows">
-        {principles.map((c, i) => (
-          <li class="lt-row" data-reveal style={`--d:${i * 70}ms`}>
-            <span class="n lt-dot">{pad2(i + 1)}</span>
-            <h3>{c.title}</h3>
-            <p>{c.text}</p>
-          </li>
-        ))}
-      </ul>
-    </section>
-
-    <!-- 6 · Contact -->
-    <section class="lt-contact" id="contact">
-      <div data-reveal>
-        <p class="lt-label" style="margin-bottom:28px">Contact</p>
-        <h2>Building something? Write to us.</h2>
-      </div>
-      <div class="lt-contact-row" data-reveal style="--d:120ms">
-        <a class="lt-mail" href={`mailto:${company.contactEmail}`}>{company.contactEmail}<span class="arrow" aria-hidden="true">↗</span></a>
-        <p class="lt-contact-note">Questions about a product, a privacy request, a partnership, or an idea you think belongs in the lab. We read everything.</p>
-      </div>
-    </section>
+    <CtaBand
+      title="Explore the portfolio, or talk to us."
+      text="See what we have built, try it, and tell us what you think."
+      primary={{ label: 'Explore our products', href: '/products/' }}
+      secondary={{ label: 'Contact LixTeam', href: '/contact/' }}
+    />
   </main>
 </Base>
-
-<script>
-  import { initScroll } from '../scripts/scroll.js';
-  initScroll();
-
-  // Gentle 3D lean on the product visuals. Skipped for touch and for "reduce motion".
-  const fine = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
-  const reduce = document.documentElement.classList.contains('rm');
-
-  if (fine && !reduce) {
-    document.querySelectorAll<HTMLElement>('[data-tilt]').forEach((el) => {
-      const stage = (el.closest('.lt-stage') as HTMLElement) || el;
-      const base = { rx: parseFloat(el.style.getPropertyValue('--rx')) || 0, ry: parseFloat(el.style.getPropertyValue('--ry')) || 0 };
-      stage.addEventListener('pointermove', (e) => {
-        const r = stage.getBoundingClientRect();
-        const x = (e.clientX - r.left) / r.width - 0.5;
-        const y = (e.clientY - r.top) / r.height - 0.5;
-        el.style.setProperty('--ry', `${(base.ry + x * 16).toFixed(2)}deg`);
-        el.style.setProperty('--rx', `${(base.rx - y * 12).toFixed(2)}deg`);
-      });
-      stage.addEventListener('pointerleave', () => {
-        el.style.setProperty('--ry', `${base.ry}deg`);
-        el.style.setProperty('--rx', `${base.rx}deg`);
-      });
-    });
-  }
-
-  // The 3D logo. three.js is a separate download that only loads when the hero
-  // is on screen, so it never slows down the first paint.
-  const host = document.getElementById('hero3d');
-  const saveData = (navigator as any).connection?.saveData === true;
-  if (host && !saveData) {
-    const start = () => import('../scripts/hero3d.js').then((m) => m.initHero3D(host)).catch(() => {});
-    if ('IntersectionObserver' in window) {
-      const io = new IntersectionObserver((entries) => {
-        if (entries.some((e) => e.isIntersecting)) { io.disconnect(); start(); }
-      });
-      io.observe(host);
-    } else {
-      start();
-    }
-  }
-</script>

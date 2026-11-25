@@ -1,0 +1,59 @@
+---
+import { Image } from 'astro:assets';
+import StatusBadge from './StatusBadge.astro';
+import type { Product } from '../data/products';
+
+interface Props {
+  product: Product;
+  /** Eager-load the artwork when the card is near the top of the page. */
+  eager?: boolean;
+}
+const { product: p, eager = false } = Astro.props;
+const [a, b] = [p.hero, p.gallery[0]];
+const secondary = p.page && p.cta.href !== p.page ? { label: 'View product', href: p.page } : null;
+---
+<article class="lt-card" style={`--c:${p.accent}`} data-reveal>
+  <div class="lt-card-art" aria-hidden="true">
+    {p.theme === 'fitnfree' && a && (
+      <div class="lt-phones">
+        <div class="lt-phone"><Image src={a.src} alt="" width={420} loading={eager ? 'eager' : 'lazy'} /></div>
+        {b && <div class="lt-phone"><Image src={b.src} alt="" width={420} loading={eager ? 'eager' : 'lazy'} /></div>}
+      </div>
+    )}
+    {p.theme !== 'fitnfree' && a && (
+      <div class="lt-window">
+        <div class="lt-window-bar"><i></i><i></i><i></i></div>
+        <Image src={a.src} alt="" width={900} loading={eager ? 'eager' : 'lazy'} />
+      </div>
+    )}
+  </div>
+
+  <div class="lt-card-body">
+    <div class="lt-card-top">
+      <div class="lt-card-id">
+        {p.logo ? <Image src={p.logo} alt="" width={80} height={80} /> : <span class="mono" aria-hidden="true">{p.name.slice(0, 2).toUpperCase()}</span>}
+        <div>
+          <h3>{p.name}</h3>
+          <p class="cat">{p.category}</p>
+        </div>
+      </div>
+      <StatusBadge status={p.status} label={p.statusLabel} />
+    </div>
+
+    <p class="sum">{p.summary}</p>
+    <ul class="lt-ticks">
+      {p.benefits.map((x) => <li>{x}</li>)}
+    </ul>
+
+    <div class="lt-card-foot">
+      {p.page ? (
+        <a class="lt-btn lt-btn-light" href={p.page} aria-label={`View ${p.name}`}>View product <span class="arrow" aria-hidden="true">→</span></a>
+      ) : (
+        <a class="lt-btn" href={p.cta.href}>{p.cta.label}</a>
+      )}
+      {p.page && p.cta.href !== p.page && (
+        <a class="lt-link" href={p.cta.href} {...(p.cta.external ? { target: '_blank', rel: 'noopener' } : {})}>{p.cta.label} <span class="arrow" aria-hidden="true">→</span></a>
+      )}
+    </div>
+  </div>
+</article>

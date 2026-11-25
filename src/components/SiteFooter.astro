@@ -1,10 +1,10 @@
 ---
 import Logo from './Logo.astro';
 import { company } from '../data/company';
-import { visibleProducts } from '../data/portfolio';
+import { visibleProducts } from '../data/products';
 import { apps } from '../data/apps';
 
-const live = visibleProducts.filter((p) => p.status.tone !== 'next');
+const listed = visibleProducts.filter((p) => p.page);
 ---
 <footer class="lt-footer">
   <div class="lt-wrap">
@@ -20,16 +20,17 @@ const live = visibleProducts.filter((p) => p.status.tone !== 'next');
       <div>
         <h4>Products</h4>
         <ul>
-          {live.map((p) => <li><a href={p.links[0].href}>{p.name}</a></li>)}
+          <li><a href="/products/">All products</a></li>
+          {listed.map((p) => <li><a href={p.page!}>{p.name}</a></li>)}
         </ul>
       </div>
 
       <div>
         <h4>Company</h4>
         <ul>
-          <li><a href="/#approach">Approach</a></li>
-          <li><a href="/company/">About</a></li>
-          <li><a href={`mailto:${company.contactEmail}`}>Contact</a></li>
+          <li><a href="/about/">About</a></li>
+          <li><a href="/contact/">Contact</a></li>
+          <li><a href={`mailto:${company.contactEmail}`}>Email us</a></li>
         </ul>
       </div>
 
@@ -50,7 +51,7 @@ const live = visibleProducts.filter((p) => p.status.tone !== 'next');
 
     <div class="lt-footer-base">
       <span>© {company.year} {company.name}. All rights reserved.</span>
-      <a href={`mailto:${company.contactEmail}`}>{company.contactEmail}</a>
+      <span>{company.name} is the company behind FitNFree and ROOTLINE.</span>
     </div>
   </div>
 </footer>

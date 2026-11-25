@@ -19,11 +19,11 @@ export const fitnfree: AppInfo = {
   hero: {
     headline: 'Your AI health companion.',
     sub: 'Workouts, nutrition, sleep and recovery, all in one app that adapts to how you are actually doing, instead of four apps you have to juggle.',
-    facts: ['Free to start', 'USDA nutrition data', 'Syncs with Oura', 'For ages 16+'],
+    facts: ['Free to start', 'USDA nutrition data', 'iPhone and Apple Watch', 'For ages 16+'],
   },
   webApp: { label: 'Try it on the web', url: 'https://fitnfree-lilac.vercel.app' },
   stores: {
-    ios: { label: 'App Store', url: 'https://apps.apple.com/app/id6809598004' },
+    ios: { label: 'App Store', url: 'https://apps.apple.com/us/app/fitnfree/id6809598004' },
     android: { label: 'Google Play', url: null },
   },
   features: [
@@ -127,7 +127,7 @@ export const fitnfree: AppInfo = {
     },
     {
       q: 'Where can I get it?',
-      a: 'FitNFree is coming to the App Store and Google Play. A web app is available today.',
+      a: 'FitNFree is on the App Store for iPhone (iOS 16.4 or later), with an Apple Watch app. A web app also works in any browser. There is no Android app yet.',
     },
     {
       q: 'How do I cancel Premium?',

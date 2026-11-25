@@ -1,0 +1,143 @@
+---
+import Base from '../layouts/Base.astro';
+import SectionHead from '../components/SectionHead.astro';
+import CtaBand from '../components/CtaBand.astro';
+import { company } from '../data/company';
+
+const beliefs = [
+  { t: 'Evidence before code', d: 'We test whether people want something before we build it, and we stop when they do not. A small experiment that fails is a cheap result.' },
+  { t: 'Own the whole product', d: 'The same small team designs it, builds it, ships it and answers the support email. That keeps the product honest and the loop short.' },
+  { t: 'Privacy and security are features', d: 'We collect what a feature needs and no more, say so in plain language, and enforce access rules at the database rather than trusting the interface.' },
+  { t: 'AI assists, people decide', d: 'AI is useful and we use it, with permission asked before personal data is shared and a person approving anything published in our name.' },
+  { t: 'Stay small and focused', d: 'We would rather run a few products well than collect many we cannot look after. New ideas earn a slot.' },
+];
+
+const interests = ['Fitness & wellness', 'Cybersecurity and security education', 'AI-assisted products', 'Market intelligence', 'Emerging technology'];
+const tools = ['React Native', 'Expo', 'TypeScript', 'Astro', 'Supabase', 'PostgreSQL', 'Stripe', 'Vercel', 'Anthropic Claude'];
+
+// Company facts that have been filled in (see src/data/company.ts). Empty ones are not shown.
+const facts = [
+  ['Company', company.facts.legalName],
+  ['Founded', company.facts.founded],
+  ['Based in', company.facts.location],
+  ['Team', company.facts.team],
+].filter(([, v]) => v) as [string, string][];
+---
+
+<Base
+  title="About"
+  description="LixTeam builds digital products designed to solve problems, create opportunities and make technology more useful."
+  variant="lt"
+>
+  <main id="main">
+    <section class="lt-pagehead">
+      <div class="lt-wrap">
+        <p class="lt-eyebrow" data-reveal>About</p>
+        <h1 class="lt-h1" data-reveal style="--d:60ms">Technology that is more useful.</h1>
+        <p class="lt-lead" data-reveal style="--d:120ms">
+          {company.name} builds digital products designed to solve problems, create opportunities and make
+          technology more useful.
+        </p>
+      </div>
+    </section>
+
+    {facts.length > 0 && (
+      <section style="padding-bottom:clamp(40px,6vw,72px)">
+        <div class="lt-wrap">
+          <dl class="lt-facts" data-reveal>
+            {facts.map(([k, v]) => <div><dt>{k}</dt><dd>{v}</dd></div>)}
+          </dl>
+        </div>
+      </section>
+    )}
+
+    <section class="lt-section lt-band">
+      <div class="lt-wrap lt-twocol">
+        <div data-reveal>
+          <p class="lt-eyebrow">Who we are</p>
+          <h2 class="lt-h2">A small team that ships.</h2>
+        </div>
+        <div class="lt-prose" data-reveal style="--d:80ms">
+          <p>
+            {company.name} is a small technology company. We pick a problem, build the product ourselves,
+            and <strong>operate it</strong>: the support inbox, the app-store reviews, the billing, the
+            updates and the privacy requests.
+          </p>
+          <p>
+            Our first two products are FitNFree, a fitness and wellness app, and ROOTLINE, a hands-on
+            cybersecurity training game. Both are live.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section class="lt-section">
+      <div class="lt-wrap lt-twocol">
+        <div data-reveal>
+          <p class="lt-eyebrow">Our mission</p>
+          <h2 class="lt-h2">Make technology useful to the people who use it.</h2>
+        </div>
+        <div class="lt-prose" data-reveal style="--d:80ms">
+          <p>
+            We want to build products that earn a place in people's days: ones that solve a real problem,
+            respect their privacy, and keep getting better after the launch.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section class="lt-section lt-band">
+      <div class="lt-wrap">
+        <SectionHead eyebrow="How we build" title="Five habits we do not skip." />
+        <div class="lt-grid-3">
+          {beliefs.map((b, i) => (
+            <div class="lt-tile" data-reveal style={`--d:${(i % 3) * 60}ms`}>
+              <span class="n">{String(i + 1).padStart(2, '0')}</span>
+              <h3>{b.t}</h3>
+              <p>{b.d}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    <section class="lt-section">
+      <div class="lt-wrap lt-twocol">
+        <div data-reveal>
+          <p class="lt-eyebrow">Where we look</p>
+          <h2 class="lt-h2">Our areas of interest.</h2>
+        </div>
+        <div data-reveal style="--d:80ms">
+          <ul class="lt-tools">{interests.map((t) => <li>{t}</li>)}</ul>
+          <h3 class="lt-h3" style="margin-top:48px">What we build with</h3>
+          <ul class="lt-tools">{tools.map((t) => <li>{t}</li>)}</ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="lt-section lt-band">
+      <div class="lt-wrap lt-twocol">
+        <div data-reveal>
+          <p class="lt-eyebrow">Where it is going</p>
+          <h2 class="lt-h2">A portfolio that keeps growing.</h2>
+        </div>
+        <div class="lt-prose" data-reveal style="--d:80ms">
+          <p>
+            We want {company.name} to become a company with several useful products, each one small enough
+            to look after properly. New products and technologies will be added over time, tested the same
+            way every time: a clear question, a small experiment, and a decision based on what people
+            actually do.
+          </p>
+          <p><a class="lt-link" href="/products/">See the portfolio <span class="arrow" aria-hidden="true">→</span></a></p>
+        </div>
+      </div>
+    </section>
+
+    <CtaBand
+      title="Partnerships, ideas and questions."
+      text="If you want to collaborate, have an idea that belongs in the lab, or need help with one of our products, write to us."
+      primary={{ label: 'Contact LixTeam', href: '/contact/' }}
+      secondary={{ label: 'Explore products', href: '/products/' }}
+    />
+  </main>
+</Base>
