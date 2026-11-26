@@ -2,6 +2,7 @@
 import Base from '../layouts/Base.astro';
 import SectionHead from '../components/SectionHead.astro';
 import CtaBand from '../components/CtaBand.astro';
+import SocialLinks from '../components/SocialLinks.astro';
 import { company } from '../data/company';
 
 const beliefs = [
@@ -130,6 +131,16 @@ const facts = [
           </p>
           <p><a class="lt-link" href="/products/">See the portfolio <span class="arrow" aria-hidden="true">→</span></a></p>
         </div>
+      </div>
+    </section>
+
+    <section class="lt-section" style="padding:0 0 clamp(40px,6vw,72px)">
+      <div class="lt-wrap lt-twocol">
+        <div data-reveal>
+          <p class="lt-eyebrow">Follow us</p>
+          <h2 class="lt-h3">See what we are working on.</h2>
+        </div>
+        <div data-reveal style="--d:80ms"><SocialLinks variant="labelled" /></div>
       </div>
     </section>
 

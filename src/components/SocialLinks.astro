@@ -1,0 +1,20 @@
+---
+import SocialIcon from './SocialIcon.astro';
+import { company } from '../data/company';
+
+interface Props {
+  /** 'icons' = round icon buttons; 'labelled' = icon plus the handle. */
+  variant?: 'icons' | 'labelled';
+}
+const { variant = 'icons' } = Astro.props;
+---
+<ul class={`lt-social${variant === 'labelled' ? ' labelled' : ''}`} aria-label={`${company.name} on social media`}>
+  {company.socials.map((s) => (
+    <li>
+      <a href={s.href} target="_blank" rel="noopener noreferrer me" aria-label={`${company.name} on ${s.name} (${s.handle}), opens in a new tab`}>
+        <SocialIcon name={s.name} />
+        {variant === 'labelled' && <span><b>{s.name}</b><small>{s.handle}</small></span>}
+      </a>
+    </li>
+  ))}
+</ul>
