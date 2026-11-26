@@ -32,6 +32,12 @@ const listed = visibleProducts.filter((p) => p.page);
           <li><a href="/contact/">Contact</a></li>
           <li><a href={`mailto:${company.contactEmail}`}>Email us</a></li>
         </ul>
+        <h4 style="margin-top:28px">Follow</h4>
+        <ul>
+          {company.socials.map((s) => (
+            <li><a href={s.href} target="_blank" rel="noopener noreferrer me" aria-label={`${company.name} on ${s.name}, opens in a new tab`}>{s.name}</a></li>
+          ))}
+        </ul>
       </div>
 
       <div>

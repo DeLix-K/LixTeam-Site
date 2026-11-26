@@ -24,6 +24,7 @@ const orgLd = JSON.stringify({
   name: company.name,
   url: company.siteUrl,
   description: company.description,
+  sameAs: company.socials.map((s) => s.href),
 });
 ---
 

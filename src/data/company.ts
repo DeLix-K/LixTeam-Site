@@ -13,6 +13,15 @@ export const company = {
   // company address when one exists.
   contactEmail: 'teamlix6@gmail.com',
   year: 2026,
+  // Official profiles, shown in the footer and on the Contact page. Plain
+  // profile addresses only: no tracking parameters.
+  socials: [
+    { name: 'Instagram', handle: '@lixpro.co', href: 'https://www.instagram.com/lixpro.co' },
+    { name: 'TikTok', handle: '@lixteam.com', href: 'https://www.tiktok.com/@lixteam.com' },
+    { name: 'YouTube', handle: '@lixdeteam', href: 'https://www.youtube.com/@lixdeteam' },
+    { name: 'Facebook', handle: 'LixDeTeam', href: 'https://www.facebook.com/LixDeTeam/' },
+    { name: 'Threads', handle: '@lixpro.co', href: 'https://www.threads.com/@lixpro.co' },
+  ],
   // Facts we have not confirmed yet. Fill one in and it appears on the About
   // page; leave it null and nothing is shown. Never state one that is not true.
   facts: {

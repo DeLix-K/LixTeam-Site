@@ -38,6 +38,11 @@ const topics = [
             </a>
           ))}
         </div>
+        <ul class="lt-tools" style="margin-top:40px" aria-label="LixTeam on social media">
+          {company.socials.map((s) => (
+            <li><a href={s.href} target="_blank" rel="noopener noreferrer me" style="text-decoration:none">{s.name} <span class="lt-fade">{s.handle}</span></a></li>
+          ))}
+        </ul>
         <p class="lt-mailline">
           Or write to <a href={`mailto:${company.contactEmail}`}>{company.contactEmail}</a>. For FitNFree help
           articles, see <a href="/fitnfree/support/">FitNFree support</a>.
